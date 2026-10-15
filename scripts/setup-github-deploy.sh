@@ -9,8 +9,9 @@ ADMIN_KEY="$WORK/server-key"
 PUBLIC_IP=$(sed -n 's/^PUBLIC_IP=//p' "$WORK/state.env" | tail -n1)
 [[ "$PUBLIC_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ && -f "$ADMIN_KEY" ]]
 umask 077
-[[ -f "$KEY" ]] || ssh-keygen -q -t ed25519 -N '' -C cloudmargin-github-actions -f "$KEY"
+[[ -f "$KEY" ]] || ssh-keygen -q -t rsa -b 4096 -N '' -C cloudmargin-github-actions -f "$KEY"
 chmod 600 "$KEY"
+ssh-keygen -y -f "$KEY" > "$KEY.pub"
 [[ -f "$KEY.pub" ]] || ssh-keygen -y -f "$KEY" > "$KEY.pub"
 SSH=(ssh -i "$ADMIN_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new "ubuntu@$PUBLIC_IP")
 # Stream the receiver, never any private key, into an administrative installation.
@@ -28,12 +29,13 @@ install -d -o cloudmargin-deploy -g cloudmargin-deploy -m 755 /var/lib/cloudmarg
 chown -R cloudmargin-deploy:cloudmargin-deploy /var/www/html
 REMOTE
 # Retrieve the host public key through the existing trusted admin connection.
-HOST_KEY=$("${SSH[@]}" 'cat /etc/ssh/ssh_host_ed25519_key.pub')
+HOST_KEY=$("${SSH[@]}" 'cat /etc/ssh/ssh_host_rsa_key.pub')
 printf '%s %s\n' "$PUBLIC_IP" "$HOST_KEY" > "$WORK/github-known-hosts"
 chmod 600 "$WORK/github-known-hosts"
 echo 'Dedicated deployment account configured.'
 echo "Private key file (do not paste into chat): $KEY"
 echo "Known-hosts file: $WORK/github-known-hosts"
+export PATH="$HOME/.local/bin:$PATH"
 if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
   gh secret set DEPLOY_SSH_KEY --repo EuphoriaLux/react-web-server < "$KEY"
   gh secret set DEPLOY_KNOWN_HOSTS --repo EuphoriaLux/react-web-server < "$WORK/github-known-hosts"

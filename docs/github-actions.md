@@ -15,10 +15,13 @@ The preview URL is shown in the Actions job summary. There is no PR comment bot.
 ```bash
 cd ~/react-web-server
 git pull --ff-only
+bash scripts/install-gh.sh
+export PATH="$HOME/.local/bin:$PATH"
+gh auth login --hostname github.com --git-protocol https --web
 bash scripts/setup-github-deploy.sh
 ```
 
-This generates a new, dedicated Ed25519 key without printing its private contents, installs the forced-command receiver on Ubuntu, and creates a `cloudmargin-deploy` account. The account has no sudo grant. Its SSH key disables forwarding, PTY, and arbitrary commands. The account owns the static web root so it can deploy files without privileged shell access. Your original Ubuntu administrator key stays separate.
+This generates a new, dedicated RSA 4096 key (compatible with Cloud Shell FIPS mode) without printing its private contents, installs the forced-command receiver on Ubuntu, and creates a `cloudmargin-deploy` account. The account has no sudo grant. Its SSH key disables forwarding, PTY, and arbitrary commands. The account owns the static web root so it can deploy files without privileged shell access. Your original Ubuntu administrator key stays separate.
 
 The receiver accepts only `deploy production`, `deploy pr-N`, and `remove pr-N`. It rejects traversal, symlinks, special archive files, unexpected root paths, and excessive payload sizes. It backs up the previous production entry point (last 10), preserves existing hashed assets, and replaces the HTML entry point atomically. Preview files are public, share the website origin, and are for trusted demo changes only; they are not isolated customer environments. Do not use them for secrets or real customer data. Deleting preview files does not clear browser-local demo preferences.
 
@@ -39,7 +42,7 @@ gh auth login --hostname github.com --git-protocol https --web
 bash scripts/setup-github-deploy.sh
 ```
 
-If `gh` is unavailable, install the official GitHub CLI using <https://cli.github.com/manual/installation>, then run the commands above. Alternatively, use Cloud Shell's file-download menu to download `~/react-server-setup/github-actions-key` and `~/react-server-setup/github-known-hosts`, and add their contents directly in **Repository Settings → Secrets and variables → Actions → Secrets**. Set `DEPLOY_HOST` under **Variables**. Never paste private keys into chat, commit them, or put them in a repository variable. Treat downloaded private-key copies as credentials.
+If `gh` is unavailable, run `bash scripts/install-gh.sh` and `export PATH="$HOME/.local/bin:$PATH"`. The installer downloads the official Linux release for the Cloud Shell architecture and verifies its SHA-256 checksum before installing it to `~/.local/bin/gh`, without sudo. Then authenticate as above. Alternatively, use Cloud Shell's file-download menu to download `~/react-server-setup/github-actions-key` and `~/react-server-setup/github-known-hosts`, and add their contents directly in **Repository Settings → Secrets and variables → Actions → Secrets**. Set `DEPLOY_HOST` under **Variables**. Never paste private keys into chat, commit them, or put them in a repository variable. Treat downloaded private-key copies as credentials.
 
 Once configured, the CLI path is:
 
@@ -67,3 +70,7 @@ The bootstrap script and receiver need to be installed on the VM before CI can c
 ## Validation
 
 Receiver tests verify command restrictions, traversal/link rejection, preview isolation from the production entry point, cleanup, and production entry-point backup. YAML and shell syntax are validated locally. Live Actions/SSH execution requires the one-time setup in your authenticated Cloud Shell.
+
+### FIPS compatibility
+
+The setup uses RSA 4096 for the dedicated client key and pins the server RSA host public key, retrieved over the existing trusted administrator SSH session. It does not enable deprecated SHA-1 `ssh-rsa` signatures or disable FIPS. Existing private keys are preserved; an existing incompatible key must be handled explicitly rather than silently rotated.
