@@ -24,7 +24,7 @@ EXPECTED=$(awk -v filename="$ARCHIVE" '$2 == filename {print $1}' "$TEMP_DIR/$CH
 [[ "$EXPECTED" =~ ^[a-f0-9]{64}$ ]] || { echo 'Missing/invalid published checksum' >&2; exit 1; }
 (cd "$TEMP_DIR"; printf '%s  %s\n' "$EXPECTED" "$ARCHIVE" | sha256sum -c -)
 MEMBER="gh_${VERSION}_linux_${ARCH}/bin/gh"
-tar -xzf "$TEMP_DIR/$ARCHIVE" -C "$TEMP_DIR" "$MEMBER"
+tar --no-same-owner -xzf "$TEMP_DIR/$ARCHIVE" -C "$TEMP_DIR" "$MEMBER"
 install -d "$HOME/.local/bin"
 install -m 755 "$TEMP_DIR/$MEMBER" "$HOME/.local/bin/gh"
 "$HOME/.local/bin/gh" --version
