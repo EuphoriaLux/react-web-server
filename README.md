@@ -1,66 +1,88 @@
-# React Web Server
+# CloudMargin — Azure-first FinOps
 
-A React website project hosted on an Oracle Cloud Infrastructure ARM64 Ubuntu server.
+A React website for exploring cloud costs and optimization opportunities. The first release focuses on Azure, with AWS, Google Cloud, and OCI reserved for later connectors.
 
-## Project status
+**This is a frontend demo.** All cost/resource/recommendation data is synthetic. No Microsoft authorization, customer authentication, backend database, tenant isolation, or billing imports are implemented. Do not enter confidential information. HTTPS must be configured before real customer onboarding.
 
-The server and Nginx have been configured successfully. This repository currently contains infrastructure automation; the React application and HTTPS configuration are the next stages.
+## Website features
 
-## Infrastructure target
+- Overview with spend metrics, daily chart, service breakdown, and estimated opportunities.
+- Cost explorer with service search, subscription/date filters, grouping, and CSV export.
+- Optimization recommendations with details, dismiss, and review states.
+- Cloud account cards and an Azure onboarding walkthrough that does not collect credentials.
+- Three-step demo workspace onboarding and browser-local preferences.
+- Editable demo budget and responsive desktop/mobile navigation.
+
+Only workspace name, budget, and recommendation states persist in browser localStorage. There is no actual signup or shared customer workspace. Switching the demo name does not create an isolated tenant.
+
+## Local development
+
+Requires Node 22.12+ (Node 22 recommended) and npm.
+
+```bash
+npm ci
+npm run dev
+```
+
+```bash
+npm test
+npm run build
+npm run preview
+```
+
+The build produces `dist/`, served as static files by Nginx. No Node process is needed to serve the built website.
+
+## Deploy to the existing Oracle server
+
+Run in authenticated **OCI Cloud Shell**, not in an SSH session on Ubuntu. Use `exit` first if your prompt is `ubuntu@react-web-server`.
+
+```bash
+git clone https://github.com/EuphoriaLux/react-web-server.git
+cd react-web-server
+bash scripts/deploy.sh
+```
+
+If already cloned:
+
+```bash
+cd ~/react-web-server
+git pull --ff-only
+bash scripts/deploy.sh
+```
+
+The deployment script reads the IP and original key from `~/react-server-setup`, connects to Ubuntu, installs user-local Node 22 using the official NVM project (installer checkout pinned to `v0.40.8`), clones this public repository, installs locked dependencies, runs tests, builds, backs up the previous site, and copies the output to Nginx. It keeps old fingerprinted assets for open browser sessions and replaces `index.html` atomically. The deployment checkout must have no local changes. Backups accumulate under `/var/backups/cloudmargin`; manage retention as the project grows.
+
+It then verifies the CloudMargin entry point locally and externally. Deployment requires outbound GitHub/npm/Node downloads from the VM. No credentials are stored in Git, and the private SSH key is never printed.
+
+## Infrastructure provisioning
+
+`create-react-server.sh` targets:
 
 | Setting | Value |
 | --- | --- |
 | Region | Frankfurt (`eu-frankfurt-1`), tenancy home region |
 | Instance | `react-web-server` |
 | Shape | `VM.Standard.A1.Flex`, ARM64 |
-| Resources | 1 OCPU, 6 GB RAM, 50 GB boot volume |
-| OS | Canonical Ubuntu 24.04 LTS |
-| Availability | Prefer AD-1; try AD-2/AD-3 only on host-capacity errors |
-| Web server | Ubuntu-packaged Nginx |
+| Resources | 1 OCPU, 6 GB RAM, 50 GB boot disk |
+| Image | Canonical Ubuntu 24.04 ARM64 |
+| Availability | Prefer AD-1; capacity fallback to AD-2/AD-3 |
 | Web root | `/var/www/html` |
 | Inbound TCP | 22, 80, 443 |
 
-Free eligibility depends on total tenancy usage and Oracle's current allowances. Before a new launch, the script audits active compartments in the home region against a conservative allowance of 2 A1 OCPUs, 12 GB RAM, and 200 GB block storage. It stops if an inventory request fails. It does not upgrade the account or choose a paid substitute shape.
-
-This is an HTTP hosting baseline. TLS, domain configuration, application deployment, backups, and monitoring remain separate work.
-
-## Run from authenticated OCI Cloud Shell
-
-Provisioning runs in **Cloud Shell**, not inside an SSH session on the Ubuntu server. If the prompt says `ubuntu@react-web-server`, use `exit` first.
+Run provisioning from authenticated Cloud Shell:
 
 ```bash
-git clone https://github.com/EuphoriaLux/react-web-server.git
-cd react-web-server
 install -m 700 create-react-server.sh "$HOME/create-react-server.sh"
 bash "$HOME/create-react-server.sh"
 ```
 
-For later updates:
+The script detects tenancy context, discovers images, reconciles networking, reuses an existing named VM, configures Nginx and the OCI Ubuntu host firewall, and checks HTTP. State is written atomically, older field names are migrated, and a local lock prevents overlapping runs. Ambiguous resources or existing hardware/image mismatches stop execution rather than replacing a server. The first SSH connection records its host key; mismatches remain blocked.
 
-```bash
-cd ~/react-web-server
-git pull --ff-only
-install -m 700 create-react-server.sh "$HOME/create-react-server.sh"
-bash "$HOME/create-react-server.sh"
-```
+Existing web content is preserved by provisioning. It manages the project route/security rules and default Nginx site, backing up the original default configuration once. The Nginx configuration supports React client-side route fallback.
 
-Dependencies: authenticated OCI CLI, Bash, jq, Python 3, SSH, curl, and flock. The tenancy context is detected from environment variables, OCI config, or availability-domain metadata. Export `OCI_TENANCY` if automatic detection fails. Permissions are needed to inventory compartments and manage this project's compute/network/storage resources.
+Before a **new** launch, all discoverable active compartments in the home region are audited against 2 A1 OCPUs, 12 GB RAM, and 200 GB block storage. Inventory failures stop execution. Free eligibility still depends on the whole account, Oracle's current terms, and resource availability; this is not a billing guarantee. This is a small HTTP hosting baseline, not a high-availability production deployment.
 
-## What the script does
-
-1. Detects tenancy context, verifies the home region, and discovers compatible Ubuntu 24.04 ARM64 images.
-2. Reconciles the project VCN, internet gateway, routes, security list, and public subnet.
-3. Reuses the existing named server or launches the requested shape with AD fallback.
-4. Connects by SSH, waits for cloud-init, and installs Nginx and persistent firewall tooling.
-5. Places HTTP/HTTPS ACCEPT rules before Oracle Ubuntu's default host-firewall REJECT rules.
-6. Configures the default Nginx site for `/var/www/html`, including React client-route fallback.
-7. Requires HTTP 200 locally and from Cloud Shell before printing the final report.
-
-Existing site content is preserved. The project's route/security configuration and default Nginx site are managed by the script. The original default Nginx site is backed up once. Existing image/hardware/subnet mismatches stop execution rather than replacing the VM.
-
-## State and SSH keys
-
-These files stay outside the Git checkout:
+## Private Cloud Shell files
 
 ```text
 ~/create-react-server.sh
@@ -70,39 +92,30 @@ These files stay outside the Git checkout:
 ~/react-server-setup/server-information.txt
 ```
 
-The setup directory uses mode `700`, and the private key uses mode `600`. The script never prints private-key contents. Keep a secure backup of the original private key. An existing server without its original local key causes a stop.
-
-State is written atomically after resource discovery/creation. An exclusive local lock prevents concurrent runs. Older state names are migrated. Name reconciliation helps resume interrupted runs; ambiguous names or mismatched resources stop execution. Following an ambiguous API timeout, inspect pending operations before rerunning.
-
-## Connect and inspect
-
-Use the public IP from the generated report:
+Directory mode: `700`. Private-key mode: `600`. Keep a secure key backup. Existing servers require the original key; missing keys are not silently replaced.
 
 ```bash
 ssh -i "$HOME/react-server-setup/server-key" ubuntu@YOUR_PUBLIC_IP
-```
-
-The first SSH connection records the host key with `StrictHostKeyChecking=accept-new`; changed host keys remain blocked.
-
-Read the report in Cloud Shell:
-
-```bash
 cat ~/react-server-setup/server-information.txt
 ```
 
-Port 443 is allowed, but HTTPS is not configured yet. The script installs the supported Ubuntu Nginx package and reports its actual version rather than pinning an old security patch.
+Do not commit keys, OCI credentials, generated state/reports, or `.env` secrets. `.gitignore` does not protect already-tracked files or erase Git history. Frontend bundles are public; future provider credentials must stay in a protected backend.
 
-## Validation and troubleshooting
+## Demo-data assumptions
 
-Bash syntax and two mocked existing-server reruns passed without create/launch calls. The owner also ran the existing-server path successfully in authenticated Cloud Shell, including external HTTP verification. Fresh provisioning and capacity fallback have not been independently integration-tested.
+The model uses a fixed synthetic September 2026 dataset and EUR. Subscription allocation is 65% Production, 23% Development, and 12% Shared services. The seven-day view prorates monthly rows by 7/30; it is illustrative, not a real daily billing history. Chart weights are synthetic and reconcile with filtered totals. The prior-period comparison assumes an illustrative 8.3% reduction; the next-month forecast assumes a 7% uplift on normalized monthly spend. Savings are hypothetical monthly estimates, may overlap, and are not realized savings. Budget usage is normalized to a month for partial periods.
 
-- **Capacity exhausted:** each AD is tried once. Network progress remains saved; retry later.
-- **SSH timeout:** check the key, public IP, firewall, and Cloud Shell public-network access.
-- **Stopped instance:** start it explicitly, then rerun.
-- **Instance status wait:** bounded polling is used; `instance get --wait-for-state` is not supported.
+## Validation
 
-## Repository security
+- Four Node tests cover subscription reconciliation, period/search filtering, grouped/chart totals, and CSV escaping.
+- Production Vite build completed successfully.
+- Provisioning previously passed two mocked reruns, then the owner verified its existing-server path and HTTP checks in Cloud Shell.
+- Browser QA, fresh-provisioning fallback, and the new deployment script have not been live-tested in this environment.
 
-Commit source code and reusable automation only. Keep private SSH keys, OCI credentials, `.env` secrets, state files, and generated server reports out of Git. Documentation uses placeholders for account-specific addresses and identifiers.
+## Next milestones
 
-`.gitignore` excludes common sensitive artifacts but does not remove tracked secrets or Git history. Any secret accidentally committed must be revoked or rotated. React browser bundles are public: never embed server-side credentials in frontend configuration.
+1. Review the website UX and branding.
+2. Configure a domain and HTTPS.
+3. Add real authentication, server-side tenant isolation, database, and audit logging.
+4. Implement Azure authorization, validated scope selection, read-only ingestion, and import status.
+5. Add other providers behind a shared connector/data model.
