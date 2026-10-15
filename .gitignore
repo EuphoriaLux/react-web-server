@@ -27,3 +27,9 @@ server-information.txt
 .DS_Store
 .vscode/
 .idea/
+
+# Dedicated Actions deployment keys and Python caches
+github-actions-key*
+github-known-hosts
+__pycache__/
+*.pyc

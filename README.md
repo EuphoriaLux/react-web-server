@@ -119,3 +119,7 @@ The model uses a fixed synthetic September 2026 dataset and EUR. Subscription al
 3. Add real authentication, server-side tenant isolation, database, and audit logging.
 4. Implement Azure authorization, validated scope selection, read-only ingestion, and import status.
 5. Add other providers behind a shared connector/data model.
+
+## Automatic deployments with GitHub Actions
+
+PR previews and production deployments are configured in `.github/workflows/deploy.yml`. Complete the one-time dedicated SSH account/secret setup in [the Actions guide](docs/github-actions.md). Same-repository non-draft PRs get preview paths, fork PRs only run checks, and merges to `main` publish production. No OCI API key is needed.

@@ -1,0 +1,113 @@
+name: Test and deploy CloudMargin
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, closed]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cloudmargin-${{ github.event.pull_request.number || 'production' }}
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: python3 scripts/test-receiver.py
+      - name: Build production or PR preview
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -n "$PR_NUMBER" ]; then
+            npm run build -- --base="/previews/pr-$PR_NUMBER/"
+          else
+            npm run build
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: website
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+  deploy:
+    needs: build
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: website
+          path: dist
+      - name: Deploy built static files
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?Set DEPLOY_SSH_KEY in GitHub Actions secrets}"
+          : "${KNOWN_HOSTS:?Set DEPLOY_KNOWN_HOSTS in GitHub Actions secrets}"
+          : "${DEPLOY_HOST:?Set DEPLOY_HOST in GitHub Actions variables}"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          install -d -m 700 ~/.ssh
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          TARGET=production
+          URL="http://$DEPLOY_HOST/"
+          if [ -n "$PR_NUMBER" ]; then
+            [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+            TARGET="pr-$PR_NUMBER"
+            URL="http://$DEPLOY_HOST/previews/$TARGET/"
+          fi
+          tar -czf site.tgz -C dist index.html assets
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "cloudmargin-deploy@$DEPLOY_HOST" "deploy $TARGET" < site.tgz
+          curl --fail --silent --show-error --retry 3 --max-time 20 "$URL" | grep -q CloudMargin
+          printf '### Deployment successful\n\n[%s](%s)\n' "$URL" "$URL" >> "$GITHUB_STEP_SUMMARY"
+  cleanup:
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Remove closed PR preview
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?Missing DEPLOY_SSH_KEY}"
+          : "${KNOWN_HOSTS:?Missing DEPLOY_KNOWN_HOSTS}"
+          : "${DEPLOY_HOST:?Missing DEPLOY_HOST}"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ && "$PR_NUMBER" =~ ^[0-9]+$ ]]
+          install -d -m 700 ~/.ssh
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "cloudmargin-deploy@$DEPLOY_HOST" "remove pr-$PR_NUMBER"
