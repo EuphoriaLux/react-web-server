@@ -14,6 +14,10 @@ import {
   Menu,
   X,
   Sparkles,
+  AlertCircle,
+  Receipt,
+  MessageCircleWarning,
+  Files,
 } from 'lucide-react'
 import './style.css'
 
@@ -41,17 +45,33 @@ const features = [
 ]
 
 const friction = [
-  'Missed handovers and last-minute schedule changes',
-  'Disputes over expenses and who paid last',
-  'Messages that turn into arguments',
-  'Important papers scattered across emails and folders',
+  {
+    icon: Clock,
+    title: 'Missed handovers',
+    text: 'Last-minute schedule changes and unclear pickup times create stress for everyone.',
+  },
+  {
+    icon: Receipt,
+    title: 'Expense disputes',
+    text: 'Who paid for school trip, clothes, activities? The spreadsheet never stays current.',
+  },
+  {
+    icon: MessageCircleWarning,
+    title: 'Messages that escalate',
+    text: 'Ordinary logistics turn emotional in chat threads with no structure or history.',
+  },
+  {
+    icon: Files,
+    title: 'Scattered papers',
+    text: 'Agreements, medical notes and school forms live in inboxes, drives and drawers.',
+  },
 ]
 
 const steps = [
   {
     n: '01',
     title: 'Invite the other parent',
-    text: 'Create a shared space. Both of you keep full visibility and control.',
+    text: 'Create a shared space. Both of you keep full visibility and equal control.',
   },
   {
     n: '02',
@@ -61,7 +81,7 @@ const steps = [
   {
     n: '03',
     title: 'Run the logistics together',
-    text: 'Decide faster, argue less, and keep the child at the centre.',
+    text: 'Decide faster, argue less, and keep the child at the centre of every plan.',
   },
 ]
 
@@ -70,7 +90,7 @@ function App() {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
+    const onScroll = () => setScrolled(window.scrollY > 16)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -90,7 +110,7 @@ function App() {
         <div className="nav-inner">
           <a className="logo" href="#top" onClick={closeMenu}>
             <span className="logo-mark">
-              <Heart size={18} strokeWidth={2.2} />
+              <Heart size={16} strokeWidth={2.4} />
             </span>
             CoParents
           </a>
@@ -142,17 +162,20 @@ function App() {
       <main id="top">
         {/* HERO */}
         <section className="hero">
-          <div className="hero-bg" aria-hidden="true" />
+          <div className="hero-bg" aria-hidden="true">
+            <div className="orb orb-a" />
+            <div className="orb orb-b" />
+            <div className="grid-fade" />
+          </div>
           <div className="container hero-grid">
             <div className="hero-copy">
               <div className="eyebrow">
-                <Sparkles size={14} />
+                <Sparkles size={13} />
                 Built for parents who still share a child
               </div>
               <h1>
                 Co-parenting
-                <br />
-                without the chaos
+                <span className="h1-line">without the chaos</span>
               </h1>
               <p className="lead">
                 One calm, shared space for schedules, expenses, messages and documents.
@@ -184,51 +207,68 @@ function App() {
             </div>
 
             <div className="hero-visual" aria-hidden="true">
-              <div className="card stack-card">
-                <div className="card-head">
-                  <CalendarDays size={18} />
-                  <span>This week</span>
+              <div className="mock-shell">
+                <div className="mock-topbar">
+                  <span className="mock-dots">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                  <span className="mock-title">Family space</span>
                 </div>
-                <div className="event">
-                  <span className="dot teal" />
-                  <div>
-                    <strong>School pickup</strong>
-                    <small>Thu · 15:30 · Parent A</small>
+                <div className="mock-body">
+                  <div className="card stack-card">
+                    <div className="card-head">
+                      <CalendarDays size={16} />
+                      <span>This week</span>
+                      <span className="pill">Synced</span>
+                    </div>
+                    <div className="event">
+                      <span className="dot teal" />
+                      <div>
+                        <strong>School pickup</strong>
+                        <small>Thu · 15:30 · Parent A</small>
+                      </div>
+                    </div>
+                    <div className="event">
+                      <span className="dot amber" />
+                      <div>
+                        <strong>Handover</strong>
+                        <small>Fri · 18:00 · Parent B</small>
+                      </div>
+                    </div>
+                    <div className="event">
+                      <span className="dot blue" />
+                      <div>
+                        <strong>Doctor appointment</strong>
+                        <small>Mon · 10:15 · Both notified</small>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="event">
-                  <span className="dot amber" />
-                  <div>
-                    <strong>Handover</strong>
-                    <small>Fri · 18:00 · Parent B</small>
-                  </div>
-                </div>
-                <div className="event">
-                  <span className="dot blue" />
-                  <div>
-                    <strong>Doctor appointment</strong>
-                    <small>Mon · 10:15 · Both notified</small>
+
+                  <div className="card expense-card">
+                    <div className="card-head">
+                      <Wallet size={16} />
+                      <span>Shared expenses</span>
+                    </div>
+                    <div className="expense-row">
+                      <span>School trip</span>
+                      <strong>€84.00</strong>
+                    </div>
+                    <div className="expense-row">
+                      <span>Swimming lessons</span>
+                      <strong>€45.00</strong>
+                    </div>
+                    <div className="expense-balance">
+                      <span>Balance this month</span>
+                      <strong className="balanced">Settled</strong>
+                    </div>
                   </div>
                 </div>
               </div>
-
-              <div className="card expense-card">
-                <div className="card-head">
-                  <Wallet size={18} />
-                  <span>Shared expenses</span>
-                </div>
-                <div className="expense-row">
-                  <span>School trip</span>
-                  <strong>€84.00</strong>
-                </div>
-                <div className="expense-row">
-                  <span>Swimming lessons</span>
-                  <strong>€45.00</strong>
-                </div>
-                <div className="expense-balance">
-                  <span>Balance this month</span>
-                  <strong className="balanced">Settled</strong>
-                </div>
+              <div className="float-badge">
+                <Check size={14} />
+                Both parents aligned
               </div>
             </div>
           </div>
@@ -236,34 +276,43 @@ function App() {
 
         {/* PROBLEM */}
         <section className="section problem" id="problem">
-          <div className="container narrow">
-            <div className="section-label">The friction</div>
-            <h2>Separation is hard enough.
-              <br />
-              Logistics shouldn’t make it worse.</h2>
-            <p className="section-lead">
-              When two households raise the same child, small gaps in information
-              quickly become conflict. CoParents is designed to close those gaps.
-            </p>
-            <ul className="friction-list">
-              {friction.map((item) => (
-                <li key={item}>
-                  <span className="friction-x">×</span>
-                  {item}
-                </li>
+          <div className="container">
+            <div className="problem-head">
+              <div className="section-label">The friction</div>
+              <h2>
+                Separation is hard enough.
+                <br />
+                Logistics shouldn’t make it worse.
+              </h2>
+              <p className="section-lead">
+                When two households raise the same child, small gaps in information
+                quickly become conflict. CoParents is designed to close those gaps.
+              </p>
+            </div>
+            <div className="friction-grid">
+              {friction.map(({ icon: Icon, title, text }) => (
+                <article className="friction-card" key={title}>
+                  <div className="friction-icon">
+                    <Icon size={20} strokeWidth={1.8} />
+                  </div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </article>
               ))}
-            </ul>
+            </div>
           </div>
         </section>
 
         {/* SOLUTION */}
         <section className="section solution" id="solution">
           <div className="container">
-            <div className="section-header">
+            <div className="section-header center">
               <div className="section-label">The space</div>
-              <h2>Everything you both need,
+              <h2>
+                Everything you both need,
                 <br />
-                in one shared place</h2>
+                in one shared place
+              </h2>
               <p className="section-lead">
                 Not another chat thread. Not another spreadsheet.
                 A focused toolkit that keeps decisions calm and visible.
@@ -271,10 +320,13 @@ function App() {
             </div>
 
             <div className="feature-grid">
-              {features.map(({ icon: Icon, title, text }) => (
+              {features.map(({ icon: Icon, title, text }, i) => (
                 <article className="feature" key={title}>
-                  <div className="feature-icon">
-                    <Icon size={22} strokeWidth={1.8} />
+                  <div className="feature-top">
+                    <div className="feature-icon">
+                      <Icon size={22} strokeWidth={1.75} />
+                    </div>
+                    <span className="feature-n">0{i + 1}</span>
                   </div>
                   <h3>{title}</h3>
                   <p>{text}</p>
@@ -287,7 +339,7 @@ function App() {
         {/* HOW IT WORKS */}
         <section className="section how" id="how">
           <div className="container">
-            <div className="section-header">
+            <div className="section-header center">
               <div className="section-label">Getting started</div>
               <h2>Simple by design</h2>
               <p className="section-lead">
@@ -296,9 +348,12 @@ function App() {
             </div>
 
             <div className="steps">
-              {steps.map((s) => (
+              {steps.map((s, i) => (
                 <article className="step" key={s.n}>
-                  <span className="step-n">{s.n}</span>
+                  <div className="step-rail">
+                    <span className="step-n">{s.n}</span>
+                    {i < steps.length - 1 && <span className="step-line" />}
+                  </div>
                   <h3>{s.title}</h3>
                   <p>{s.text}</p>
                 </article>
@@ -309,30 +364,42 @@ function App() {
 
         {/* VALUES */}
         <section className="section values">
-          <div className="container values-grid">
-            <div>
+          <div className="container values-panel">
+            <div className="values-copy">
               <div className="section-label">Principles</div>
-              <h2>Built around the child,
+              <h2>
+                Built around the child,
                 <br />
-                not the conflict</h2>
+                not the conflict
+              </h2>
+              <p>
+                CoParents is intentionally calm. Structure reduces emotional load
+                so conversations stay practical and fair.
+              </p>
             </div>
             <ul className="value-list">
               <li>
-                <Check size={18} />
+                <span className="value-check">
+                  <Check size={16} />
+                </span>
                 <div>
                   <strong>Equal access</strong>
                   <span>Both parents see the same information. No one is locked out.</span>
                 </div>
               </li>
               <li>
-                <Check size={18} />
+                <span className="value-check">
+                  <Check size={16} />
+                </span>
                 <div>
                   <strong>Calm by default</strong>
                   <span>Structure reduces emotional load so conversations stay practical.</span>
                 </div>
               </li>
               <li>
-                <Check size={18} />
+                <span className="value-check">
+                  <Check size={16} />
+                </span>
                 <div>
                   <strong>Privacy first</strong>
                   <span>Your family data stays private. Designed for real life, not surveillance.</span>
@@ -344,17 +411,20 @@ function App() {
 
         {/* FINAL CTA */}
         <section className="section cta">
-          <div className="container cta-box">
-            <h2>Ready to lower the temperature?</h2>
-            <p>
-              Create a shared space that keeps logistics clear and the focus
-              where it belongs — on your child.
-            </p>
-            <button className="btn primary large" type="button">
-              Get early access
-              <ArrowRight size={18} />
-            </button>
-            <p className="cta-note">No credit card. Private beta starting soon.</p>
+          <div className="container">
+            <div className="cta-box">
+              <div className="cta-glow" aria-hidden="true" />
+              <h2>Ready to lower the temperature?</h2>
+              <p>
+                Create a shared space that keeps logistics clear and the focus
+                where it belongs — on your child.
+              </p>
+              <button className="btn primary large light" type="button">
+                Get early access
+                <ArrowRight size={18} />
+              </button>
+              <p className="cta-note">No credit card. Private beta starting soon.</p>
+            </div>
           </div>
         </section>
       </main>
@@ -363,7 +433,7 @@ function App() {
         <div className="container footer-inner">
           <div className="footer-brand">
             <span className="logo-mark small">
-              <Heart size={14} strokeWidth={2.2} />
+              <Heart size={13} strokeWidth={2.4} />
             </span>
             CoParents
           </div>
