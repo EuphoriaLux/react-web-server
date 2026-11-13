@@ -696,3 +696,8 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .deploy-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .deploy-item { display: flex; gap: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 10px; font-size: 0.88rem; }
 .deploy-ts { font-weight: 700; color: var(--muted); min-width: 140px; }
+
+.cal-cell.day.dim { opacity: 0.35; }
+.cal-cell.day.ask-picked { outline: 2px solid #0f2744; outline-offset: -2px; }
+.ask-switch, .ask-days { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.fiscal-card textarea, .fiscal-banner textarea { width: 100%; min-height: 72px; margin-top: 6px; }

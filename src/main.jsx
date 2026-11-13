@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react'
-import { Activity,  createRoot } from 'react-dom/client'
-import { Activity, 
-  ArrowRight, Check, Shield, Heart, Clock, Users, Menu, X, Sparkles,
+import { createRoot } from 'react-dom/client'
+import {
+  Activity, ArrowRight, Check, Shield, Heart, Clock, Users, Menu, X, Sparkles,
   Info, HelpCircle, Calendar, Wallet, MessageSquare, FileText, Plus,
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
 } from 'lucide-react'
 import './style.css'
+import { Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -1123,15 +1124,17 @@ function DeployLog() {
 
 function AppShell({ onExit }) {
   const { tr } = useLang()
-  const [tab, setTab] = useState('calendar')
+  const [tab, setTab] = useState('today')
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="app-brand"><Heart size={18} /> {tr.appTitle}</div>
         <nav className="app-tabs">
+          <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}><Heart size={16} /> Today</button>
           <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}><Calendar size={16} /> {tr.tabCal}</button>
           <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><Wallet size={16} /> {tr.tabExp}</button>
           <button className={tab === 'messages' ? 'active' : ''} onClick={() => setTab('messages')}><MessageSquare size={16} /> {tr.tabMsg}</button>
+          <button className={tab === 'resolve' ? 'active' : ''} onClick={() => setTab('resolve')}><Check size={16} /> Resolve</button>
           <button className={tab === 'docs' ? 'active' : ''} onClick={() => setTab('docs')}><FileText size={16} /> {tr.tabDoc}</button>
           <button className={tab === 'deploy' ? 'active' : ''} onClick={() => setTab('deploy')}><Activity size={16} /> {tr.tabDeploy || 'Deploy'}</button>
         </nav>
@@ -1139,10 +1142,12 @@ function AppShell({ onExit }) {
         <button className="btn ghost" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
       </header>
       <main className="app-main">
+        {tab === 'today' && <TodayBoard />}
         {tab === 'calendar' && <CalendarView />}
         {tab === 'expenses' && <ExpensesView />}
-        {tab === 'messages' && <Placeholder title={tr.msgTitle} text={tr.msgText} />}
-        {tab === 'docs' && <Placeholder title={tr.docTitle} text={tr.docText} />}
+        {tab === 'messages' && <Threads />}
+        {tab === 'resolve' && <ResolveBoard />}
+        {tab === 'docs' && <Papers />}
         {tab === 'deploy' && <DeployLog />}
       </main>
     </div>
@@ -1336,4 +1341,4 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LangProvider><App /></LangProvider>
   </React.StrictMode>
-)\n    tabDeploy: 'Deploy',\n    deployLead: 'Lokal Notizen iwwer Deployments. Déi richteg Logs sinn an GitHub Actions.',\n    deployNote: 'Notiz dobäisetzen',\n    noLogs: 'Nach keng Notizen.',\n    tabDeploy: 'Deploy',\n    deployLead: 'Lokale Notizen zu Deployments. Die echten Logs sind in GitHub Actions.',\n    deployNote: 'Notiz hinzufügen',\n    noLogs: 'Noch keine Notizen.',\n    tabDeploy: 'Déploiement',\n    deployLead: 'Notes locales sur les déploiements. Les vrais logs sont dans GitHub Actions.',\n    deployNote: 'Ajouter une note',\n    noLogs: 'Aucune note pour le moment.',\n    tabDeploy: 'Deploy',\n    deployLead: 'Local notes about deployments and checks. Real pipeline logs are in GitHub Actions.',\n    deployNote: 'Add a deploy note',\n    noLogs: 'No local deploy notes yet.',
+)
