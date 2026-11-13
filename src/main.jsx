@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import './style.css'
 import { Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
+import { ShareBar } from './sync.jsx'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -1142,6 +1143,7 @@ function AppShell({ onExit }) {
         <button className="btn ghost" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
       </header>
       <main className="app-main">
+        <ShareBar />
         {tab === 'today' && <TodayBoard />}
         {tab === 'calendar' && <CalendarView />}
         {tab === 'expenses' && <ExpensesView />}
