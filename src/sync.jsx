@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses',
-  'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers', 'cp-rules',
+  'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers', 'cp-rules', 'cp-profile',
 ]
 const TOKEN_KEY = 'cp-token'
 const CODE_KEY = 'cp-code'
@@ -170,7 +170,7 @@ export function ShareBar() {
     <div className="share-bar on">
       <div>
         <strong>Shared plan {code}</strong>
-        <p>You are {role === 'A' ? 'Alex' : 'Sam'}. The other parent joins with this code.</p>
+        <p>You are {role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam')}. The other parent joins with this code.</p>
       </div>
       <button className="btn ghost sm" type="button" onClick={copy}>Copy code</button>
       <button className="btn ghost sm" type="button" onClick={leave}>Leave on this phone</button>

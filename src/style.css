@@ -847,7 +847,16 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 }
 .biff textarea { min-height: 72px; }
 .biff-urgent { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 0.95rem; color: var(--ink); }
-.expense-block { margin-bottom: 12px; }
+.today-home h2 { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.05; margin-bottom: 16px; }
+.today-card {
+  background: #f8fafc;
+  border-radius: 18px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.today-card span { display: block; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.today-card strong { display: block; font-family: var(--display); font-size: 1.35rem; margin-top: 2px; }
+.today-card p { margin: 4px 0 0; color: var(--ink-soft); }
 .expense-block .note-thread { margin-top: 8px; }
 
 /* ─── Polished app chrome ─── */

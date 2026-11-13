@@ -12,6 +12,11 @@ function load(key, fallback) {
 function save(key, value) {
   localStorage.setItem(key, JSON.stringify(value))
 }
+const DEFAULT_PROFILE = { nameA: 'Alex', nameB: 'Sam', child: 'Noa' }
+export function names() {
+  const profile = load('cp-profile', DEFAULT_PROFILE)
+  return { A: profile.nameA || 'Alex', B: profile.nameB || 'Sam', child: profile.child || 'Noa' }
+}
 function isoDate(date) {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -25,7 +30,7 @@ const COPY = {
     handTitle: 'Handover', handKicker: 'The next change', handEmpty: 'No handover in the next six weeks. Paint the calendar so you both know the next change.',
     from: 'From', to: 'To', time: 'Time', place: 'Place', bring: 'Bring',
     addItem: 'Add an item', confirm: 'I will be there', confirmed: 'Confirmed',
-    waitingFor: 'Waiting for', bothReady: 'Both confirmed. Noa is expected.',
+    waitingFor: 'Waiting for', bothReady: 'Both confirmed. {child} is expected.',
     youAre: 'You are', schoolGate: 'School gate',
     bag: 'School bag', coat: 'Coat', medicine: 'Medicine', sport: 'Sports kit', comfort: 'Comfort item',
     ask: 'Ask for a day', need: 'Day you need', offer: 'Day you can offer',
@@ -62,6 +67,7 @@ const COPY = {
     heatTitle: 'This note sounds hot', heatLead: 'A calmer version is below. Edit it, or send the original if you still mean it.',
     calmer: 'Calmer version', sendCalm: 'Send the calmer note', sendAnyway: 'Send as written',
     papers: 'Papers', papersLead: 'Agreements and notes both of you can find.', emptyPapers: 'No papers yet.',
+    names: 'Names', done: 'Done', parentA: 'Parent A', parentB: 'Parent B', child: 'Child',
   },
   fr: {
     today: 'Aujourd’hui', resolve: 'Apaiser', with: 'est avec', open: 'Aujourd’hui n’est pas encore prévu',
@@ -69,7 +75,7 @@ const COPY = {
     handTitle: 'Passage', handKicker: 'Le prochain changement', handEmpty: 'Aucun passage dans les six semaines. Colorez le calendrier pour que vous sachiez tous les deux.',
     from: 'De', to: 'Vers', time: 'Heure', place: 'Lieu', bring: 'À emporter',
     addItem: 'Ajouter', confirm: 'Je serai là', confirmed: 'Confirmé',
-    waitingFor: 'En attente de', bothReady: 'Vous avez confirmé. Noa est attendu.',
+    waitingFor: 'En attente de', bothReady: 'Vous avez confirmé. {child} est attendu.',
     youAre: 'Vous êtes', schoolGate: 'Portail de l’école',
     bag: 'Cartable', coat: 'Manteau', medicine: 'Médicament', sport: 'Tenue de sport', comfort: 'Doudou',
     ask: 'Demander un jour', need: 'Jour dont vous avez besoin', offer: 'Jour que vous pouvez offrir',
@@ -106,6 +112,7 @@ const COPY = {
     heatTitle: 'Ce message sonne dur', heatLead: 'Une version plus calme est ci-dessous.',
     calmer: 'Version plus calme', sendCalm: 'Envoyer la version calme', sendAnyway: 'Envoyer tel quel',
     papers: 'Papiers', papersLead: 'Accords et notes pour vous deux.', emptyPapers: 'Aucun document.',
+    names: 'Noms', done: 'Terminé', parentA: 'Parent A', parentB: 'Parent B', child: 'Enfant',
   },
   de: {
     today: 'Heute', resolve: 'Klären', with: 'ist bei', open: 'Heute ist noch nicht geplant',
@@ -113,7 +120,7 @@ const COPY = {
     handTitle: 'Übergabe', handKicker: 'Der nächste Wechsel', handEmpty: 'Keine Übergabe in den nächsten sechs Wochen. Malt den Kalender, damit ihr beide den nächsten Wechsel kennt.',
     from: 'Von', to: 'Zu', time: 'Uhrzeit', place: 'Ort', bring: 'Mitnehmen',
     addItem: 'Etwas hinzufügen', confirm: 'Ich bin da', confirmed: 'Bestätigt',
-    waitingFor: 'Wartet auf', bothReady: 'Ihr habt bestätigt. Noa wird erwartet.',
+    waitingFor: 'Wartet auf', bothReady: 'Ihr habt bestätigt. {child} wird erwartet.',
     youAre: 'Du bist', schoolGate: 'Schultor',
     bag: 'Schultasche', coat: 'Jacke', medicine: 'Medizin', sport: 'Sportsachen', comfort: 'Kuscheltier',
     ask: 'Einen Tag bitten', need: 'Tag, den du brauchst', offer: 'Tag, den du anbieten kannst',
@@ -150,6 +157,7 @@ const COPY = {
     heatTitle: 'Diese Notiz klingt scharf', heatLead: 'Unten steht eine ruhigere Fassung.',
     calmer: 'Ruhigere Fassung', sendCalm: 'Die ruhige Notiz senden', sendAnyway: 'So senden',
     papers: 'Papiere', papersLead: 'Vereinbarungen, die ihr beide findet.', emptyPapers: 'Noch keine Dokumente.',
+    names: 'Namen', done: 'Fertig', parentA: 'Elternteil A', parentB: 'Elternteil B', child: 'Kind',
   },
   lb: {
     today: 'Haut', resolve: 'Klären', with: 'ass bei', open: 'Haut ass nach net geplangt',
@@ -157,7 +165,7 @@ const COPY = {
     handTitle: 'Iwwergab', handKicker: 'Deen nächsten Wiessel', handEmpty: 'Keng Iwwergab an deenen nächste sechs Wochen. Mollt de Kalenner, fir datt dir béid de Wiessel kennt.',
     from: 'Vun', to: 'Bei', time: 'Zäit', place: 'Plaz', bring: 'Mathuelen',
     addItem: 'Eppes derbäi', confirm: 'Ech sinn do', confirmed: 'Bestätegt',
-    waitingFor: 'Waart op', bothReady: 'Dir hutt bestätegt. Noa gëtt erwaart.',
+    waitingFor: 'Waart op', bothReady: 'Dir hutt bestätegt. {child} gëtt erwaart.',
     youAre: 'Du bass', schoolGate: 'Schoulpaart',
     bag: 'Schoulsak', coat: 'Jackett', medicine: 'Medezin', sport: 'Sportssachen', comfort: 'Kuscheldéier',
     ask: 'En Dag froen', need: 'Dag, deen dir braucht', offer: 'Dag, deen dir ubidde kënnt',
@@ -194,6 +202,7 @@ const COPY = {
     heatTitle: 'Dës Notiz kléngt schaarf', heatLead: 'Ënnen steet eng méi roueg Fassong.',
     calmer: 'Roueg Fassong', sendCalm: 'Déi roueg Notiz schécken', sendAnyway: 'Esou schécken',
     papers: 'Pabeier', papersLead: 'Ofkommes fir iech béid.', emptyPapers: 'Nach keng Dokumenter.',
+    names: 'Nimm', done: 'Fäerdeg', parentA: 'Elterendeel A', parentB: 'Elterendeel B', child: 'Kand',
   },
 }
 function useCopy() {
@@ -231,16 +240,21 @@ function soften(text) {
 export function TodayBoard() {
   const { lang } = useLang()
   const c = useCopy()
+  const n = names()
   const [custody, setCustody] = useState(() => load('cp-custody', {}))
   const [locked] = useState(() => load('cp-locked', {}))
   const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
   const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
+  const [profile, setProfile] = useState(() => load('cp-profile', DEFAULT_PROFILE))
+  const [editing, setEditing] = useState(false)
   useEffect(() => { save('cp-custody', custody) }, [custody])
   useEffect(() => { save('cp-swaps', swaps) }, [swaps])
   useEffect(() => { save('cp-writer', writer) }, [writer])
+  useEffect(() => { save('cp-profile', profile) }, [profile])
   const today = useMemo(() => new Date(), [])
   const todayKey = isoDate(today)
   const who = custody[todayKey]
+  const label = (id) => n[id]
   let change = null
   let prev = who
   for (let i = 1; i <= 42; i += 1) {
@@ -255,13 +269,29 @@ export function TodayBoard() {
     }
     prev = owner
   }
-  const label = (id) => (id === 'A' ? 'Alex' : 'Sam')
+  const open = swaps.filter((row) => row.status === 'open')
   return (
-    <div className="app-panel">
-      <div className="panel-head"><h2>{c.today}</h2></div>
-      <p className="q-lead">{who === 'A' || who === 'B' ? `Noa ${c.with} ${label(who)}` : c.open}</p>
-      <h3>{c.next}</h3>
-      <p>{change ? `${pretty(change.date, lang)} · ${label(change.from)} → ${label(change.to)}` : c.none}</p>
+    <div className="app-panel today-home">
+      <p className="hand-kicker">{c.today}</p>
+      <h2>{who === 'A' || who === 'B' ? `${n.child} ${c.with} ${label(who)}` : c.open}</h2>
+      <article className="today-card">
+        <span>{c.next}</span>
+        <strong>{change ? pretty(change.date, lang) : c.none}</strong>
+        {change && <p>{label(change.from)} → {label(change.to)}</p>}
+      </article>
+      <article className="today-card">
+        <span>{c.openSwaps}</span>
+        <strong>{open.length}</strong>
+        <p>{open.length ? open.map((row) => pretty(row.want, lang)).join(' · ') : c.noSwaps}</p>
+      </article>
+      <button type="button" className="btn ghost sm" onClick={() => setEditing((v) => !v)}>{editing ? c.done : c.names}</button>
+      {editing && (
+        <form className="biff" onSubmit={(event) => { event.preventDefault(); setEditing(false) }}>
+          <label>{c.parentA}<input value={profile.nameA} onChange={(event) => setProfile({ ...profile, nameA: event.target.value })} /></label>
+          <label>{c.parentB}<input value={profile.nameB} onChange={(event) => setProfile({ ...profile, nameB: event.target.value })} /></label>
+          <label>{c.child}<input value={profile.child} onChange={(event) => setProfile({ ...profile, child: event.target.value })} /></label>
+        </form>
+      )}
       <AskDay custody={custody} setCustody={setCustody} locked={locked} swaps={swaps} setSwaps={setSwaps} writer={writer} setWriter={setWriter} />
     </div>
   )
@@ -299,7 +329,8 @@ export function HandoverView() {
   const today = useMemo(() => new Date(), [])
   const changes = useMemo(() => upcomingHandovers(custody, today), [custody, today])
   const current = changes.find((item) => item.date === picked) || changes[0]
-  const label = (id) => (id === 'A' ? 'Alex' : 'Sam')
+  const n = names()
+  const label = (id) => n[id]
   const entry = current ? (book[current.date] || { time: '18:00', place: c.schoolGate, items: defaultItems(c), yesA: false, yesB: false }) : null
 
   function patch(next) {
@@ -380,7 +411,7 @@ export function HandoverView() {
       </div>
 
       <div className={`hand-status ${both ? 'ready' : ''}`}>
-        <p>{both ? c.bothReady : mine ? `${c.confirmed}. ${c.waitingFor} ${label(other)}.` : `${c.waitingFor} ${label(writer)}.`}</p>
+        <p>{both ? c.bothReady.replace('{child}', names().child) : mine ? `${c.confirmed}. ${c.waitingFor} ${label(other)}.` : `${c.waitingFor} ${label(writer)}.`}</p>
         <button type="button" className={`btn ${mine ? 'ghost' : 'primary'}`} onClick={() => patch(writer === 'A' ? { yesA: !entry.yesA } : { yesB: !entry.yesB })}>
           {mine ? c.confirmed : c.confirm}
         </button>
@@ -422,7 +453,8 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
   })
   const canOffer = days.filter((day) => day.owner === writer)
   const canAsk = days.filter((day) => day.owner === other)
-  const label = (id) => (id === 'A' ? 'Alex' : 'Sam')
+  const n = names()
+  const label = (id) => n[id]
   function choose(key, owner) {
     if (locked[monthKey]) { setWarn(c.locked); return }
     if (pick === 'need') {
@@ -539,7 +571,8 @@ export function ResolveBoard() {
   useEffect(() => { save('cp-rules', rules) }, [rules])
   useEffect(() => { save('cp-issues', issues) }, [issues])
   useEffect(() => { save('cp-docs', docs) }, [docs])
-  const label = (id) => (id === 'A' ? 'Alex' : 'Sam')
+  const n = names()
+  const label = (id) => n[id]
   const aboutName = (id) => c[id] || c.other
   const open = issues.filter((item) => !item.saved)
   const currentId = open[0]?.id
@@ -605,13 +638,13 @@ export function ResolveBoard() {
               <button type="button" className="btn ghost sm" onClick={() => patch(item.id, { cooling: !item.cooling })}>{item.cooling ? c.resume : c.pause}</button>
             </div>
             {item.cooling && <p className="lock-hint">{c.cooling}</p>}
-            <label>Alex<textarea value={item.viewA} onChange={(event) => patch(item.id, { viewA: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
-            <label>Sam<textarea value={item.viewB} onChange={(event) => patch(item.id, { viewB: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
+            <label>{label('A')}<textarea value={item.viewA} onChange={(event) => patch(item.id, { viewA: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
+            <label>{label('B')}<textarea value={item.viewB} onChange={(event) => patch(item.id, { viewB: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
             <label>{c.proposal}<textarea value={item.proposal} onChange={(event) => patch(item.id, { proposal: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
             <button type="button" className={`btn sm ${mine ? 'primary' : 'ghost'}`} disabled={Boolean(blocked)} onClick={() => patch(item.id, writer === 'A' ? { yesA: !item.yesA } : { yesB: !item.yesB })}>{c.live}</button>
             {blocked && <span className="meta">{blocked}</span>}
             {!blocked && !agreed && <span className="meta">{c.waiting}</span>}
-            {agreed && !item.saved && <button type="button" className="btn primary sm" onClick={() => { setDocs([{ id: String(Date.now()), title: item.topic, note: `${c.proposal}: ${item.proposal}\nAlex: ${item.viewA}\nSam: ${item.viewB}` }, ...docs]); patch(item.id, { saved: true, cooling: false }) }}>{c.save}</button>}
+            {agreed && !item.saved && <button type="button" className="btn primary sm" onClick={() => { setDocs([{ id: String(Date.now()), title: item.topic, note: `${c.proposal}: ${item.proposal}\n${label('A')}: ${item.viewA}\n${label('B')}: ${item.viewB}` }, ...docs]); patch(item.id, { saved: true, cooling: false }) }}>{c.save}</button>}
             {agreed && item.saved && <span className="meta">{c.saved}</span>}
           </article>
         )
@@ -629,7 +662,7 @@ export function Threads() {
     <div className="app-panel">
       <div className="panel-head">
         <h2>{c.write}</h2>
-        <div className="ask-switch">{['A', 'B'].map((id) => <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{id === 'A' ? 'Alex' : 'Sam'}</button>)}</div>
+        <div className="ask-switch">{['A', 'B'].map((id) => <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{names()[id]}</button>)}</div>
       </div>
       <div className="ask-switch">{['handover', 'school', 'money', 'health'].map((id) => <button key={id} type="button" className={`btn sm ${channel === id ? 'primary' : 'ghost'}`} onClick={() => setChannel(id)}>{c[id]}</button>)}</div>
       <NoteThread channel={channel} writer={writer} />
@@ -728,7 +761,7 @@ export function NoteThread({ channel, title, writer }) {
       {notes.map((item) => (
         <article key={item.id} className={`note ${item.author === 'A' ? 'a' : 'b'}`}>
           <header>
-            <strong>{item.author === 'A' ? 'Alex' : 'Sam'}</strong>
+            <strong>{names()[item.author]}</strong>
             <time>{new Date(item.sent_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>
           </header>
           <p>{item.fact}</p>
