@@ -622,3 +622,31 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
   font-size: 0.88rem;
 }
 .holiday-list .hol-date { font-weight: 800; color: #9d174d; min-width: 48px; }
+
+/* ─── Questionnaire overlay ─── */
+.q-overlay {
+  position: fixed; inset: 0; background: rgba(12, 31, 56, 0.45);
+  display: flex; align-items: flex-end; justify-content: center; z-index: 80;
+  padding: 0;
+}
+.q-card {
+  background: white; width: 100%; max-width: 520px; border-radius: 20px 20px 0 0;
+  padding: 20px 18px 28px; max-height: 92vh; overflow: auto;
+  box-shadow: 0 -12px 40px rgba(12,31,56,0.18);
+}
+.q-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.q-head h3 { font-size: 1.15rem; }
+.q-lead { color: var(--ink-soft); font-size: 0.92rem; margin-bottom: 16px; }
+.q-card label { display: block; font-weight: 700; font-size: 0.85rem; margin: 14px 0 8px; }
+.q-options { display: flex; flex-direction: column; gap: 6px; }
+.q-options button {
+  text-align: left; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--line); background: #f8fafc; font-weight: 600;
+}
+.q-options button.on { background: var(--teal-soft); border-color: #99f6e4; color: var(--teal-deep); }
+.q-actions { margin-top: 18px; }
+.q-preview { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+@media (min-width: 640px) {
+  .q-overlay { align-items: center; padding: 20px; }
+  .q-card { border-radius: 20px; }
+}
