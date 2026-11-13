@@ -590,7 +590,7 @@ function generateFairPlan(year, month, answers, holidays, school) {
   // 1. Assign pure public-holiday days first — strict equal (±1)
   const holDays = []
   for (let d = 1; d <= days; d++) if (isHoliday(d)) holDays.push(d)
-  let aH = 0, bH = 0
+  let aH = answers.priorA || 0, bH = answers.priorB || 0
   holDays.forEach((d) => {
     const who = aH <= bH ? 'A' : 'B'
     plan[d] = who
@@ -635,16 +635,17 @@ function generateFairPlan(year, month, answers, holidays, school) {
   return plan
 }
 
-function Questionnaire({ year, month, holidays, school, onApply, onClose, tr }) {
+function Questionnaire({ year, month, holidays, school, prior, onApply, onClose, tr }) {
   const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split', scope: 'month' })
   const [preview, setPreview] = useState(null)
   const generate = () => {
+    const withPrior = { ...answers, priorA: prior?.a || 0, priorB: prior?.b || 0 }
     if (answers.scope === 'year') {
       const res = generateYearPlan(year, answers)
       setPreview({ ...res, scope: 'year' })
       return
     }
-    const plan = generateFairPlan(year, month, answers, holidays, school || {})
+    const plan = generateFairPlan(year, month, withPrior, holidays, school || {})
     let aH = 0, bH = 0, aS = 0, bS = 0
     const last = new Date(year, month+1, 0).getDate()
     for (let d = 1; d <= last; d++) {
@@ -743,9 +744,25 @@ function schoolHolidayMap(year) {
   return map
 }
 
+
+function priorBalance(custody, year, month) {
+  let aH = 0, bH = 0, aS = 0, bS = 0
+  for (const [key, who] of Object.entries(custody)) {
+    const [y, m] = key.split('-').map(Number)
+    if (y < year || (y === year && m < month + 1)) {
+      // approximate: count assigned days before this month
+      if (who === 'A') aH++
+      else if (who === 'B') bH++
+    }
+  }
+  return { a: aH, b: bH }
+}
+
 function CalendarView() {
   const { tr } = useLang()
   const [custody, setCustody] = useState(() => load('cp-custody', {}))
+  const [locked, setLocked] = useState(() => load('cp-locked', {}))
+  const [lockDays, setLockDays] = useState(() => load('cp-lockdays', 7))
   const [showQ, setShowQ] = useState(false)
   const [events, setEvents] = useState(() => load('cp-events', []))
   const [cursor, setCursor] = useState(() => new Date())
@@ -754,6 +771,8 @@ function CalendarView() {
   const [form, setForm] = useState({ title: '', date: '', type: 'event' })
 
   useEffect(() => { save('cp-custody', custody) }, [custody])
+  useEffect(() => { save('cp-locked', locked) }, [locked])
+  useEffect(() => { save('cp-lockdays', lockDays) }, [lockDays])
   useEffect(() => { save('cp-events', events) }, [events])
 
   const year = cursor.getFullYear()
@@ -768,6 +787,13 @@ function CalendarView() {
   const iso = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en'
   const monthLabel = cursor.toLocaleString(locale, { month: 'long', year: 'numeric' })
+  const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
+  const isLocked = !!locked[monthKey]
+  const monthStart = new Date(year, month, 1)
+  const lockFrom = new Date(monthStart)
+  lockFrom.setDate(lockFrom.getDate() - Number(lockDays || 0))
+  const inLockWindow = new Date() >= lockFrom && !isLocked
+  const balance = priorBalance(custody, year, month)
   const hols = luxHolidays(year, tr)
   const school = schoolHolidayMap(year)
 
@@ -790,7 +816,7 @@ function CalendarView() {
   }
 
   const paintDay = (d) => {
-    if (mode === 'event') return
+    if (mode === 'event' || isLocked) return
     setDay(d, paint === 'clear' ? null : paint)
   }
 
@@ -865,6 +891,16 @@ function CalendarView() {
         <span className="pill b">B · {counts.B}</span>
         <span className="pill both">{tr.both || 'Both'} · {counts.both}</span>
         <span className="pill holiday">{tr.holidays || 'Holidays'}</span>
+        {isLocked && <span className="pill locked">{tr.locked || 'Locked'}</span>}
+      </div>
+      <div className="lock-bar">
+        <label>{tr.lockBefore || 'Lock next month'} <input type="number" min="0" max="60" value={lockDays} onChange={(e) => setLockDays(Number(e.target.value))} /> {tr.daysBefore || 'days before'}</label>
+        <button type="button" className="btn ghost sm" disabled={isLocked} onClick={() => setLocked((p) => ({ ...p, [monthKey]: true }))}>{tr.lockMonth || 'Lock this month'}</button>
+        {isLocked && <button type="button" className="btn ghost sm" onClick={() => setLocked((p) => { const n = { ...p }; delete n[monthKey]; return n })}>{tr.unlock || 'Unlock'}</button>}
+        {inLockWindow && !isLocked && <span className="lock-hint">{tr.lockHint || 'Lock window is open — confirm the month soon.'}</span>}
+      </div>
+      <div className="balance-bar">
+        <span>{tr.prior || 'Prior balance'} A {balance.a} · B {balance.b}</span>
       </div>
 
       <div className="paint-bar">
@@ -920,6 +956,7 @@ function CalendarView() {
           month={month}
           holidays={hols}
           school={school}
+          prior={balance}
           tr={tr}
           onClose={() => setShowQ(false)}
           onApply={(res) => {
@@ -1242,4 +1279,4 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LangProvider><App /></LangProvider>
   </React.StrictMode>
-)
+)\n    locked: 'Gesperrt',\n    lockBefore: 'Nächste Mount spären',\n    daysBefore: 'Deeg virdrun',\n    lockMonth: 'Dëse Mount spären',\n    unlock: 'Entspären',\n    lockHint: 'Spärfenster op — confirméiert geschwënn.',\n    prior: 'Viregte Stand',\n    locked: 'Gesperrt',\n    lockBefore: 'Nächsten Monat sperren',\n    daysBefore: 'Tage vorher',\n    lockMonth: 'Diesen Monat sperren',\n    unlock: 'Entsperren',\n    lockHint: 'Sperrfenster offen — bald bestätigen.',\n    prior: 'Vorheriger Stand',\n    locked: 'Verrouillé',\n    lockBefore: 'Verrouiller le mois suivant',\n    daysBefore: 'jours avant',\n    lockMonth: 'Verrouiller ce mois',\n    unlock: 'Déverrouiller',\n    lockHint: 'Fenêtre de verrouillage ouverte — confirmez bientôt.',\n    prior: 'Solde précédent',\n    locked: 'Locked',\n    lockBefore: 'Lock next month',\n    daysBefore: 'days before',\n    lockMonth: 'Lock this month',\n    unlock: 'Unlock',\n    lockHint: 'Lock window is open — confirm soon.',\n    prior: 'Prior balance',
