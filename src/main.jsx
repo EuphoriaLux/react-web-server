@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, createContext, useContext } from 'react'
-import { createRoot } from 'react-dom/client'
-import {
+import { Activity,  createRoot } from 'react-dom/client'
+import { Activity, 
   ArrowRight, Check, Shield, Heart, Clock, Users, Menu, X, Sparkles,
   Info, HelpCircle, Calendar, Wallet, MessageSquare, FileText, Plus,
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
@@ -1094,6 +1094,33 @@ function ExpensesView() {
 
 function Placeholder({ title, text }) { return (<div className="app-panel"><h2>{title}</h2><p className="empty">{text}</p></div>) }
 
+
+function DeployLog() {
+  const { tr } = useLang()
+  const [logs, setLogs] = useState(() => load('cp-deploy-logs', []))
+  const add = (msg) => setLogs((p) => [{ id: Date.now(), ts: new Date().toISOString(), msg }, ...p].slice(0, 50))
+  useEffect(() => { save('cp-deploy-logs', logs) }, [logs])
+  return (
+    <div className="app-panel">
+      <div className="panel-head"><h2>{tr.tabDeploy || 'Deploy'}</h2></div>
+      <p className="q-lead">{tr.deployLead || 'Local notes about deployments and checks. The real pipeline logs live in GitHub Actions.'}</p>
+      <form className="add-form" onSubmit={(e) => { e.preventDefault(); const v = e.target.note.value.trim(); if (v) { add(v); e.target.reset() } }}>
+        <input name="note" placeholder={tr.deployNote || 'Add a deploy note'} />
+        <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
+      </form>
+      <div className="deploy-list">
+        {logs.length === 0 && <p className="empty">{tr.noLogs || 'No local deploy notes yet.'}</p>}
+        {logs.map((l) => (
+          <div key={l.id} className="deploy-item">
+            <span className="deploy-ts">{l.ts.slice(0, 19).replace('T', ' ')}</span>
+            <span>{l.msg}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AppShell({ onExit }) {
   const { tr } = useLang()
   const [tab, setTab] = useState('calendar')
@@ -1106,6 +1133,7 @@ function AppShell({ onExit }) {
           <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><Wallet size={16} /> {tr.tabExp}</button>
           <button className={tab === 'messages' ? 'active' : ''} onClick={() => setTab('messages')}><MessageSquare size={16} /> {tr.tabMsg}</button>
           <button className={tab === 'docs' ? 'active' : ''} onClick={() => setTab('docs')}><FileText size={16} /> {tr.tabDoc}</button>
+          <button className={tab === 'deploy' ? 'active' : ''} onClick={() => setTab('deploy')}><Activity size={16} /> {tr.tabDeploy || 'Deploy'}</button>
         </nav>
         <LangSwitch />
         <button className="btn ghost" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
@@ -1115,6 +1143,7 @@ function AppShell({ onExit }) {
         {tab === 'expenses' && <ExpensesView />}
         {tab === 'messages' && <Placeholder title={tr.msgTitle} text={tr.msgText} />}
         {tab === 'docs' && <Placeholder title={tr.docTitle} text={tr.docText} />}
+        {tab === 'deploy' && <DeployLog />}
       </main>
     </div>
   )
@@ -1307,4 +1336,4 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LangProvider><App /></LangProvider>
   </React.StrictMode>
-)
+)\n    tabDeploy: 'Deploy',\n    deployLead: 'Lokal Notizen iwwer Deployments. Déi richteg Logs sinn an GitHub Actions.',\n    deployNote: 'Notiz dobäisetzen',\n    noLogs: 'Nach keng Notizen.',\n    tabDeploy: 'Deploy',\n    deployLead: 'Lokale Notizen zu Deployments. Die echten Logs sind in GitHub Actions.',\n    deployNote: 'Notiz hinzufügen',\n    noLogs: 'Noch keine Notizen.',\n    tabDeploy: 'Déploiement',\n    deployLead: 'Notes locales sur les déploiements. Les vrais logs sont dans GitHub Actions.',\n    deployNote: 'Ajouter une note',\n    noLogs: 'Aucune note pour le moment.',\n    tabDeploy: 'Deploy',\n    deployLead: 'Local notes about deployments and checks. Real pipeline logs are in GitHub Actions.',\n    deployNote: 'Add a deploy note',\n    noLogs: 'No local deploy notes yet.',
