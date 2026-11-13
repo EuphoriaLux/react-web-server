@@ -709,7 +709,8 @@ function CalendarView() {
   const iso = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en'
   const monthLabel = cursor.toLocaleString(locale, { month: 'long', year: 'numeric' })
-  const hols = luxHolidays(year, tr)\n    school: 'Schoul',\n    school: 'Schule',\n    school: 'École',\n    school: 'School',\n  const school = schoolHolidayMap(year)
+  const hols = luxHolidays(year, tr)
+  const school = schoolHolidayMap(year)
 
   const setDay = (d, who) => {
     const key = iso(d)
