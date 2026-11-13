@@ -437,3 +437,87 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
     animation: none !important;
   }
 }
+
+/* ─── APP SHELL (no-auth MVP) ─── */
+.app-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+.app-header {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(244, 247, 251, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 24px;
+  display: flex; align-items: center; gap: 24px; flex-wrap: wrap;
+}
+.app-brand {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--display); font-weight: 800; font-size: 1.05rem;
+}
+.app-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.app-tabs button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  font-weight: 600; font-size: 0.88rem; color: var(--ink-soft);
+  background: transparent;
+}
+.app-tabs button.active {
+  background: var(--ink); color: white;
+}
+.app-main { flex: 1; padding: 28px 24px 48px; max-width: 1100px; width: 100%; margin: 0 auto; }
+.app-panel {
+  background: white; border: 1px solid var(--line); border-radius: 18px;
+  padding: 24px; box-shadow: var(--shadow-soft);
+}
+.panel-head {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.month-nav { display: flex; align-items: center; gap: 8px; }
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  margin-bottom: 24px;
+}
+.cal-dow { font-size: 0.75rem; font-weight: 700; color: var(--muted); text-align: center; padding: 6px 0; }
+.cal-cell {
+  min-height: 88px; border: 1px solid var(--line); border-radius: 10px;
+  padding: 6px; background: #fafcfe; position: relative;
+}
+.cal-cell.empty { background: transparent; border-color: transparent; }
+.cal-day { font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); }
+.cal-event {
+  margin-top: 4px; font-size: 0.72rem; padding: 2px 6px; border-radius: 6px;
+  background: #d5f5ef; color: var(--teal-deep); display: flex; justify-content: space-between; align-items: center; gap: 4px;
+}
+.cal-event.handover { background: #dbeafe; color: #1e40af; }
+.cal-event.school { background: #fef3c7; color: #92400e; }
+.cal-event.medical { background: #fce7f3; color: #9d174d; }
+.cal-event button { color: inherit; opacity: 0.6; }
+.add-form {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  padding-top: 12px; border-top: 1px solid var(--line);
+}
+.add-form input, .add-form select {
+  padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+  font: inherit; background: white; min-width: 140px;
+}
+.expense-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.expense-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fafcfe;
+}
+.expense-row .meta { display: block; font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.expense-row .amt { margin-left: auto; font-weight: 700; }
+.balance-pill {
+  display: flex; gap: 16px; font-weight: 700; font-size: 0.92rem;
+  background: var(--teal-soft); padding: 8px 14px; border-radius: 999px;
+}
+.empty { color: var(--muted); font-style: italic; }
+@media (max-width: 720px) {
+  .app-header { padding: 10px 16px; }
+  .app-main { padding: 16px; }
+  .cal-grid { gap: 3px; }
+  .cal-cell { min-height: 64px; }
+}
