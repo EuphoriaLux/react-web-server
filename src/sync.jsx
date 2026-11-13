@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses',
-  'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers',
+  'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers', 'cp-rules',
 ]
 const TOKEN_KEY = 'cp-token'
 const CODE_KEY = 'cp-code'

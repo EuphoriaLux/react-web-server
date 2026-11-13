@@ -35,6 +35,20 @@ const COPY = {
     openSwaps: 'Open requests', noSwaps: 'No open requests.', accept: 'Accept', decline: 'Decline',
     locked: 'That month is locked.', as: 'As',
     resolveLead: 'One topic, two views, one proposal. Agree only when you can live with it.',
+    rulesTitle: 'House rules', rulesLead: 'These apply before a disagreement starts. Both parents agree once.',
+    processTitle: 'How a disagreement is settled',
+    r1: 'One topic at a time. Finish or pause it before opening another.',
+    r2: 'Both views are written before anyone agrees.',
+    r3: 'A proposal must be concrete: a time, a place, or an amount.',
+    r4: 'Nothing is final until both say they can live with it.',
+    r5: 'If it gets hot, pause. Come back the next day.',
+    ruleNotice: '24 hours notice for a schedule change, unless the child is unwell.',
+    ruleDaily: 'The parent who has the child decides the small daily things.',
+    ruleBig: 'School, health, and money over €50 need both parents.',
+    ruleFinal: 'No decision is final until both can live with it.',
+    rulePause: 'If a note gets hot, pause. Do not decide the same day.',
+    needBoth: 'Both views first', needProposal: 'Write a proposal first', paused: 'Paused',
+    now: 'Now', waitingTopic: 'Waiting', agreeRule: 'I agree to this rule',
     raise: 'Raise a topic', topic: 'What is the disagreement about', view: 'Your view, in one calm paragraph',
     proposal: 'A proposal both could live with', pause: 'Pause', resume: 'Resume', live: 'I can live with this',
     waiting: 'Waiting for the other parent', agreed: 'You both agreed.', save: 'Save to papers', saved: 'Saved with the papers',
@@ -61,6 +75,20 @@ const COPY = {
     openSwaps: 'Demandes ouvertes', noSwaps: 'Aucune demande ouverte.', accept: 'Accepter', decline: 'Refuser',
     locked: 'Ce mois est verrouillé.', as: 'En tant que',
     resolveLead: 'Un sujet, deux points de vue, une proposition.',
+    rulesTitle: 'Règles de la maison', rulesLead: 'Elles s’appliquent avant le désaccord. Les deux parents les acceptent une fois.',
+    processTitle: 'Comment un désaccord se règle',
+    r1: 'Un sujet à la fois. Terminez-le ou mettez-le en pause avant d’en ouvrir un autre.',
+    r2: 'Les deux vues sont écrites avant tout accord.',
+    r3: 'La proposition doit être concrète : une heure, un lieu ou un montant.',
+    r4: 'Rien n’est final tant que les deux ne peuvent pas vivre avec.',
+    r5: 'Si ça chauffe, pause. On revient le lendemain.',
+    ruleNotice: '24 heures de préavis pour un changement, sauf si l’enfant est malade.',
+    ruleDaily: 'Le parent qui a l’enfant décide des petites choses du quotidien.',
+    ruleBig: 'École, santé et argent au-dessus de 50 € : les deux parents.',
+    ruleFinal: 'Aucune décision n’est finale tant que les deux ne peuvent pas vivre avec.',
+    rulePause: 'Si un message chauffe, pause. Pas de décision le jour même.',
+    needBoth: 'Les deux vues d’abord', needProposal: 'Écrire une proposition', paused: 'En pause',
+    now: 'En cours', waitingTopic: 'En attente', agreeRule: 'J’accepte cette règle',
     raise: 'Ouvrir un sujet', topic: 'De quoi s’agit-il', view: 'Votre vue, calmement',
     proposal: 'Une proposition acceptable', pause: 'Pause', resume: 'Reprendre', live: 'Je peux vivre avec ça',
     waiting: 'En attente de l’autre parent', agreed: 'Vous êtes d’accord.', save: 'Enregistrer dans les papiers', saved: 'Enregistré',
@@ -87,6 +115,20 @@ const COPY = {
     openSwaps: 'Offene Anfragen', noSwaps: 'Keine offenen Anfragen.', accept: 'Annehmen', decline: 'Ablehnen',
     locked: 'Dieser Monat ist gesperrt.', as: 'Als',
     resolveLead: 'Ein Thema, zwei Sichten, ein Vorschlag.',
+    rulesTitle: 'Hausregeln', rulesLead: 'Sie gelten, bevor ein Streit beginnt. Beide Eltern stimmen einmal zu.',
+    processTitle: 'Wie ein Streit geklärt wird',
+    r1: 'Ein Thema nach dem anderen. Erst beenden oder pausieren.',
+    r2: 'Beide Sichten stehen, bevor jemand zustimmt.',
+    r3: 'Der Vorschlag muss konkret sein: Zeit, Ort oder Betrag.',
+    r4: 'Nichts ist endgültig, bis beide damit leben können.',
+    r5: 'Wenn es hitzig wird, Pause. Am nächsten Tag weiter.',
+    ruleNotice: '24 Stunden Vorlauf für eine Planänderung, außer das Kind ist krank.',
+    ruleDaily: 'Der Elternteil, der das Kind hat, entscheidet die kleinen Alltagssachen.',
+    ruleBig: 'Schule, Gesundheit und Geld über 50 € brauchen beide.',
+    ruleFinal: 'Keine Entscheidung ist endgültig, bis beide damit leben können.',
+    rulePause: 'Wird eine Notiz hitzig, Pause. Nicht am selben Tag entscheiden.',
+    needBoth: 'Erst beide Sichten', needProposal: 'Erst einen Vorschlag', paused: 'Pausiert',
+    now: 'Jetzt', waitingTopic: 'Wartet', agreeRule: 'Ich stimme dieser Regel zu',
     raise: 'Thema öffnen', topic: 'Worum geht der Streit', view: 'Deine Sicht, ruhig',
     proposal: 'Ein Vorschlag für beide', pause: 'Pause', resume: 'Weiter', live: 'Damit kann ich leben',
     waiting: 'Wartet auf den anderen Elternteil', agreed: 'Ihr seid einig.', save: 'Bei den Papieren speichern', saved: 'Gespeichert',
@@ -113,6 +155,20 @@ const COPY = {
     openSwaps: 'Oppe Ufroen', noSwaps: 'Keng oppe Ufroen.', accept: 'Unhuelen', decline: 'Ofleenen',
     locked: 'Dëse Mount ass gespaart.', as: 'Als',
     resolveLead: 'Een Thema, zwou Vue, ee Virschlag.',
+    rulesTitle: 'Hausreegelen', rulesLead: 'Si gëllen, ier e Sträit ufänkt. Béid Elteren stëmmen eemol zou.',
+    processTitle: 'Wéi e Sträit gekläert gëtt',
+    r1: 'Een Thema no deem aneren. Éischt fäerdeg maachen oder pauséieren.',
+    r2: 'Béid Vue stinn, ier een zoustëmmt.',
+    r3: 'De Virschlag muss konkret sinn: Zäit, Plaz oder Betrag.',
+    r4: 'Näischt ass definitiv, bis béid dermat liewen kënnen.',
+    r5: 'Wann et waarm gëtt, Paus. Deen nächsten Dag weider.',
+    ruleNotice: '24 Stonnen Virlaf fir eng Plänännerung, ausser d’Kand ass krank.',
+    ruleDaily: 'Deen Elterendeel, deen d’Kand huet, entscheet déi kleng Alldagssachen.',
+    ruleBig: 'Schoul, Gesondheet a Geld iwwer 50 € brauchen béid.',
+    ruleFinal: 'Keng Decisioun ass definitiv, bis béid dermat liewen kënnen.',
+    rulePause: 'Gëtt eng Notiz waarm, Paus. Net deeselwechten Dag entscheeden.',
+    needBoth: 'Éischt béid Vue', needProposal: 'Éischt e Virschlag', paused: 'A Paus',
+    now: 'Elo', waitingTopic: 'Waart', agreeRule: 'Ech stëmmen dëser Reegel zou',
     raise: 'Thema opmaachen', topic: 'Ëm wat geet et', view: 'Deng Vue, roueg',
     proposal: 'E Virschlag fir béid', pause: 'Paus', resume: 'Weider', live: 'Domat kann ech liewen',
     waiting: 'Waart op deen aneren', agreed: 'Dir sidd d’accord.', save: 'Bei de Pabeier späicheren', saved: 'Gespäichert',
@@ -439,9 +495,22 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
   )
 }
 
+const SEED_RULES = [
+  { id: 'notice', key: 'ruleNotice' },
+  { id: 'daily', key: 'ruleDaily' },
+  { id: 'big', key: 'ruleBig' },
+  { id: 'final', key: 'ruleFinal' },
+  { id: 'pause', key: 'rulePause' },
+]
+
+function concrete(text) {
+  return /\d|€|eur|school|école|schule|schoul|gate|portail|tor|paart/i.test(text || '')
+}
+
 export function ResolveBoard() {
   const c = useCopy()
   const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
+  const [rules, setRules] = useState(() => load('cp-rules', SEED_RULES.map((rule) => ({ ...rule, yesA: false, yesB: false }))))
   const [issues, setIssues] = useState(() => load('cp-issues', [{
     id: 'i1', topic: 'Friday pickup time', about: 'handover',
     viewA: '18:00 works after work.', viewB: '17:30 so Noa is not last at the gate.',
@@ -450,47 +519,82 @@ export function ResolveBoard() {
   }]))
   const [docs, setDocs] = useState(() => load('cp-docs', []))
   useEffect(() => { save('cp-writer', writer) }, [writer])
+  useEffect(() => { save('cp-rules', rules) }, [rules])
   useEffect(() => { save('cp-issues', issues) }, [issues])
   useEffect(() => { save('cp-docs', docs) }, [docs])
   const label = (id) => (id === 'A' ? 'Alex' : 'Sam')
   const aboutName = (id) => c[id] || c.other
+  const open = issues.filter((item) => !item.saved)
+  const currentId = open[0]?.id
   function patch(id, next) { setIssues(issues.map((item) => item.id === id ? { ...item, ...next } : item)) }
+  function patchRule(id, next) { setRules(rules.map((rule) => rule.id === id ? { ...rule, ...next } : rule)) }
   return (
     <div className="app-panel">
       <div className="panel-head">
         <h2>{c.resolve}</h2>
         <div className="ask-switch">{['A', 'B'].map((id) => <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{label(id)}</button>)}</div>
       </div>
-      <p className="q-lead">{c.resolveLead}</p>
+
+      <section className="rules-card">
+        <p className="hand-kicker">{c.rulesTitle}</p>
+        <p className="q-lead">{c.rulesLead}</p>
+        {rules.map((rule) => {
+          const mine = writer === 'A' ? rule.yesA : rule.yesB
+          const both = rule.yesA && rule.yesB
+          return (
+            <div key={rule.id} className={`rule-row ${both ? 'ready' : ''}`}>
+              <p>{c[rule.key]}</p>
+              <button type="button" className={`btn sm ${mine ? 'primary' : 'ghost'}`} onClick={() => patchRule(rule.id, writer === 'A' ? { yesA: !rule.yesA } : { yesB: !rule.yesB })}>
+                {both ? c.bothReady : mine ? c.confirmed : c.agreeRule}
+              </button>
+            </div>
+          )
+        })}
+      </section>
+
+      <section className="rules-process">
+        <h3>{c.processTitle}</h3>
+        <ol>{[c.r1, c.r2, c.r3, c.r4, c.r5].map((rule) => <li key={rule}>{rule}</li>)}</ol>
+      </section>
+
       <form className="add-form" onSubmit={(event) => {
         event.preventDefault()
         const data = new FormData(event.currentTarget)
         const topic = String(data.get('topic') || '').trim()
         const view = String(data.get('view') || '').trim()
         if (!topic || !view) return
-        setIssues([{ id: String(Date.now()), topic, about: String(data.get('about')), viewA: writer === 'A' ? view : '', viewB: writer === 'B' ? view : '', proposal: String(data.get('proposal') || ''), cooling: false, yesA: false, yesB: false, saved: false }, ...issues])
+        setIssues([{ id: String(Date.now()), topic, about: String(data.get('about')), viewA: writer === 'A' ? view : '', viewB: writer === 'B' ? view : '', proposal: '', cooling: false, yesA: false, yesB: false, saved: false }, ...issues])
         event.currentTarget.reset()
       }}>
         <input name="topic" required placeholder={c.topic} />
         <select name="about">{['handover', 'school', 'money', 'health', 'other'].map((id) => <option key={id} value={id}>{aboutName(id)}</option>)}</select>
         <input name="view" required placeholder={c.view} />
-        <input name="proposal" placeholder={c.proposal} />
         <button className="btn primary" type="submit">{c.raise}</button>
       </form>
+
       {issues.length === 0 && <p className="empty">{c.emptyIssues}</p>}
       {issues.map((item) => {
         const mine = writer === 'A' ? item.yesA : item.yesB
         const agreed = item.yesA && item.yesB
+        const bothViews = Boolean(item.viewA.trim() && item.viewB.trim())
+        const hasProposal = Boolean(item.proposal.trim()) && concrete(item.proposal)
+        const isNow = item.id === currentId
+        const blocked = item.cooling ? c.paused : !bothViews ? c.needBoth : !hasProposal ? c.needProposal : !isNow && !item.saved ? c.waitingTopic : ''
         return (
-          <article key={item.id} className="fiscal-card">
-            <div className="panel-head"><h3>{item.topic}</h3><button type="button" className="btn ghost sm" onClick={() => patch(item.id, { cooling: !item.cooling })}>{item.cooling ? c.resume : c.pause}</button></div>
+          <article key={item.id} className={`fiscal-card ${isNow ? 'now' : ''}`}>
+            <div className="panel-head">
+              <h3>{item.topic}</h3>
+              <span className="pill">{item.saved ? c.saved : isNow ? c.now : c.waitingTopic}</span>
+              <button type="button" className="btn ghost sm" onClick={() => patch(item.id, { cooling: !item.cooling })}>{item.cooling ? c.resume : c.pause}</button>
+            </div>
             {item.cooling && <p className="lock-hint">{c.cooling}</p>}
             <label>Alex<textarea value={item.viewA} onChange={(event) => patch(item.id, { viewA: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
             <label>Sam<textarea value={item.viewB} onChange={(event) => patch(item.id, { viewB: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
             <label>{c.proposal}<textarea value={item.proposal} onChange={(event) => patch(item.id, { proposal: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
-            <button type="button" className={`btn sm ${mine ? 'primary' : 'ghost'}`} onClick={() => patch(item.id, writer === 'A' ? { yesA: !item.yesA } : { yesB: !item.yesB })}>{c.live}</button>
-            {!agreed && <span className="meta">{c.waiting}</span>}
-            {agreed && !item.saved && <button type="button" className="btn primary sm" onClick={() => { setDocs([{ id: String(Date.now()), title: item.topic, note: `Alex: ${item.viewA}\nSam: ${item.viewB}\n${c.proposal}: ${item.proposal}` }, ...docs]); patch(item.id, { saved: true, cooling: false }) }}>{c.save}</button>}
+            <button type="button" className={`btn sm ${mine ? 'primary' : 'ghost'}`} disabled={Boolean(blocked)} onClick={() => patch(item.id, writer === 'A' ? { yesA: !item.yesA } : { yesB: !item.yesB })}>{c.live}</button>
+            {blocked && <span className="meta">{blocked}</span>}
+            {!blocked && !agreed && <span className="meta">{c.waiting}</span>}
+            {agreed && !item.saved && <button type="button" className="btn primary sm" onClick={() => { setDocs([{ id: String(Date.now()), title: item.topic, note: `${c.proposal}: ${item.proposal}\nAlex: ${item.viewA}\nSam: ${item.viewB}` }, ...docs]); patch(item.id, { saved: true, cooling: false }) }}>{c.save}</button>}
             {agreed && item.saved && <span className="meta">{c.saved}</span>}
           </article>
         )
