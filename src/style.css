@@ -521,3 +521,19 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
   .cal-grid { gap: 3px; }
   .cal-cell { min-height: 64px; }
 }
+
+/* ─── Language switcher ─── */
+.lang-switch {
+  display: inline-flex; gap: 2px; padding: 3px;
+  background: #eef3f9; border-radius: 999px; border: 1px solid var(--line);
+}
+.lang-switch button {
+  padding: 5px 9px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+  letter-spacing: 0.04em; color: var(--ink-soft); background: transparent;
+}
+.lang-switch button.active { background: var(--ink); color: white; }
+.nav-actions .lang-switch { margin-right: 4px; }
+.app-header .lang-switch { margin-left: auto; }
+@media (max-width: 720px) {
+  .nav-actions .lang-switch { display: none; }
+}
