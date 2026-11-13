@@ -1128,23 +1128,24 @@ function DeployLog() {
 
 function AppShell({ onExit }) {
   const { tr } = useLang()
-  const [tab, setTab] = useState('handover')
+  const [tab, setTab] = useState('today')
+  const [more, setMore] = useState(false)
+  const primary = [
+    { id: 'today', label: 'Today', Icon: Heart },
+    { id: 'handover', label: 'Handover', Icon: Clock },
+    { id: 'calendar', label: tr.tabCal, Icon: Calendar },
+    { id: 'expenses', label: tr.tabExp, Icon: Wallet },
+    { id: 'messages', label: tr.tabMsg, Icon: MessageSquare },
+  ]
+  function open(id) { setTab(id); setMore(false) }
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-brand"><Heart size={18} /> {tr.appTitle}</div>
-        <nav className="app-tabs">
-          <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}><Heart size={16} /> Today</button>
-          <button className={tab === 'handover' ? 'active' : ''} onClick={() => setTab('handover')}><Clock size={16} /> Handover</button>
-          <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}><Calendar size={16} /> {tr.tabCal}</button>
-          <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><Wallet size={16} /> {tr.tabExp}</button>
-          <button className={tab === 'messages' ? 'active' : ''} onClick={() => setTab('messages')}><MessageSquare size={16} /> {tr.tabMsg}</button>
-          <button className={tab === 'resolve' ? 'active' : ''} onClick={() => setTab('resolve')}><Check size={16} /> Resolve</button>
-          <button className={tab === 'docs' ? 'active' : ''} onClick={() => setTab('docs')}><FileText size={16} /> {tr.tabDoc}</button>
-          <button className={tab === 'deploy' ? 'active' : ''} onClick={() => setTab('deploy')}><Activity size={16} /> {tr.tabDeploy || 'Deploy'}</button>
-        </nav>
-        <LangSwitch />
-        <button className="btn ghost" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
+        <div className="app-brand"><span className="logo-mark small"><Heart size={14} /></span> {tr.appTitle}</div>
+        <div className="app-tools">
+          <LangSwitch />
+          <button className="btn ghost sm" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
+        </div>
       </header>
       <main className="app-main">
         <ShareBar />
@@ -1157,6 +1158,25 @@ function AppShell({ onExit }) {
         {tab === 'docs' && <Papers />}
         {tab === 'deploy' && <DeployLog />}
       </main>
+      <nav className="dock" aria-label="App">
+        {primary.map(({ id, label, Icon }) => (
+          <button key={id} type="button" className={tab === id ? 'on' : ''} onClick={() => open(id)}>
+            <Icon size={20} />
+            <span>{label}</span>
+          </button>
+        ))}
+        <button type="button" className={more || ['resolve', 'docs', 'deploy'].includes(tab) ? 'on' : ''} onClick={() => setMore((v) => !v)}>
+          <Menu size={20} />
+          <span>More</span>
+        </button>
+      </nav>
+      {more && (
+        <div className="more-sheet">
+          <button type="button" onClick={() => open('resolve')}><Check size={16} /> Resolve</button>
+          <button type="button" onClick={() => open('docs')}><FileText size={16} /> {tr.tabDoc}</button>
+          <button type="button" onClick={() => open('deploy')}><Activity size={16} /> {tr.tabDeploy || 'Deploy'}</button>
+        </div>
+      )}
     </div>
   )
 }

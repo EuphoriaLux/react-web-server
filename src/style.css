@@ -850,3 +850,88 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .expense-block { margin-bottom: 12px; }
 .expense-block .note-thread { margin-top: 8px; }
 
+/* ─── Polished app chrome ─── */
+.app-header {
+  padding: 14px 20px;
+  justify-content: space-between;
+  gap: 12px;
+}
+.app-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.app-main { padding: 20px 20px 108px; max-width: 760px; }
+.app-panel, .handover-screen {
+  border: 0;
+  box-shadow: 0 1px 2px rgba(12, 31, 56, 0.04), 0 18px 40px -28px rgba(12, 31, 56, 0.28);
+}
+.share-bar {
+  border: 0;
+  box-shadow: var(--shadow-soft);
+  border-radius: 20px;
+  padding: 16px 18px;
+}
+.share-bar input, .add-form input, .add-form select, .hand-facts input {
+  min-height: 44px;
+  border-radius: 12px;
+  border-color: #d7e1ec;
+  background: #f8fafc;
+}
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 20px));
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+  padding: 8px 6px 10px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 16px 40px -18px rgba(12, 31, 56, 0.45);
+  backdrop-filter: blur(16px);
+  z-index: 50;
+}
+.dock button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-height: 52px;
+  border-radius: 14px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.dock button.on { color: var(--teal-deep); background: var(--teal-soft); }
+.more-sheet {
+  position: fixed;
+  right: 16px;
+  bottom: 92px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--line);
+}
+.more-sheet button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 160px;
+}
+.more-sheet button:hover { background: #f4f7fb; }
+@media (max-width: 720px) {
+  .app-header { padding: 12px 14px; }
+  .app-tools .btn span, .app-tools .btn { font-size: 0.85rem; }
+  .app-main { padding: 14px 12px 108px; }
+  .dock { bottom: 10px; }
+}
+
