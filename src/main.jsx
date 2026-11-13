@@ -1166,12 +1166,17 @@ function AppShell({ onExit }) {
         {tab === 'deploy' && <DeployLog />}
       </main>
       <nav className="dock" aria-label="App">
-        {primary.map(({ id, label, Icon }) => (
-          <button key={id} type="button" className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
-            <span className="dock-icon"><Icon size={22} /></span>
-            <span>{label}</span>
-          </button>
-        ))}
+        {primary.map(({ id, label, Icon }) => {
+          const on = tab === id
+          return (
+            <button key={id} type="button" className={on ? 'on' : ''} onClick={() => setTab(id)}>
+              <span className="dock-icon">
+                <Icon size={22} strokeWidth={on ? 2.4 : 1.75} fill={on ? 'currentColor' : 'none'} />
+              </span>
+              <span>{label}</span>
+            </button>
+          )
+        })}
       </nav>
     </div>
   )

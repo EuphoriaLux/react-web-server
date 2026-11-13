@@ -901,14 +901,22 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
   font-weight: 700;
 }
 .dock-icon {
-  width: 56px;
+  width: 64px;
   height: 32px;
   border-radius: 16px;
   display: grid;
   place-items: center;
+  color: #8aa0b8;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 .dock button.on { color: var(--teal-deep); background: transparent; }
-.dock button.on .dock-icon { background: var(--teal-soft); }
+.dock button.on .dock-icon {
+  background: var(--teal-soft);
+  color: var(--teal-deep);
+}
+.dock button.on .dock-icon svg { fill-opacity: 0.16; }
+.dock button.on span:last-child { font-weight: 800; }
+.dock button:active .dock-icon { transform: scale(0.96); }
 .app-tools .btn.on { color: var(--teal-deep); background: var(--teal-soft); }
 @media (max-width: 720px) {
   .app-header { padding: 12px 14px; }
