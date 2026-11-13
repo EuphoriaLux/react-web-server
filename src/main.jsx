@@ -615,6 +615,15 @@ function CalendarView() {
         <button type="button" className="btn ghost sm" onClick={clearMonth}>{tr.clearMonth || 'Clear month'}</button>
       </div>
 
+      <details className="holiday-list" open>
+        <summary>{tr.holidays || 'Holidays'} · {year}</summary>
+        <ul>
+          {Object.entries(luxHolidays(year, tr)).map(([date, name]) => (
+            <li key={date}><span className="hol-date">{date.slice(8)}.{date.slice(5,7)}</span> {name}</li>
+          ))}
+        </ul>
+      </details>
+
       <details className="event-details">
         <summary>{tr.addEvent || 'Add note / event'}</summary>
         <form className="add-form" onSubmit={addEvent}>
