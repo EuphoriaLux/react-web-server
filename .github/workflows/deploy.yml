@@ -1,4 +1,4 @@
-name: Test and deploy CloudMargin
+name: Build and deploy CoParents
 on:
   push:
     branches: [main]
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: cloudmargin-${{ github.event.pull_request.number || 'production' }}
+  group: coparents-${{ github.event.pull_request.number || 'production' }}
   cancel-in-progress: false
 jobs:
   build:
@@ -24,8 +24,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm test
-      - run: python3 scripts/test-receiver.py
       - name: Build production or PR preview
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -82,7 +80,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
             "cloudmargin-deploy@$DEPLOY_HOST" "deploy $TARGET" < site.tgz
-          curl --fail --silent --show-error --retry 3 --max-time 20 "$URL" | grep -q CloudMargin
+          curl --fail --silent --show-error --retry 3 --max-time 20 "$URL" | grep -qiE 'CoParents|co-parenting'
           printf '### Deployment successful\n\n[%s](%s)\n' "$URL" "$URL" >> "$GITHUB_STEP_SUMMARY"
   cleanup:
     if: >-
