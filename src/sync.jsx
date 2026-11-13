@@ -8,6 +8,11 @@ const TOKEN_KEY = 'cp-token'
 const CODE_KEY = 'cp-code'
 const ROLE_KEY = 'cp-role'
 
+function sameState(a, b) {
+  const keys = [...new Set([...Object.keys(a || {}), ...Object.keys(b || {})])].sort()
+  return keys.every((key) => (a || {})[key] === (b || {})[key])
+}
+
 function snapshot() {
   const state = {}
   for (const key of KEYS) {
@@ -51,10 +56,16 @@ export function ShareBar() {
       try {
         const remote = await api('/api/state')
         if (stopped) return
-        const local = JSON.stringify(snapshot())
-        const remoteJson = JSON.stringify(remote.state || {})
-        if (remoteJson !== '{}' && remoteJson !== local && remoteJson !== lastSent) {
-          applyState(remote.state)
+        const remoteState = remote.state || {}
+        const localState = snapshot()
+        if (!sameState(remoteState, localState) && Object.keys(remoteState).length > 0) {
+          const stamp = remote.updated_at || 'remote'
+          if (sessionStorage.getItem('cp-sync-stamp') === stamp) {
+            setStatus('Shared plan is open')
+            return
+          }
+          sessionStorage.setItem('cp-sync-stamp', stamp)
+          applyState(remoteState)
           if (remote.role) {
             localStorage.setItem(ROLE_KEY, remote.role)
             localStorage.setItem('cp-writer', remote.role)
@@ -62,10 +73,14 @@ export function ShareBar() {
           window.location.reload()
           return
         }
-        if (local !== lastSent) {
-          await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: snapshot() }) })
+        sessionStorage.removeItem('cp-sync-stamp')
+        const local = JSON.stringify(localState)
+        if (local !== lastSent && !sameState(remoteState, localState)) {
+          await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: localState }) })
           lastSent = local
           if (!stopped) setStatus('Saved')
+        } else if (!stopped) {
+          setStatus('Shared plan is open')
         }
       } catch (error) {
         if (!stopped) setStatus(error.message)
