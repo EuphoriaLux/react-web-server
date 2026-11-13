@@ -526,6 +526,55 @@ function luxHolidays(year, tr) {
 }
 
 
+function generateYearPlan(year, answers) {
+  const hols = {}
+  const school = schoolHolidayMap(year)
+  // Build full-year holiday map
+  const easter = easterSunday(year)
+  const fixed = [
+    [new Date(year, 0, 1), 'h'], [addDays(easter, 1), 'h'], [new Date(year, 4, 1), 'h'],
+    [new Date(year, 4, 9), 'h'], [addDays(easter, 39), 'h'], [addDays(easter, 50), 'h'],
+    [new Date(year, 5, 23), 'h'], [new Date(year, 7, 15), 'h'], [new Date(year, 10, 1), 'h'],
+    [new Date(year, 11, 25), 'h'], [new Date(year, 11, 26), 'h'],
+  ]
+  const holMap = {}
+  for (const [d] of fixed) holMap[isoDate(d)] = true
+  const plan = {}
+  // Collect all holiday and school days
+  const holDays = Object.keys(holMap).sort()
+  const schoolDays = Object.keys(school).filter(k => !holMap[k]).sort()
+  let aH = 0, bH = 0
+  holDays.forEach((key) => {
+    const who = aH <= bH ? 'A' : 'B'
+    plan[key] = who
+    if (who === 'A') aH++; else bH++
+  })
+  let aS = 0, bS = 0
+  schoolDays.forEach((key) => {
+    const who = aS <= bS ? 'A' : 'B'
+    plan[key] = who
+    if (who === 'A') aS++; else bS++
+  })
+  // Fill remaining days of the year according to rhythm
+  for (let m = 0; m < 12; m++) {
+    const days = new Date(year, m + 1, 0).getDate()
+    for (let d = 1; d <= days; d++) {
+      const key = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+      if (plan[key]) continue
+      if (answers.rhythm === 'weeks') {
+        const week = Math.floor((d + ((new Date(year, m, 1).getDay()+6)%7) - 1) / 7)
+        plan[key] = week % 2 === 0 ? 'A' : 'B'
+      } else if (answers.rhythm === 'weekend-mid') {
+        const dow = (new Date(year, m, d).getDay() + 6) % 7
+        plan[key] = dow === 2 || dow === 3 ? 'B' : 'A'
+      } else {
+        plan[key] = d % 2 === 0 ? 'A' : 'B'
+      }
+    }
+  }
+  return { plan, aH, bH, aS, bS }
+}
+
 function generateFairPlan(year, month, answers, holidays, school) {
   const days = new Date(year, month + 1, 0).getDate()
   const plan = {}
@@ -587,9 +636,14 @@ function generateFairPlan(year, month, answers, holidays, school) {
 }
 
 function Questionnaire({ year, month, holidays, school, onApply, onClose, tr }) {
-  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split' })
+  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split', scope: 'month' })
   const [preview, setPreview] = useState(null)
   const generate = () => {
+    if (answers.scope === 'year') {
+      const res = generateYearPlan(year, answers)
+      setPreview({ ...res, scope: 'year' })
+      return
+    }
     const plan = generateFairPlan(year, month, answers, holidays, school || {})
     let aH = 0, bH = 0, aS = 0, bS = 0
     const last = new Date(year, month+1, 0).getDate()
@@ -602,7 +656,7 @@ function Questionnaire({ year, month, holidays, school, onApply, onClose, tr }) 
         if (plan[d] === 'A') aS++; else if (plan[d] === 'B') bS++
       }
     }
-    setPreview({ plan, aH, bH, aS, bS })
+    setPreview({ plan, aH, bH, aS, bS, scope: 'month' })
   }
   return (
     <div className="q-overlay" onClick={onClose}>
@@ -629,6 +683,11 @@ function Questionnaire({ year, month, holidays, school, onApply, onClose, tr }) 
           <button type="button" className={answers.holidays==='split'?'on':''} onClick={() => setAnswers({...answers, holidays:'split'})}>{tr.q3a}</button>
           <button type="button" className={answers.holidays==='alternate'?'on':''} onClick={() => setAnswers({...answers, holidays:'alternate'})}>{tr.q3b}</button>
         </div>
+        <label>{tr.scope || 'Apply to'}</label>
+        <div className="q-options">
+          <button type="button" className={answers.scope==='month'?'on':''} onClick={() => setAnswers({...answers, scope:'month'})}>{tr.thisMonth || 'This month'}</button>
+          <button type="button" className={answers.scope==='year'?'on':''} onClick={() => setAnswers({...answers, scope:'year'})}>{tr.fullYear || 'Full year'}</button>
+        </div>
         <div className="q-actions">
           <button className="btn primary" type="button" onClick={generate}>{tr.generate}</button>
         </div>
@@ -640,7 +699,7 @@ function Questionnaire({ year, month, holidays, school, onApply, onClose, tr }) 
               <span className="pill school">{tr.school || 'School'} A · {preview.aS}</span>
               <span className="pill school">{tr.school || 'School'} B · {preview.bS}</span>
             </div>
-            <button className="btn primary" type="button" onClick={() => onApply(preview.plan)}>{tr.apply}</button>
+            <button className="btn primary" type="button" onClick={() => onApply(preview)}>{tr.apply}</button>
           </div>
         )}
       </div>
@@ -863,11 +922,15 @@ function CalendarView() {
           school={school}
           tr={tr}
           onClose={() => setShowQ(false)}
-          onApply={(plan) => {
+          onApply={(res) => {
             const next = { ...custody }
-            for (const [d, who] of Object.entries(plan)) {
-              const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-              next[key] = who
+            if (res.scope === 'year') {
+              Object.assign(next, res.plan)
+            } else {
+              for (const [d, who] of Object.entries(res.plan)) {
+                const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+                next[key] = who
+              }
             }
             setCustody(next)
             setShowQ(false)
@@ -1179,4 +1242,4 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LangProvider><App /></LangProvider>
   </React.StrictMode>
-)
+)\n    scope: 'Uwenden op',\n    thisMonth: 'Dëse Mount',\n    fullYear: 'Ganzt Joer',\n    scope: 'Anwenden auf',\n    thisMonth: 'Dieser Monat',\n    fullYear: 'Ganzes Jahr',\n    scope: 'Appliquer à',\n    thisMonth: 'Ce mois',\n    fullYear: 'Année complète',\n    scope: 'Apply to',\n    thisMonth: 'This month',\n    fullYear: 'Full year',\n    scope: 'Appliquer à',\n    thisMonth: 'Ce mois',\n    fullYear: 'Année complète',\n    scope: 'Apply to',\n    thisMonth: 'This month',\n    fullYear: 'Full year',
