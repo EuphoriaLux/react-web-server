@@ -1129,7 +1129,6 @@ function DeployLog() {
 function AppShell({ onExit }) {
   const { tr } = useLang()
   const [tab, setTab] = useState('today')
-  const [more, setMore] = useState(false)
   const primary = [
     { id: 'today', label: 'Today', Icon: Heart },
     { id: 'handover', label: 'Handover', Icon: Clock },
@@ -1137,12 +1136,20 @@ function AppShell({ onExit }) {
     { id: 'expenses', label: tr.tabExp, Icon: Wallet },
     { id: 'messages', label: tr.tabMsg, Icon: MessageSquare },
   ]
-  function open(id) { setTab(id); setMore(false) }
+  const extra = [
+    { id: 'resolve', label: 'Resolve', Icon: Check },
+    { id: 'docs', label: tr.tabDoc, Icon: FileText },
+  ]
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="app-brand"><span className="logo-mark small"><Heart size={14} /></span> {tr.appTitle}</div>
         <div className="app-tools">
+          {extra.map(({ id, label, Icon }) => (
+            <button key={id} type="button" className={`btn ghost sm ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>
+              <Icon size={16} /> {label}
+            </button>
+          ))}
           <LangSwitch />
           <button className="btn ghost sm" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
         </div>
@@ -1160,23 +1167,12 @@ function AppShell({ onExit }) {
       </main>
       <nav className="dock" aria-label="App">
         {primary.map(({ id, label, Icon }) => (
-          <button key={id} type="button" className={tab === id ? 'on' : ''} onClick={() => open(id)}>
-            <Icon size={20} />
+          <button key={id} type="button" className={tab === id ? 'on' : ''} onClick={() => setTab(id)}>
+            <span className="dock-icon"><Icon size={22} /></span>
             <span>{label}</span>
           </button>
         ))}
-        <button type="button" className={more || ['resolve', 'docs', 'deploy'].includes(tab) ? 'on' : ''} onClick={() => setMore((v) => !v)}>
-          <Menu size={20} />
-          <span>More</span>
-        </button>
       </nav>
-      {more && (
-        <div className="more-sheet">
-          <button type="button" onClick={() => open('resolve')}><Check size={16} /> Resolve</button>
-          <button type="button" onClick={() => open('docs')}><FileText size={16} /> {tr.tabDoc}</button>
-          <button type="button" onClick={() => open('deploy')}><Activity size={16} /> {tr.tabDeploy || 'Deploy'}</button>
-        </div>
-      )}
     </div>
   )
 }

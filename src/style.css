@@ -876,62 +876,43 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 }
 .dock {
   position: fixed;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-  width: min(560px, calc(100% - 20px));
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
-  padding: 8px 6px 10px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  box-shadow: 0 16px 40px -18px rgba(12, 31, 56, 0.45);
-  backdrop-filter: blur(16px);
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  padding: 6px 8px calc(10px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px -18px rgba(12, 31, 56, 0.35);
   z-index: 50;
 }
 .dock button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  min-height: 52px;
-  border-radius: 14px;
+  gap: 2px;
+  min-height: 56px;
+  border-radius: 16px;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 700;
 }
-.dock button.on { color: var(--teal-deep); background: var(--teal-soft); }
-.more-sheet {
-  position: fixed;
-  right: 16px;
-  bottom: 92px;
-  z-index: 60;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  background: white;
+.dock-icon {
+  width: 56px;
+  height: 32px;
   border-radius: 16px;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
 }
-.more-sheet button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  font-weight: 600;
-  color: var(--ink);
-  min-width: 160px;
-}
-.more-sheet button:hover { background: #f4f7fb; }
+.dock button.on { color: var(--teal-deep); background: transparent; }
+.dock button.on .dock-icon { background: var(--teal-soft); }
+.app-tools .btn.on { color: var(--teal-deep); background: var(--teal-soft); }
 @media (max-width: 720px) {
   .app-header { padding: 12px 14px; }
   .app-tools .btn span, .app-tools .btn { font-size: 0.85rem; }
-  .app-main { padding: 14px 12px 108px; }
-  .dock { bottom: 10px; }
+  .app-main { padding: 14px 12px 96px; }
 }
 
