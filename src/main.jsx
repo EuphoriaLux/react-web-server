@@ -61,7 +61,7 @@ const t = {
     footerMeta: 'CoParents · Concept preview',
     appTitle: 'CoParents demo',
     tabCal: 'Calendar', tabExp: 'Expenses', tabMsg: 'Messages', tabDoc: 'Docs',
-    calTitle: 'Shared calendar',
+    calTitle: 'Shared calendar',\n    both: 'Both', paintAs: 'Assign', clear: 'Clear', altWeeks: 'Alt. weeks (A)', altWeeksB: 'Alt. weeks (B)', weekendA: 'Every other weekend A', monthA: 'Whole month A', monthB: 'Whole month B', clearMonth: 'Clear month', addEvent: 'Add note / event',
     eventTitle: 'Event title', add: 'Add',
     typeEvent: 'Event', typeHandover: 'Handover', typeSchool: 'School', typeMedical: 'Medical',
     expTitle: 'Transparent expenses',
@@ -122,7 +122,7 @@ const t = {
     footerMeta: 'CoParents · Aperçu concept',
     appTitle: 'Démo CoParents',
     tabCal: 'Calendrier', tabExp: 'Dépenses', tabMsg: 'Messages', tabDoc: 'Documents',
-    calTitle: 'Calendrier partagé',
+    calTitle: 'Calendrier partagé',\n    both: 'Les deux', paintAs: 'Attribuer', clear: 'Effacer', altWeeks: 'Semaines alt. (A)', altWeeksB: 'Semaines alt. (B)', weekendA: 'Un week-end sur deux A', monthA: 'Tout le mois A', monthB: 'Tout le mois B', clearMonth: 'Effacer le mois', addEvent: 'Ajouter une note / événement',
     eventTitle: 'Titre de l’événement', add: 'Ajouter',
     typeEvent: 'Événement', typeHandover: 'Garde', typeSchool: 'École', typeMedical: 'Médical',
     expTitle: 'Dépenses transparentes',
@@ -183,7 +183,7 @@ const t = {
     footerMeta: 'CoParents · Konzeptvorschau',
     appTitle: 'CoParents Demo',
     tabCal: 'Kalender', tabExp: 'Ausgaben', tabMsg: 'Nachrichten', tabDoc: 'Dokumente',
-    calTitle: 'Gemeinsamer Kalender',
+    calTitle: 'Gemeinsamer Kalender',\n    both: 'Beide', paintAs: 'Zuweisen', clear: 'Löschen', altWeeks: 'Wechselnde Wochen (A)', altWeeksB: 'Wechselnde Wochen (B)', weekendA: 'Jedes zweite Wochenende A', monthA: 'Ganzer Monat A', monthB: 'Ganzer Monat B', clearMonth: 'Monat löschen', addEvent: 'Notiz / Ereignis',
     eventTitle: 'Ereignistitel', add: 'Hinzufügen',
     typeEvent: 'Ereignis', typeHandover: 'Übergabe', typeSchool: 'Schule', typeMedical: 'Medizinisch',
     expTitle: 'Transparente Ausgaben',
@@ -300,63 +300,190 @@ function save(key, value) { localStorage.setItem(key, JSON.stringify(value)) }
 
 function CalendarView() {
   const { tr } = useLang()
+  const [custody, setCustody] = useState(() => load('cp-custody', {}))
   const [events, setEvents] = useState(() => load('cp-events', []))
   const [cursor, setCursor] = useState(() => new Date())
+  const [mode, setMode] = useState('paint') // paint | event
+  const [paint, setPaint] = useState('A')
   const [form, setForm] = useState({ title: '', date: '', type: 'event' })
+
+  useEffect(() => { save('cp-custody', custody) }, [custody])
   useEffect(() => { save('cp-events', events) }, [events])
-  const year = cursor.getFullYear(), month = cursor.getMonth()
+
+  const year = cursor.getFullYear()
+  const month = cursor.getMonth()
   const first = new Date(year, month, 1)
   const startPad = (first.getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const cells = []
   for (let i = 0; i < startPad; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-  const add = (e) => { e.preventDefault(); if (!form.title || !form.date) return; setEvents((p) => [...p, { id: Date.now(), ...form }]); setForm({ title: '', date: '', type: 'event' }) }
-  const remove = (id) => setEvents((p) => p.filter((x) => x.id !== id))
-  const monthLabel = cursor.toLocaleString(tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en', { month: 'long', year: 'numeric' })
+
+  const iso = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+  const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en'
+  const monthLabel = cursor.toLocaleString(locale, { month: 'long', year: 'numeric' })
+
+  const setDay = (d, who) => {
+    const key = iso(d)
+    setCustody((prev) => {
+      const next = { ...prev }
+      if (!who) delete next[key]
+      else next[key] = who
+      return next
+    })
+  }
+
+  const cycleDay = (d) => {
+    const key = iso(d)
+    const cur = custody[key]
+    const order = [null, 'A', 'B', 'both']
+    const next = order[(order.indexOf(cur) + 1) % order.length]
+    setDay(d, next)
+  }
+
+  const paintDay = (d) => {
+    if (mode === 'event') return
+    setDay(d, paint === 'clear' ? null : paint)
+  }
+
+  // Quick plans
+  const planAlternateWeeks = (startWith) => {
+    const next = { ...custody }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d)
+      const week = Math.floor((d + startPad - 1) / 7)
+      next[iso(d)] = week % 2 === 0 ? startWith : (startWith === 'A' ? 'B' : 'A')
+    }
+    setCustody(next)
+  }
+  const planEveryOtherWeekend = (who) => {
+    const next = { ...custody }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d)
+      const dow = (date.getDay() + 6) % 7 // Mon=0
+      const isWeekend = dow >= 5
+      const week = Math.floor((d + startPad - 1) / 7)
+      if (isWeekend && week % 2 === 0) next[iso(d)] = who
+      else if (!next[iso(d)]) next[iso(d)] = who === 'A' ? 'B' : 'A'
+    }
+    setCustody(next)
+  }
+  const planWholeMonth = (who) => {
+    const next = { ...custody }
+    for (let d = 1; d <= daysInMonth; d++) next[iso(d)] = who
+    setCustody(next)
+  }
+  const clearMonth = () => {
+    const next = { ...custody }
+    for (let d = 1; d <= daysInMonth; d++) delete next[iso(d)]
+    setCustody(next)
+  }
+
+  const counts = { A: 0, B: 0, both: 0 }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const w = custody[iso(d)]
+    if (w === 'A') counts.A++
+    else if (w === 'B') counts.B++
+    else if (w === 'both') counts.both++
+  }
+
+  const addEvent = (e) => {
+    e.preventDefault()
+    if (!form.title || !form.date) return
+    setEvents((p) => [...p, { id: Date.now(), ...form }])
+    setForm({ title: '', date: '', type: 'event' })
+  }
+  const removeEvent = (id) => setEvents((p) => p.filter((x) => x.id !== id))
+
+  const weekdays = tr.lang === 'FR'
+    ? ['L','M','M','J','V','S','D']
+    : tr.lang === 'DE'
+    ? ['Mo','Di','Mi','Do','Fr','Sa','So']
+    : ['M','T','W','T','F','S','S']
+
   return (
-    <div className="app-panel">
+    <div className="app-panel kid-cal">
       <div className="panel-head">
         <h2>{tr.calTitle}</h2>
         <div className="month-nav">
-          <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month - 1, 1))}><ChevronLeft size={18} /></button>
+          <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} aria-label="Prev"><ChevronLeft size={20} /></button>
           <strong>{monthLabel}</strong>
-          <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month + 1, 1))}><ChevronRight size={18} /></button>
+          <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} aria-label="Next"><ChevronRight size={20} /></button>
         </div>
       </div>
-      <div className="cal-grid">
-        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => <div key={d} className="cal-dow">{d}</div>)}
+
+      <div className="kid-summary">
+        <span className="pill a">A · {counts.A}</span>
+        <span className="pill b">B · {counts.B}</span>
+        <span className="pill both">{tr.both || 'Both'} · {counts.both}</span>
+      </div>
+
+      <div className="paint-bar">
+        <span className="paint-label">{tr.paintAs || 'Assign'}</span>
+        <button type="button" className={`paint a ${paint === 'A' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('A') }}>A</button>
+        <button type="button" className={`paint b ${paint === 'B' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('B') }}>B</button>
+        <button type="button" className={`paint both ${paint === 'both' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('both') }}>{tr.both || 'Both'}</button>
+        <button type="button" className={`paint clear ${paint === 'clear' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('clear') }}>{tr.clear || 'Clear'}</button>
+      </div>
+
+      <div className="cal-grid kid">
+        {weekdays.map((d, i) => <div key={i} className="cal-dow">{d}</div>)}
         {cells.map((d, i) => {
-          const iso = d ? `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` : null
-          const dayEvents = events.filter((ev) => ev.date === iso)
+          if (!d) return <div key={i} className="cal-cell empty" />
+          const key = iso(d)
+          const who = custody[key]
+          const dayEvents = events.filter((ev) => ev.date === key)
           return (
-            <div key={i} className={`cal-cell ${d ? '' : 'empty'}`}>
-              {d && <span className="cal-day">{d}</span>}
-              {dayEvents.map((ev) => (
-                <div key={ev.id} className={`cal-event ${ev.type}`}>
-                  {ev.title}
-                  <button type="button" onClick={() => remove(ev.id)} aria-label="Remove"><Trash2 size={12} /></button>
-                </div>
-              ))}
-            </div>
+            <button
+              key={i}
+              type="button"
+              className={`cal-cell day ${who || ''}`}
+              onClick={() => paintDay(d)}
+              onDoubleClick={() => cycleDay(d)}
+              aria-label={`${d} ${who || 'none'}`}
+            >
+              <span className="cal-day">{d}</span>
+              {who && <span className="who">{who === 'both' ? 'AB' : who}</span>}
+              {dayEvents.length > 0 && <span className="dot" />}
+            </button>
           )
         })}
       </div>
-      <form className="add-form" onSubmit={add}>
-        <input placeholder={tr.eventTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-          <option value="event">{tr.typeEvent}</option>
-          <option value="handover">{tr.typeHandover}</option>
-          <option value="school">{tr.typeSchool}</option>
-          <option value="medical">{tr.typeMedical}</option>
-        </select>
-        <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
-      </form>
+
+      <div className="plan-row">
+        <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('A')}>{tr.altWeeks || 'Alt. weeks (A start)'}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('B')}>{tr.altWeeksB || 'Alt. weeks (B start)'}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planEveryOtherWeekend('A')}>{tr.weekendA || 'Every other weekend A'}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('A')}>{tr.monthA || 'Whole month A'}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('B')}>{tr.monthB || 'Whole month B'}</button>
+        <button type="button" className="btn ghost sm" onClick={clearMonth}>{tr.clearMonth || 'Clear month'}</button>
+      </div>
+
+      <details className="event-details">
+        <summary>{tr.addEvent || 'Add note / event'}</summary>
+        <form className="add-form" onSubmit={addEvent}>
+          <input placeholder={tr.eventTitle} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+            <option value="event">{tr.typeEvent}</option>
+            <option value="handover">{tr.typeHandover}</option>
+            <option value="school">{tr.typeSchool}</option>
+            <option value="medical">{tr.typeMedical}</option>
+          </select>
+          <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
+        </form>
+        <div className="event-mini">
+          {events.filter(ev => ev.date && ev.date.startsWith(`${year}-${String(month+1).padStart(2,'0')}`)).map(ev => (
+            <div key={ev.id} className="mini-ev">
+              <span>{ev.date.slice(8)} · {ev.title}</span>
+              <button type="button" onClick={() => removeEvent(ev.id)}><Trash2 size={14} /></button>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   )
 }
-
 function ExpensesView() {
   const { tr } = useLang()
   const [items, setItems] = useState(() => load('cp-expenses', []))
