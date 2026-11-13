@@ -19,10 +19,6 @@ function HeroArt() {
   return (
     <svg className="hero-art" viewBox="0 0 520 440" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <linearGradient id="gSky" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#e8f7f4" />
-          <stop offset="100%" stopColor="#eef3fa" />
-        </linearGradient>
         <linearGradient id="gHouseA" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#ffffff" />
           <stop offset="100%" stopColor="#f0f5fb" />
@@ -41,11 +37,9 @@ function HeroArt() {
         </filter>
       </defs>
 
-      {/* soft ground */}
-      <ellipse cx="260" cy="400" rx="200" ry="18" fill="#dfe8f2" opacity="0.55" />
+      <ellipse className="ha-ground" cx="260" cy="400" rx="200" ry="18" fill="#dfe8f2" opacity="0.55" />
 
-      {/* left home */}
-      <g filter="url(#soft)">
+      <g className="ha-house ha-house-l" filter="url(#soft)">
         <path d="M48 210 L110 152 L172 210 Z" fill="#0d9488" opacity="0.9" />
         <rect x="58" y="210" width="104" height="96" rx="10" fill="url(#gHouseA)" stroke="#d5e0ec" />
         <rect x="78" y="232" width="28" height="28" rx="5" fill="#cce8e3" />
@@ -53,8 +47,7 @@ function HeroArt() {
         <rect x="96" y="268" width="28" height="38" rx="5" fill="#0f2744" opacity="0.85" />
       </g>
 
-      {/* right home */}
-      <g filter="url(#soft)">
+      <g className="ha-house ha-house-r" filter="url(#soft)">
         <path d="M348 210 L410 152 L472 210 Z" fill="#0f766e" opacity="0.85" />
         <rect x="358" y="210" width="104" height="96" rx="10" fill="url(#gHouseB)" stroke="#d5e0ec" />
         <rect x="378" y="232" width="28" height="28" rx="5" fill="#d5f0ea" />
@@ -62,7 +55,7 @@ function HeroArt() {
         <rect x="396" y="268" width="28" height="38" rx="5" fill="#0f2744" opacity="0.85" />
       </g>
 
-      {/* connecting path */}
+      {/* thick soft bridge */}
       <path
         d="M162 258 C210 220, 310 220, 358 258"
         stroke="url(#gBridge)"
@@ -70,34 +63,34 @@ function HeroArt() {
         strokeLinecap="round"
         fill="none"
       />
+      {/* animated dashed connection — stroke-dashoffset technique */}
       <path
+        className="ha-bridge"
         d="M162 258 C210 220, 310 220, 358 258"
+        pathLength="1"
         stroke="#0d9488"
         strokeWidth="2.5"
         strokeLinecap="round"
-        strokeDasharray="6 8"
+        strokeDasharray="0.08 0.12"
         fill="none"
-        opacity="0.55"
+        opacity="0.65"
       />
 
-      {/* center shared node — calendar */}
-      <g filter="url(#soft)">
+      <g className="ha-cal" filter="url(#soft)">
         <rect x="218" y="188" width="84" height="92" rx="16" fill="white" stroke="#d5e0ec" />
         <rect x="218" y="188" width="84" height="26" rx="16" fill="#0d9488" />
         <rect x="218" y="204" width="84" height="10" fill="#0d9488" />
         <circle cx="236" cy="201" r="3.5" fill="white" opacity="0.9" />
         <circle cx="284" cy="201" r="3.5" fill="white" opacity="0.9" />
-        {/* calendar dots */}
-        <circle cx="236" cy="240" r="4" fill="#0d9488" />
+        <circle className="ha-dot" cx="236" cy="240" r="4" fill="#0d9488" />
         <circle cx="260" cy="240" r="4" fill="#94a3b8" opacity="0.45" />
-        <circle cx="284" cy="240" r="4" fill="#2563eb" />
+        <circle className="ha-dot ha-dot-delay" cx="284" cy="240" r="4" fill="#2563eb" />
         <circle cx="236" cy="262" r="4" fill="#94a3b8" opacity="0.45" />
-        <circle cx="260" cy="262" r="4" fill="#d97706" />
+        <circle className="ha-dot ha-dot-delay2" cx="260" cy="262" r="4" fill="#d97706" />
         <circle cx="284" cy="262" r="4" fill="#94a3b8" opacity="0.45" />
       </g>
 
-      {/* heart badge above calendar */}
-      <g transform="translate(248 156)">
+      <g className="ha-heart" transform="translate(248 156)">
         <circle cx="12" cy="12" r="16" fill="#ccfbf1" stroke="#99f6e4" />
         <path
           d="M12 20.5 C12 20.5 5 15.2 5 10.8 C5 8.4 6.8 6.8 9 6.8 C10.4 6.8 11.5 7.5 12 8.5 C12.5 7.5 13.6 6.8 15 6.8 C17.2 6.8 19 8.4 19 10.8 C19 15.2 12 20.5 12 20.5 Z"
@@ -105,22 +98,20 @@ function HeroArt() {
         />
       </g>
 
-      {/* floating chips */}
-      <g filter="url(#soft)">
+      <g className="ha-chip ha-chip-l" filter="url(#soft)">
         <rect x="86" y="118" width="108" height="36" rx="18" fill="white" stroke="#e2eaf3" />
         <circle cx="106" cy="136" r="8" fill="#ccfbf1" />
         <rect x="120" y="130" width="54" height="6" rx="3" fill="#d5e0ec" />
         <rect x="120" y="140" width="36" height="5" rx="2.5" fill="#e8eef5" />
       </g>
-      <g filter="url(#soft)">
+      <g className="ha-chip ha-chip-r" filter="url(#soft)">
         <rect x="330" y="118" width="108" height="36" rx="18" fill="white" stroke="#e2eaf3" />
         <circle cx="350" cy="136" r="8" fill="#dbeafe" />
         <rect x="364" y="130" width="54" height="6" rx="3" fill="#d5e0ec" />
         <rect x="364" y="140" width="36" height="5" rx="2.5" fill="#e8eef5" />
       </g>
 
-      {/* small child node under bridge */}
-      <g transform="translate(248 300)">
+      <g className="ha-child" transform="translate(248 300)">
         <circle cx="12" cy="10" r="9" fill="#fde68a" />
         <rect x="4" y="20" width="16" height="14" rx="6" fill="#fbbf24" opacity="0.85" />
       </g>
@@ -224,7 +215,7 @@ function IconScatter() {
     <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
       <rect x="6" y="8" width="14" height="18" rx="2.5" fill="#fecaca" transform="rotate(-8 13 17)" />
       <rect x="16" y="10" width="14" height="18" rx="2.5" fill="#fda4af" transform="rotate(6 23 19)" />
-      <rect x="12" y="14" width="14" height="18" rx="2.5" fill="#fff" stroke="#fecaca" />
+      <rect x="12" y="14" width="14" height="18" rx="2.5" fill="white" stroke="#fecaca" />
       <path d="M16 20h6M16 24h5" stroke="#f87171" strokeWidth="1.6" strokeLinecap="round" opacity="0.7" />
     </svg>
   )
@@ -240,7 +231,6 @@ function ValuesArt() {
         </linearGradient>
       </defs>
       <rect x="20" y="30" width="280" height="160" rx="24" fill="url(#vg)" opacity="0.55" />
-      {/* two adults + child silhouette group */}
       <g transform="translate(70 55)">
         <circle cx="40" cy="36" r="16" fill="#0d9488" opacity="0.9" />
         <rect x="24" y="54" width="32" height="40" rx="12" fill="#0d9488" opacity="0.75" />
@@ -248,78 +238,33 @@ function ValuesArt() {
         <rect x="124" y="54" width="32" height="40" rx="12" fill="#0f766e" opacity="0.75" />
         <circle cx="90" cy="52" r="12" fill="#fbbf24" />
         <rect x="78" y="66" width="24" height="28" rx="10" fill="#f59e0b" opacity="0.9" />
-        {/* connecting arc */}
-        <path d="M56 40 C70 20, 110 20, 124 40" stroke="#0d9488" strokeWidth="2.5" strokeDasharray="5 6" strokeLinecap="round" opacity="0.5" />
+        <path className="va-arc" d="M56 40 C70 20, 110 20, 124 40" pathLength="1" stroke="#0d9488" strokeWidth="2.5" strokeDasharray="0.12 0.1" strokeLinecap="round" opacity="0.55" fill="none" />
       </g>
-      <circle cx="52" cy="48" r="6" fill="#99f6e4" />
-      <circle cx="268" cy="170" r="8" fill="#bae6fd" />
-      <circle cx="250" cy="50" r="5" fill="#99f6e4" opacity="0.8" />
+      <circle className="va-orb" cx="52" cy="48" r="6" fill="#99f6e4" />
+      <circle className="va-orb va-orb-2" cx="268" cy="170" r="8" fill="#bae6fd" />
+      <circle className="va-orb va-orb-3" cx="250" cy="50" r="5" fill="#99f6e4" opacity="0.8" />
     </svg>
   )
 }
 
 const features = [
-  {
-    Icon: IconCalendar,
-    title: 'Shared calendar',
-    text: 'One source of truth for handovers, school events, holidays and medical appointments. Both parents see the same plan.',
-  },
-  {
-    Icon: IconWallet,
-    title: 'Transparent expenses',
-    text: 'Log costs, attach receipts and settle fairly. Fewer arguments about who paid for what.',
-  },
-  {
-    Icon: IconMessages,
-    title: 'Structured messages',
-    text: 'Keep conversations focused on the child. Less emotional noise, clearer decisions.',
-  },
-  {
-    Icon: IconDocs,
-    title: 'Secure documents',
-    text: 'Agreements, school reports, medical records and ID copies — always available to both of you.',
-  },
+  { Icon: IconCalendar, title: 'Shared calendar', text: 'One source of truth for handovers, school events, holidays and medical appointments. Both parents see the same plan.' },
+  { Icon: IconWallet, title: 'Transparent expenses', text: 'Log costs, attach receipts and settle fairly. Fewer arguments about who paid for what.' },
+  { Icon: IconMessages, title: 'Structured messages', text: 'Keep conversations focused on the child. Less emotional noise, clearer decisions.' },
+  { Icon: IconDocs, title: 'Secure documents', text: 'Agreements, school reports, medical records and ID copies — always available to both of you.' },
 ]
 
 const friction = [
-  {
-    Icon: IconHandover,
-    title: 'Missed handovers',
-    text: 'Last-minute schedule changes and unclear pickup times create stress for everyone.',
-  },
-  {
-    Icon: IconExpense,
-    title: 'Expense disputes',
-    text: 'Who paid for school trip, clothes, activities? The spreadsheet never stays current.',
-  },
-  {
-    Icon: IconEscalate,
-    title: 'Messages that escalate',
-    text: 'Ordinary logistics turn emotional in chat threads with no structure or history.',
-  },
-  {
-    Icon: IconScatter,
-    title: 'Scattered papers',
-    text: 'Agreements, medical notes and school forms live in inboxes, drives and drawers.',
-  },
+  { Icon: IconHandover, title: 'Missed handovers', text: 'Last-minute schedule changes and unclear pickup times create stress for everyone.' },
+  { Icon: IconExpense, title: 'Expense disputes', text: 'Who paid for school trip, clothes, activities? The spreadsheet never stays current.' },
+  { Icon: IconEscalate, title: 'Messages that escalate', text: 'Ordinary logistics turn emotional in chat threads with no structure or history.' },
+  { Icon: IconScatter, title: 'Scattered papers', text: 'Agreements, medical notes and school forms live in inboxes, drives and drawers.' },
 ]
 
 const steps = [
-  {
-    n: '01',
-    title: 'Invite the other parent',
-    text: 'Create a shared space. Both of you keep full visibility and equal control.',
-  },
-  {
-    n: '02',
-    title: 'Bring your calendar & costs in',
-    text: 'Start with what already exists. No need to rebuild everything from scratch.',
-  },
-  {
-    n: '03',
-    title: 'Run the logistics together',
-    text: 'Decide faster, argue less, and keep the child at the centre of every plan.',
-  },
+  { n: '01', title: 'Invite the other parent', text: 'Create a shared space. Both of you keep full visibility and equal control.' },
+  { n: '02', title: 'Bring your calendar & costs in', text: 'Start with what already exists. No need to rebuild everything from scratch.' },
+  { n: '03', title: 'Run the logistics together', text: 'Decide faster, argue less, and keep the child at the centre of every plan.' },
 ]
 
 function App() {
@@ -334,9 +279,7 @@ function App() {
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : ''
-    return () => {
-      document.body.style.overflow = ''
-    }
+    return () => { document.body.style.overflow = '' }
   }, [menuOpen])
 
   const closeMenu = () => setMenuOpen(false)
@@ -346,52 +289,28 @@ function App() {
       <header className={`nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="nav-inner">
           <a className="logo" href="#top" onClick={closeMenu}>
-            <span className="logo-mark">
-              <Heart size={16} strokeWidth={2.4} />
-            </span>
+            <span className="logo-mark"><Heart size={16} strokeWidth={2.4} /></span>
             CoParents
           </a>
-
           <nav className="nav-links" aria-label="Primary">
             <a href="#problem">The problem</a>
             <a href="#solution">How it helps</a>
             <a href="#how">How it works</a>
           </nav>
-
           <div className="nav-actions">
-            <button className="btn ghost" type="button">
-              Sign in
-            </button>
-            <button className="btn primary" type="button">
-              Get early access
-            </button>
+            <button className="btn ghost" type="button">Sign in</button>
+            <button className="btn primary" type="button">Get early access</button>
           </div>
-
-          <button
-            className="menu-btn"
-            type="button"
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((v) => !v)}
-          >
+          <button className="menu-btn" type="button" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
-
         {menuOpen && (
           <div className="mobile-menu">
-            <a href="#problem" onClick={closeMenu}>
-              The problem
-            </a>
-            <a href="#solution" onClick={closeMenu}>
-              How it helps
-            </a>
-            <a href="#how" onClick={closeMenu}>
-              How it works
-            </a>
-            <button className="btn primary full" type="button" onClick={closeMenu}>
-              Get early access
-            </button>
+            <a href="#problem" onClick={closeMenu}>The problem</a>
+            <a href="#solution" onClick={closeMenu}>How it helps</a>
+            <a href="#how" onClick={closeMenu}>How it works</a>
+            <button className="btn primary full" type="button" onClick={closeMenu}>Get early access</button>
           </div>
         )}
       </header>
@@ -405,46 +324,20 @@ function App() {
           </div>
           <div className="container hero-grid">
             <div className="hero-copy">
-              <div className="eyebrow">
-                <Sparkles size={13} />
-                Built for parents who still share a child
-              </div>
-              <h1>
-                Co-parenting
-                <span className="h1-line">without the chaos</span>
-              </h1>
-              <p className="lead">
-                One calm, shared space for schedules, expenses, messages and documents.
-                Less friction between you. More clarity for your child.
-              </p>
+              <div className="eyebrow"><Sparkles size={13} />Built for parents who still share a child</div>
+              <h1>Co-parenting<span className="h1-line">without the chaos</span></h1>
+              <p className="lead">One calm, shared space for schedules, expenses, messages and documents. Less friction between you. More clarity for your child.</p>
               <div className="hero-cta">
-                <button className="btn primary large" type="button">
-                  Start your shared space
-                  <ArrowRight size={18} />
-                </button>
-                <a className="btn text" href="#solution">
-                  See how it works
-                </a>
+                <button className="btn primary large" type="button">Start your shared space<ArrowRight size={18} /></button>
+                <a className="btn text" href="#solution">See how it works</a>
               </div>
               <div className="hero-trust">
-                <span>
-                  <Shield size={15} />
-                  Private by design
-                </span>
-                <span>
-                  <Users size={15} />
-                  Both parents equal
-                </span>
-                <span>
-                  <Clock size={15} />
-                  Built for real life
-                </span>
+                <span><Shield size={15} />Private by design</span>
+                <span><Users size={15} />Both parents equal</span>
+                <span><Clock size={15} />Built for real life</span>
               </div>
             </div>
-
-            <div className="hero-visual" aria-hidden="true">
-              <HeroArt />
-            </div>
+            <div className="hero-visual" aria-hidden="true"><HeroArt /></div>
           </div>
         </section>
 
@@ -452,22 +345,13 @@ function App() {
           <div className="container">
             <div className="problem-head">
               <div className="section-label">The friction</div>
-              <h2>
-                Separation is hard enough.
-                <br />
-                Logistics shouldn’t make it worse.
-              </h2>
-              <p className="section-lead">
-                When two households raise the same child, small gaps in information
-                quickly become conflict. CoParents is designed to close those gaps.
-              </p>
+              <h2>Separation is hard enough.<br />Logistics shouldn’t make it worse.</h2>
+              <p className="section-lead">When two households raise the same child, small gaps in information quickly become conflict. CoParents is designed to close those gaps.</p>
             </div>
             <div className="friction-grid">
               {friction.map(({ Icon, title, text }) => (
                 <article className="friction-card" key={title}>
-                  <div className="friction-icon custom">
-                    <Icon />
-                  </div>
+                  <div className="friction-icon custom"><Icon /></div>
                   <h3>{title}</h3>
                   <p>{text}</p>
                 </article>
@@ -480,24 +364,14 @@ function App() {
           <div className="container">
             <div className="section-header center">
               <div className="section-label">The space</div>
-              <h2>
-                Everything you both need,
-                <br />
-                in one shared place
-              </h2>
-              <p className="section-lead">
-                Not another chat thread. Not another spreadsheet.
-                A focused toolkit that keeps decisions calm and visible.
-              </p>
+              <h2>Everything you both need,<br />in one shared place</h2>
+              <p className="section-lead">Not another chat thread. Not another spreadsheet. A focused toolkit that keeps decisions calm and visible.</p>
             </div>
-
             <div className="feature-grid">
               {features.map(({ Icon, title, text }, i) => (
                 <article className="feature" key={title}>
                   <div className="feature-top">
-                    <div className="feature-icon custom">
-                      <Icon />
-                    </div>
+                    <div className="feature-icon custom"><Icon /></div>
                     <span className="feature-n">0{i + 1}</span>
                   </div>
                   <h3>{title}</h3>
@@ -513,11 +387,8 @@ function App() {
             <div className="section-header center">
               <div className="section-label">Getting started</div>
               <h2>Simple by design</h2>
-              <p className="section-lead">
-                No complex setup. Just the essentials both of you can trust.
-              </p>
+              <p className="section-lead">No complex setup. Just the essentials both of you can trust.</p>
             </div>
-
             <div className="steps">
               {steps.map((s, i) => (
                 <article className="step" key={s.n}>
@@ -537,47 +408,14 @@ function App() {
           <div className="container values-panel">
             <div className="values-copy">
               <div className="section-label">Principles</div>
-              <h2>
-                Built around the child,
-                <br />
-                not the conflict
-              </h2>
-              <p>
-                CoParents is intentionally calm. Structure reduces emotional load
-                so conversations stay practical and fair.
-              </p>
-              <div className="values-art-wrap">
-                <ValuesArt />
-              </div>
+              <h2>Built around the child,<br />not the conflict</h2>
+              <p>CoParents is intentionally calm. Structure reduces emotional load so conversations stay practical and fair.</p>
+              <div className="values-art-wrap"><ValuesArt /></div>
             </div>
             <ul className="value-list">
-              <li>
-                <span className="value-check">
-                  <Check size={16} />
-                </span>
-                <div>
-                  <strong>Equal access</strong>
-                  <span>Both parents see the same information. No one is locked out.</span>
-                </div>
-              </li>
-              <li>
-                <span className="value-check">
-                  <Check size={16} />
-                </span>
-                <div>
-                  <strong>Calm by default</strong>
-                  <span>Structure reduces emotional load so conversations stay practical.</span>
-                </div>
-              </li>
-              <li>
-                <span className="value-check">
-                  <Check size={16} />
-                </span>
-                <div>
-                  <strong>Privacy first</strong>
-                  <span>Your family data stays private. Designed for real life, not surveillance.</span>
-                </div>
-              </li>
+              <li><span className="value-check"><Check size={16} /></span><div><strong>Equal access</strong><span>Both parents see the same information. No one is locked out.</span></div></li>
+              <li><span className="value-check"><Check size={16} /></span><div><strong>Calm by default</strong><span>Structure reduces emotional load so conversations stay practical.</span></div></li>
+              <li><span className="value-check"><Check size={16} /></span><div><strong>Privacy first</strong><span>Your family data stays private. Designed for real life, not surveillance.</span></div></li>
             </ul>
           </div>
         </section>
@@ -587,14 +425,8 @@ function App() {
             <div className="cta-box">
               <div className="cta-glow" aria-hidden="true" />
               <h2>Ready to lower the temperature?</h2>
-              <p>
-                Create a shared space that keeps logistics clear and the focus
-                where it belongs — on your child.
-              </p>
-              <button className="btn primary large light" type="button">
-                Get early access
-                <ArrowRight size={18} />
-              </button>
+              <p>Create a shared space that keeps logistics clear and the focus where it belongs — on your child.</p>
+              <button className="btn primary large light" type="button">Get early access<ArrowRight size={18} /></button>
               <p className="cta-note">No credit card. Private beta starting soon.</p>
             </div>
           </div>
@@ -603,12 +435,7 @@ function App() {
 
       <footer className="footer">
         <div className="container footer-inner">
-          <div className="footer-brand">
-            <span className="logo-mark small">
-              <Heart size={13} strokeWidth={2.4} />
-            </span>
-            CoParents
-          </div>
+          <div className="footer-brand"><span className="logo-mark small"><Heart size={13} strokeWidth={2.4} /></span>CoParents</div>
           <p>Less friction. More clarity. Better for the kids.</p>
           <span className="footer-meta">© {new Date().getFullYear()} CoParents · Concept preview</span>
         </div>
@@ -618,7 +445,5 @@ function App() {
 }
 
 createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <React.StrictMode><App /></React.StrictMode>
 )
