@@ -76,7 +76,15 @@ jobs:
             TARGET="pr-$PR_NUMBER"
             URL="http://$DEPLOY_HOST/previews/$TARGET/"
           fi
+          echo "=== Deploy log ==="
+          echo "Target: $TARGET"
+          echo "URL: $URL"
+          echo "Host: $DEPLOY_HOST"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           tar -czf site.tgz -C dist index.html assets
+          echo "Archive size: $(du -h site.tgz | cut -f1)"
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
             "cloudmargin-deploy@$DEPLOY_HOST" "deploy $TARGET" < site.tgz
