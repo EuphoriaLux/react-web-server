@@ -534,24 +534,30 @@ function generateFairPlan(year, month, answers, holidays) {
     const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
     return !!holidays[key]
   }
-  // Collect holiday + weekend days that need balancing
-  const special = []
-  for (let d = 1; d <= days; d++) {
-    if (isHoliday(d) || isWeekend(d)) special.push(d)
-  }
-  // Assign special days aiming for equal count
-  let aCount = 0, bCount = 0
+  // 1. Assign pure holiday days first — strict equal (±1)
+  const holDays = []
+  for (let d = 1; d <= days; d++) if (isHoliday(d)) holDays.push(d)
+  let aH = 0, bH = 0
+  holDays.forEach((d) => {
+    const who = aH <= bH ? 'A' : 'B'
+    plan[d] = who
+    if (who === 'A') aH++; else bH++
+  })
+  // 2. Assign remaining weekends, honour preference but keep overall special close
+  const weekends = []
+  for (let d = 1; d <= days; d++) if (isWeekend(d) && !plan[d]) weekends.push(d)
+  let aW = 0, bW = 0
   const preferA = answers.weekends === 'A'
   const preferB = answers.weekends === 'B'
-  special.forEach((d, i) => {
+  weekends.forEach((d) => {
     let who
-    if (preferA && aCount <= bCount + 1) who = 'A'
-    else if (preferB && bCount <= aCount + 1) who = 'B'
-    else who = aCount <= bCount ? 'A' : 'B'
+    if (preferA && aW <= bW + 1) who = 'A'
+    else if (preferB && bW <= aW + 1) who = 'B'
+    else who = aW <= bW ? 'A' : 'B'
     plan[d] = who
-    if (who === 'A') aCount++; else bCount++
+    if (who === 'A') aW++; else bW++
   })
-  // Fill remaining weekdays according to rhythm
+  // 3. Fill remaining weekdays according to rhythm
   for (let d = 1; d <= days; d++) {
     if (plan[d]) continue
     if (answers.rhythm === 'weeks') {
@@ -559,7 +565,7 @@ function generateFairPlan(year, month, answers, holidays) {
       plan[d] = week % 2 === 0 ? 'A' : 'B'
     } else if (answers.rhythm === 'weekend-mid') {
       const dow = (new Date(year, month, d).getDay() + 6) % 7
-      plan[d] = dow === 2 || dow === 3 ? 'B' : 'A' // mid-week B, rest A as base
+      plan[d] = dow === 2 || dow === 3 ? 'B' : 'A'
     } else {
       plan[d] = d % 2 === 0 ? 'A' : 'B'
     }
