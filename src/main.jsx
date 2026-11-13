@@ -63,6 +63,18 @@ const t = {
     tabCal: 'Calendar', tabExp: 'Expenses', tabMsg: 'Messages', tabDoc: 'Docs',
     calTitle: 'Shared calendar',
     both: 'Both', paintAs: 'Assign', clear: 'Clear', altWeeks: 'Alt. weeks (A)', altWeeksB: 'Alt. weeks (B)', weekendA: 'Every other weekend A', monthA: 'Whole month A', monthB: 'Whole month B', clearMonth: 'Clear month', addEvent: 'Add note / event',
+    holidays: 'Holidays',
+    h_newyear: 'New Year',
+    h_eastermon: 'Easter Monday',
+    h_labour: 'Labour Day',
+    h_europe: 'Europe Day',
+    h_ascension: 'Ascension',
+    h_whitmon: 'Whit Monday',
+    h_national: 'National Day',
+    h_assumption: 'Assumption',
+    h_allsaints: 'All Saints',
+    h_christmas: 'Christmas',
+    h_stephen: 'St Stephen',
     eventTitle: 'Event title', add: 'Add',
     typeEvent: 'Event', typeHandover: 'Handover', typeSchool: 'School', typeMedical: 'Medical',
     expTitle: 'Transparent expenses',
@@ -125,6 +137,18 @@ const t = {
     tabCal: 'Calendrier', tabExp: 'Dépenses', tabMsg: 'Messages', tabDoc: 'Documents',
     calTitle: 'Calendrier partagé',
     both: 'Les deux', paintAs: 'Attribuer', clear: 'Effacer', altWeeks: 'Semaines alt. (A)', altWeeksB: 'Semaines alt. (B)', weekendA: 'Un week-end sur deux A', monthA: 'Tout le mois A', monthB: 'Tout le mois B', clearMonth: 'Effacer le mois', addEvent: 'Ajouter une note / événement',
+    holidays: 'Jours fériés',
+    h_newyear: 'Jour de l’An',
+    h_eastermon: 'Lundi de Pâques',
+    h_labour: 'Fête du Travail',
+    h_europe: 'Journée de l’Europe',
+    h_ascension: 'Ascension',
+    h_whitmon: 'Lundi de Pentecôte',
+    h_national: 'Fête nationale',
+    h_assumption: 'Assomption',
+    h_allsaints: 'Toussaint',
+    h_christmas: 'Noël',
+    h_stephen: 'Saint-Étienne',
     eventTitle: 'Titre de l’événement', add: 'Ajouter',
     typeEvent: 'Événement', typeHandover: 'Garde', typeSchool: 'École', typeMedical: 'Médical',
     expTitle: 'Dépenses transparentes',
@@ -187,6 +211,18 @@ const t = {
     tabCal: 'Kalender', tabExp: 'Ausgaben', tabMsg: 'Nachrichten', tabDoc: 'Dokumente',
     calTitle: 'Gemeinsamer Kalender',
     both: 'Beide', paintAs: 'Zuweisen', clear: 'Löschen', altWeeks: 'Wechselnde Wochen (A)', altWeeksB: 'Wechselnde Wochen (B)', weekendA: 'Jedes zweite Wochenende A', monthA: 'Ganzer Monat A', monthB: 'Ganzer Monat B', clearMonth: 'Monat löschen', addEvent: 'Notiz / Ereignis',
+    holidays: 'Feiertage',
+    h_newyear: 'Neujahr',
+    h_eastermon: 'Ostermontag',
+    h_labour: 'Tag der Arbeit',
+    h_europe: 'Europatag',
+    h_ascension: 'Christi Himmelfahrt',
+    h_whitmon: 'Pfingstmontag',
+    h_national: 'Nationalfeiertag',
+    h_assumption: 'Mariä Himmelfahrt',
+    h_allsaints: 'Allerheiligen',
+    h_christmas: 'Weihnachten',
+    h_stephen: 'Stephanstag',
     eventTitle: 'Ereignistitel', add: 'Hinzufügen',
     typeEvent: 'Ereignis', typeHandover: 'Übergabe', typeSchool: 'Schule', typeMedical: 'Medizinisch',
     expTitle: 'Transparente Ausgaben',
@@ -198,6 +234,77 @@ const t = {
     msgTitle: 'Nachrichten', msgText: 'Strukturierte Threads kommen als Nächstes. Bis dahin Kalender und Ausgaben nutzen.',
     docTitle: 'Dokumente', docText: 'Der gemeinsame Tresor kommt als Nächstes. Hier könnt ihr später Vereinbarungen und Notizen ablegen.',
   },
+  lb: {
+    lang: 'LB',
+    problem: 'De Problem', how: 'Wéi et hëlleft', works: 'Wéi et fonctionéiert', fiscal: 'Steierhëllef (LU)',
+    demo: 'Demo', enter: 'Gemeinsame Raum opmaachen', back: 'Zréck op d’Säit',
+    eyebrow: 'Fir Elteren, déi nach e Kand zesumme betreien',
+    h1a: 'Co-Parenting', h1b: 'ouni de Chaos',
+    lead: 'Ee rouege, gemeinsame Raum fir Terminer, Ausgaben, Messagen an Dokumenter. Manner Reibung tëscht iech. Méi Kloerheet fir Äert Kand.',
+    see: 'Kuckt wéi et funktionéiert',
+    trust1: 'Privat by Design', trust2: 'Béid Elteren gläichberechtegt', trust3: 'Fir dat richtegt Liewen gebaut',
+    frictionLabel: 'D’Reibung', frictionH2a: 'Eng Trennung ass scho schwéier genuch.', frictionH2b: 'D’Logistik sollt et net nach méi schwéier maachen.',
+    frictionLead: 'Wann zwéi Haushälter datselwecht Kand grousszéien, ginn kleng Informatiounslücken séier zu Konflikter. CoParents mécht déi Lücken zou.',
+    f1t: 'Verpasst Iwwergaben', f1: 'Last-minute Ännerungen an onkloer Ofhuelzäiten maachen Stress fir jiddereen.',
+    f2t: 'Ausgabestreit', f2: 'Wie huet de Schoulausfluch, d’Kleeder, d’Aktivitéiten bezuelt? D’Tabell ass ni aktuell.',
+    f3t: 'Messagen, déi eskaléieren', f3: 'Alldeeglech Logistik gëtt emotional a Chat-Verleef ouni Struktur oder Historie.',
+    f4t: 'Verstreet Pabeier', f4: 'Ofkommes, medezinesch Notizen a Schoulformulaire leien a Postfächer, Drives an Tiräng.',
+    solLabel: 'De Raum', solH2a: 'Alles wat dir béid braucht,', solH2b: 'op enger gemeinsamer Plaz',
+    solLead: 'Keen weidere Chat-Verlaf. Keng weider Tabell. Een fokusséiert Toolkit, dat Entscheedungen roueg a siichtbar hält.',
+    feat1t: 'Gemeinsame Kalenner', feat1: 'Eng Quell vun der Wourecht fir Iwwergaben, Schoulterminer, Vakanzen an Doktervisiten. Béid Eltere gesinn de selwechte Plang.',
+    feat2t: 'Transparent Ausgaben', feat2: 'Käschten erfaassen, Beleeger bäifügen an fair ofrechnen. Manner Sträit iwwer wie wat bezuelt huet.',
+    feat3t: 'Strukturéiert Messagen', feat3: 'Gespréicher op d’Kand fokusséieren. Manner emotionalt Rauschen, méi kloer Entscheedungen.',
+    feat4t: 'Sécher Dokumenter', feat4: 'Ofkommes, Schoulberichter, Krankeakten an Ausweiskopien — ëmmer fir béid verfügbar.',
+    howLabel: 'Onboarding', howH2: 'Vun der Aluedung zum gemeinsame Rhythmus',
+    howLead: 'Fënnef kloer Schrëtt. Keen komplizéierten Setup — just dat Wichtegst, deem dir béid vertrauen kënnt.',
+    s1t: 'Elterprofil uleeën', s1: 'D’Grondlagen: Kanner, Haushälter a wéi dir d’Betreiung scho deelt. Dauert e puer Minutten.',
+    s2t: 'Aneren Elterendeel alueden', s2: 'Privat Aluedung schécken. Béid behalen déi selwecht Visibilitéit a Kontroll.',
+    s3t: 'Gemeinsame Rhythmus festleeën', s3: 'Kalenner, Iwwergaben a widderhuelend Käschten erabrénge. Vun deem starten, wat scho existéiert.',
+    s4t: 'Einfach Ausgabenregelen ofmaachen', s4: 'Festleeën, wéi gemeinsam Käschten erfaasst an ofgerechent ginn. Manner Iwwerraschungen um Monatsenn.',
+    s5t: 'Optional: Steier-Notizen', s5: 'Dokumenter a Notizen zum Steierstatus späicheren. CoParents hëlleft beim Organiséieren — ersetzt keen Beroder.',
+    fiscLabel: 'Lëtzebuerg · Steierorientéierung', fiscH2: 'Hëllef zum Steierstatus fir Co-Elteren',
+    fiscLead: 'Eng verständlech Kaart vun den aktuellen Klassen an der Eenzelklassen-Reform 2028 — fir ze wëssen, wat dir zesummen tracke sollt. Keng personaliséiert Steierberodung.',
+    fiscBanner: 'Zäitplang: Steierjore 2026–2027 benotzen nach d’Klassen 1, 1a an 2. Klass U gëllt vum 1. Januar 2028 (Steierjoer 2028). 2027 ass e Virbereedungsjoer — inklusiv optionaler Wahlen fir verschidde Koppelen virum 30. Nov. 2027.',
+    fc1t: 'Bis Steierjoer 2027', fc1: 'Lëtzebuerg benotzt nach d’Klassen 1, 1a an 2. Getrennten oder gescheedten Eltere sinn dacks a Klass 1 oder 1a (besonnesch wann eng Kannersteiererliichterung gëllt).',
+    fc2t: 'Vum 1. Januar 2028 — Klass U', fc2: 'Eng eenzeg Steierklass (Classe U) ersetzt 1, 1a an 2 fir déi meescht Leit. De Familljestand entscheed net méi iwwer den Tarif. Eenzelveranlagung gëtt de Standard.',
+    fc3t: 'No Scheedung oder Trennung', fc3: 'Wann dir zesummen a Klass 2 veranlagt war, kënnt dir den Iwwergangs-Tarif T fënnef Joer no Enn vum Zesummeliewen behalen (bis elo dräi), ausser dir optéiert éischter fir Klass U.',
+    fc4t: 'Alleinerzéienden-Kredit', fc4: 'De maximale crédit d’impôt monoparental klëmmt vun 3.504 € op 4.008 €. De effektive Betrag hänkt weiderhin vum Akommes an erhalenem Ënnerhalt of.',
+    fc5t: 'Kand net am eegene Haushalt', fc5: 'De Fräibetrag fir e Kand, dat net zum eegene Steierhaushalt gehéiert, klëmmt vun 5.424 € op 5.928 €. Nëtzlech, wann d’Kand haaptsächlech beim aneren Elterendeel lieft.',
+    fc6t: 'Gedeelt Betreiung ≠ duebel Credits', fc6: 'Gemeinsamt Sorgerecht bedeit net automatesch, datt all Elterendeel de vollen Satz u Kanner-Credits kritt. Wou béid Elteren mam Kand liewen, ginn vill Leeschtungen 50/50 gedeelt; een Alleinerzéienden kann 100 % beanspruchen.',
+    fiscNote: 'CoParents kann Ofkommes, Beleeger a Notizen späicheren, fir datt béid Elteren am Aklang bleiwen. Fir Erklärungen an Optiounen déi offiziell ACD-Tools oder e qualifizéierte Beroder benotzen. Quellen: ugeholl Eenzelklassen-Reform (Okt. 2026); offiziell Hiwäiser ginn 2027 erweidert.',
+    valLabel: 'Prinzipien', valH2a: 'Ëm d’Kand hier gebaut,', valH2b: 'net ëm de Konflikt',
+    valP: 'CoParents ass bewosst roueg. Struktur reduzéiert déi emotional Laascht, fir datt Gespréicher praktesch a fair bleiwen.',
+    v1t: 'Gläichen Zougang', v1: 'Béid Eltere gesinn déi selwecht Informatiounen. Keen ass ausgeschloss.',
+    v2t: 'Roueg by Default', v2: 'Struktur reduzéiert déi emotional Laascht, fir datt Gespréicher praktesch bleiwen.',
+    v3t: 'Privatsphär fir d’éischt', v3: 'Är Familljendate bleiwen privat. Fir dat richtegt Liewen gebaut, net fir Iwwerwaachung.',
+    ctaH2: 'Prett, d’Temperatur ze senken?', ctaP: 'Schaaft ee gemeinsame Raum, deen d’Logistik kloer hält an de Fokus dohinner leet, wou e hi gehéiert — op Äert Kand.',
+    ctaNote: 'Keen Kont néideg. D’Demo leeft an dësem Browser.',
+    footerTag: 'Manner Reibung. Méi Kloerheet. Besser fir d’Kanner.',
+    footerMeta: 'CoParents · Konzeptvirschau',
+    appTitle: 'CoParents Demo',
+    tabCal: 'Kalenner', tabExp: 'Ausgaben', tabMsg: 'Messagen', tabDoc: 'Dokumenter',
+    calTitle: 'Gemeinsame Kalenner',
+    both: 'Béid', paintAs: 'Zouweisen', clear: 'Läschen',
+    altWeeks: 'Wiesselnd Woch (A)', altWeeksB: 'Wiesselnd Woch (B)',
+    weekendA: 'All zweet Weekend A', monthA: 'Ganze Mount A', monthB: 'Ganze Mount B',
+    clearMonth: 'Mount läschen', addEvent: 'Notiz / Evenement',
+    eventTitle: 'Evenementstitel', add: 'Dobäisetzen',
+    typeEvent: 'Evenement', typeHandover: 'Iwwergab', typeSchool: 'Schoul', typeMedical: 'Medezinesch',
+    expTitle: 'Transparent Ausgaben',
+    noExp: 'Nach keng Ausgaben. Setzt déi éischt ënnen dobäi.',
+    desc: 'Beschreiwung', amount: 'Betrag',
+    paidA: 'Bezuelt vun A', paidB: 'Bezuelt vun B',
+    split50: '50/50', splitA: '100 % A', splitB: '100 % B',
+    paidBy: 'Bezuelt vun', split: 'Opdeelung',
+    msgTitle: 'Messagen', msgText: 'Strukturéiert Threads kommen als Nächstes. Bis dohin Kalenner an Ausgaben benotzen.',
+    docTitle: 'Dokumenter', docText: 'De gemeinsame Tresor kënnt als Nächstes. Hei kënnt dir spéider Ofkommes a Notizen ofleeën.',
+    holidays: 'Feierdeeg',
+    h_newyear: 'Neijoerschdag', h_eastermon: 'Ouschterméindeg', h_labour: 'Dag vun der Aarbecht',
+    h_europe: 'Europadag', h_ascension: 'Christi Himmelfahrt', h_whitmon: 'Päischtméindeg',
+    h_national: 'Nationalfeierdag', h_assumption: 'Léiffrawëschdag', h_allsaints: 'Allerhellegen',
+    h_christmas: 'Chrëschtdag', h_stephen: 'Stiefesdag',
+  },
+
 }
 
 function LangProvider({ children }) {
@@ -211,7 +318,7 @@ function LangSwitch() {
   const { lang, setLang } = useLang()
   return (
     <div className="lang-switch" role="group" aria-label="Language">
-      {['en','fr','de'].map((code) => (
+      {['en','fr','de','lb'].map((code) => (
         <button
           key={code}
           type="button"
@@ -301,6 +408,47 @@ function ValuesArt() { return (<svg className="values-art" viewBox="0 0 320 220"
 function load(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback } catch { return fallback } }
 function save(key, value) { localStorage.setItem(key, JSON.stringify(value)) }
 
+
+/* ─── Luxembourg public holidays ─── */
+function easterSunday(y) {
+  const a = y % 19
+  const b = Math.floor(y / 100)
+  const c = y % 100
+  const d = Math.floor(b / 4)
+  const e = b % 4
+  const f = Math.floor((b + 8) / 25)
+  const g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30
+  const i = Math.floor(c / 4)
+  const k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7
+  const m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31)
+  const day = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(y, month - 1, day)
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
+function isoDate(d) { return d.toISOString().slice(0, 10) }
+function luxHolidays(year, tr) {
+  const easter = easterSunday(year)
+  const fixed = [
+    [new Date(year, 0, 1), tr.h_newyear],
+    [addDays(easter, 1), tr.h_eastermon],
+    [new Date(year, 4, 1), tr.h_labour],
+    [new Date(year, 4, 9), tr.h_europe],
+    [addDays(easter, 39), tr.h_ascension],
+    [addDays(easter, 50), tr.h_whitmon],
+    [new Date(year, 5, 23), tr.h_national],
+    [new Date(year, 7, 15), tr.h_assumption],
+    [new Date(year, 10, 1), tr.h_allsaints],
+    [new Date(year, 11, 25), tr.h_christmas],
+    [new Date(year, 11, 26), tr.h_stephen],
+  ]
+  const map = {}
+  for (const [d, name] of fixed) map[isoDate(d)] = name
+  return map
+}
+
 function CalendarView() {
   const { tr } = useLang()
   const [custody, setCustody] = useState(() => load('cp-custody', {}))
@@ -325,6 +473,7 @@ function CalendarView() {
   const iso = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en'
   const monthLabel = cursor.toLocaleString(locale, { month: 'long', year: 'numeric' })
+  const hols = luxHolidays(year, tr)
 
   const setDay = (d, who) => {
     const key = iso(d)
@@ -419,6 +568,7 @@ function CalendarView() {
         <span className="pill a">A · {counts.A}</span>
         <span className="pill b">B · {counts.B}</span>
         <span className="pill both">{tr.both || 'Both'} · {counts.both}</span>
+        <span className="pill holiday">{tr.holidays || 'Holidays'}</span>
       </div>
 
       <div className="paint-bar">
@@ -436,17 +586,20 @@ function CalendarView() {
           const key = iso(d)
           const who = custody[key]
           const dayEvents = events.filter((ev) => ev.date === key)
+          const hol = hols[key]
           return (
             <button
               key={i}
               type="button"
-              className={`cal-cell day ${who || ''}`}
+              className={`cal-cell day ${who || ''} ${hol ? 'holiday' : ''}`}
               onClick={() => paintDay(d)}
               onDoubleClick={() => cycleDay(d)}
-              aria-label={`${d} ${who || 'none'}`}
+              aria-label={`${d} ${who || 'none'} ${hol || ''}`}
+              title={hol || undefined}
             >
               <span className="cal-day">{d}</span>
               {who && <span className="who">{who === 'both' ? 'AB' : who}</span>}
+              {hol && <span className="hol-name">{hol}</span>}
               {dayEvents.length > 0 && <span className="dot" />}
             </button>
           )
