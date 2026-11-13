@@ -611,3 +611,14 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 @media (max-width: 720px) {
   .cal-grid.kid .hol-name { font-size: 0.52rem; }
 }
+
+/* ─── Holiday list ─── */
+.holiday-list { margin: 12px 0; }
+.holiday-list summary { cursor: pointer; font-weight: 700; color: var(--ink); padding: 8px 0; }
+.holiday-list ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.holiday-list li {
+  display: flex; gap: 10px; align-items: baseline;
+  padding: 8px 12px; background: #fff7fb; border: 1px solid #fbcfe8; border-radius: 10px;
+  font-size: 0.88rem;
+}
+.holiday-list .hol-date { font-weight: 800; color: #9d174d; min-width: 48px; }
