@@ -683,3 +683,11 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 }
 .cal-grid.kid .cal-cell.day.A .who { color: #0f766e; }
 .cal-grid.kid .cal-cell.day.B .who { color: #1e40af; }
+
+/* ─── Lock + prior balance ─── */
+.lock-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; font-size: 0.85rem; }
+.lock-bar input { width: 56px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); }
+.lock-hint { color: #b45309; font-weight: 650; }
+.balance-bar { font-size: 0.82rem; color: var(--ink-soft); margin-bottom: 10px; }
+.kid-summary .pill.locked { background: #fee2e2; color: #991b1b; }
+.cal-grid.kid .cal-cell.day.locked { opacity: 0.7; pointer-events: none; }
