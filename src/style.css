@@ -833,3 +833,20 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .fiscal-card.now { outline: 2px solid var(--teal); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
+.note-thread { margin-top: 18px; }
+.note { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin: 8px 0; background: white; }
+.note.a { border-left: 4px solid var(--teal); }
+.note.b { border-left: 4px solid var(--blue); }
+.note header { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 0.82rem; }
+.note p { margin: 6px 0 0; }
+.note p span { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; margin-right: 6px; }
+.biff { display: grid; gap: 10px; margin-top: 12px; }
+.biff label { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.biff textarea, .biff input[type="text"], .biff input:not([type="checkbox"]) {
+  width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; font: inherit; color: var(--ink); background: #f8fafc;
+}
+.biff textarea { min-height: 72px; }
+.biff-urgent { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 0.95rem; color: var(--ink); }
+.expense-block { margin-bottom: 12px; }
+.expense-block .note-thread { margin-top: 8px; }
+

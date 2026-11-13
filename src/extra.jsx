@@ -55,6 +55,10 @@ const COPY = {
     cooling: 'Paused. Come back when you are both calm.', emptyIssues: 'No open topics.',
     handover: 'Handover', school: 'School', money: 'Money', health: 'Health', other: 'Other',
     write: 'Write a short note', send: 'Send', emptyMsg: 'Nothing in this thread yet.',
+    fact: 'Fact', askField: 'Ask', byWhen: 'By when', urgent: 'Urgent',
+    quiet: 'After 21:00 this note waits until 07:00, unless you mark it urgent.',
+    waits: 'Waits until 07:00', stuck: 'Sent. Cannot be edited or deleted.',
+    thread: 'Notes on this',
     heatTitle: 'This note sounds hot', heatLead: 'A calmer version is below. Edit it, or send the original if you still mean it.',
     calmer: 'Calmer version', sendCalm: 'Send the calmer note', sendAnyway: 'Send as written',
     papers: 'Papers', papersLead: 'Agreements and notes both of you can find.', emptyPapers: 'No papers yet.',
@@ -95,6 +99,10 @@ const COPY = {
     cooling: 'En pause. Revenez quand vous serez calmes.', emptyIssues: 'Aucun sujet ouvert.',
     handover: 'Passage', school: 'École', money: 'Argent', health: 'Santé', other: 'Autre',
     write: 'Écrire une note courte', send: 'Envoyer', emptyMsg: 'Rien dans ce fil.',
+    fact: 'Fait', askField: 'Demande', byWhen: 'Pour quand', urgent: 'Urgent',
+    quiet: 'Après 21 h cette note attend 7 h, sauf si vous la marquez urgente.',
+    waits: 'Attend 7 h', stuck: 'Envoyée. Ni modifiable ni supprimable.',
+    thread: 'Notes ici',
     heatTitle: 'Ce message sonne dur', heatLead: 'Une version plus calme est ci-dessous.',
     calmer: 'Version plus calme', sendCalm: 'Envoyer la version calme', sendAnyway: 'Envoyer tel quel',
     papers: 'Papiers', papersLead: 'Accords et notes pour vous deux.', emptyPapers: 'Aucun document.',
@@ -135,6 +143,10 @@ const COPY = {
     cooling: 'Pausiert. Kommt zurück, wenn ihr ruhig seid.', emptyIssues: 'Keine offenen Themen.',
     handover: 'Übergabe', school: 'Schule', money: 'Geld', health: 'Gesundheit', other: 'Anderes',
     write: 'Kurze Notiz', send: 'Senden', emptyMsg: 'Noch nichts in diesem Faden.',
+    fact: 'Fakt', askField: 'Bitte', byWhen: 'Bis wann', urgent: 'Dringend',
+    quiet: 'Nach 21 Uhr wartet diese Notiz bis 7 Uhr, außer sie ist dringend.',
+    waits: 'Wartet bis 7 Uhr', stuck: 'Gesendet. Kann nicht geändert oder gelöscht werden.',
+    thread: 'Notizen dazu',
     heatTitle: 'Diese Notiz klingt scharf', heatLead: 'Unten steht eine ruhigere Fassung.',
     calmer: 'Ruhigere Fassung', sendCalm: 'Die ruhige Notiz senden', sendAnyway: 'So senden',
     papers: 'Papiere', papersLead: 'Vereinbarungen, die ihr beide findet.', emptyPapers: 'Noch keine Dokumente.',
@@ -175,6 +187,10 @@ const COPY = {
     cooling: 'A Paus. Kommt zréck, wann dir roueg sidd.', emptyIssues: 'Keng oppen Themen.',
     handover: 'Iwwergab', school: 'Schoul', money: 'Geld', health: 'Gesondheet', other: 'Aneres',
     write: 'Eng kuerz Notiz', send: 'Schécken', emptyMsg: 'Nach näischt an dësem Fuedem.',
+    fact: 'Fakt', askField: 'Ufro', byWhen: 'Bis wéini', urgent: 'Dringend',
+    quiet: 'No 21 Auer waart dës Notiz bis 7 Auer, ausser se ass dringend.',
+    waits: 'Waart bis 7 Auer', stuck: 'Geschéckt. Kann net geännert oder geläscht ginn.',
+    thread: 'Notizen dozou',
     heatTitle: 'Dës Notiz kléngt schaarf', heatLead: 'Ënnen steet eng méi roueg Fassong.',
     calmer: 'Roueg Fassong', sendCalm: 'Déi roueg Notiz schécken', sendAnyway: 'Esou schécken',
     papers: 'Pabeier', papersLead: 'Ofkommes fir iech béid.', emptyPapers: 'Nach keng Dokumenter.',
@@ -380,6 +396,7 @@ export function HandoverView() {
           ))}
         </div>
       )}
+      <NoteThread channel={`handover:${current.date}`} title={c.thread} />
     </section>
   )
 }
@@ -607,31 +624,140 @@ export function Threads() {
   const c = useCopy()
   const [channel, setChannel] = useState('handover')
   const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
-  const [messages, setMessages] = useState(() => load('cp-messages', []))
-  const [draft, setDraft] = useState('')
-  const [hold, setHold] = useState(null)
   useEffect(() => { save('cp-writer', writer) }, [writer])
-  useEffect(() => { save('cp-messages', messages) }, [messages])
-  const thread = messages.filter((item) => item.channel === channel)
-  function post(text) {
-    const clean = text.trim()
-    if (!clean) return
-    setMessages([...messages, { id: String(Date.now()), channel, author: writer, text: clean }])
-    setDraft(''); setHold(null)
-  }
   return (
     <div className="app-panel">
-      <div className="panel-head"><h2>{c.write}</h2>
+      <div className="panel-head">
+        <h2>{c.write}</h2>
         <div className="ask-switch">{['A', 'B'].map((id) => <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{id === 'A' ? 'Alex' : 'Sam'}</button>)}</div>
       </div>
       <div className="ask-switch">{['handover', 'school', 'money', 'health'].map((id) => <button key={id} type="button" className={`btn sm ${channel === id ? 'primary' : 'ghost'}`} onClick={() => setChannel(id)}>{c[id]}</button>)}</div>
-      {thread.length === 0 && <p className="empty">{c.emptyMsg}</p>}
-      {thread.map((item) => <p key={item.id} className={`pill ${item.author === 'A' ? 'a' : 'b'}`}><strong>{item.author === 'A' ? 'Alex' : 'Sam'}</strong> {item.text}</p>)}
-      <form className="add-form" onSubmit={(event) => { event.preventDefault(); const flags = heatFlags(draft); if (flags.length) { setHold({ original: draft, softer: soften(draft), flags }); return } post(draft) }}>
-        <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={c.write} />
+      <NoteThread channel={channel} writer={writer} />
+    </div>
+  )
+}
+
+function quietNow() {
+  return new Date().getHours() >= 21
+}
+
+function nextMorning() {
+  const date = new Date()
+  date.setDate(date.getDate() + 1)
+  date.setHours(7, 0, 0, 0)
+  return date.toISOString()
+}
+
+export function NoteThread({ channel, title, writer }) {
+  const { lang } = useLang()
+  const c = useCopy()
+  const [who, setWho] = useState(() => writer || load('cp-writer', 'A'))
+  const [notes, setNotes] = useState([])
+  const [fact, setFact] = useState('')
+  const [ask, setAsk] = useState('')
+  const [byWhen, setByWhen] = useState('')
+  const [urgent, setUrgent] = useState(false)
+  const [hold, setHold] = useState(null)
+  const [status, setStatus] = useState('')
+  const token = typeof localStorage !== 'undefined' && localStorage.getItem('cp-token')
+
+  useEffect(() => { if (writer) setWho(writer) }, [writer])
+
+  async function loadNotes() {
+    if (token) {
+      const response = await fetch(`/api/notes?channel=${encodeURIComponent(channel)}`, { headers: { Authorization: `Bearer ${token}` } })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Could not load notes')
+      setNotes(body.notes || [])
+      return
+    }
+    setNotes(load('cp-notes', []).filter((item) => item.channel === channel))
+  }
+
+  useEffect(() => { loadNotes().catch((error) => setStatus(error.message)) }, [channel, token])
+
+  function stamp(text, waiting) {
+    return {
+      id: String(Date.now()),
+      author: who,
+      channel,
+      fact: text.fact,
+      ask: text.ask,
+      by_when: text.byWhen,
+      urgent,
+      sent_at: new Date().toISOString(),
+      deliver_at: waiting ? nextMorning() : new Date().toISOString(),
+      waiting,
+    }
+  }
+
+  async function post(text) {
+    const clean = { fact: text.fact.trim(), ask: text.ask.trim(), byWhen: text.byWhen.trim() }
+    if (!clean.fact) return
+    const waiting = quietNow() && !urgent
+    if (token) {
+      const response = await fetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ channel, fact: clean.fact, ask: clean.ask, by_when: clean.byWhen, urgent }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body.error || 'Could not send')
+    } else {
+      const all = load('cp-notes', [])
+      save('cp-notes', [...all, stamp(clean, waiting)])
+    }
+    setFact(''); setAsk(''); setByWhen(''); setUrgent(false); setHold(null)
+    await loadNotes()
+  }
+
+  function submit(event) {
+    event.preventDefault()
+    const text = `${fact} ${ask}`
+    const flags = heatFlags(text)
+    if (flags.length) { setHold({ fact, ask, byWhen, flags }); return }
+    post({ fact, ask, byWhen }).catch((error) => setStatus(error.message))
+  }
+
+  const locale = lang === 'fr' ? 'fr' : lang === 'de' ? 'de' : lang === 'lb' ? 'lb' : 'en'
+  return (
+    <div className="note-thread">
+      {title && <h3>{title}</h3>}
+      <p className="meta">{c.stuck}</p>
+      {notes.length === 0 && <p className="empty">{c.emptyMsg}</p>}
+      {notes.map((item) => (
+        <article key={item.id} className={`note ${item.author === 'A' ? 'a' : 'b'}`}>
+          <header>
+            <strong>{item.author === 'A' ? 'Alex' : 'Sam'}</strong>
+            <time>{new Date(item.sent_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>
+          </header>
+          <p>{item.fact}</p>
+          {item.ask && <p><span>{c.askField}</span> {item.ask}</p>}
+          {item.by_when && <p><span>{c.byWhen}</span> {item.by_when}</p>}
+          {item.waiting && <p className="lock-hint">{c.waits}</p>}
+        </article>
+      ))}
+      {quietNow() && !urgent && <p className="lock-hint">{c.quiet}</p>}
+      <form className="biff" onSubmit={submit}>
+        <label>{c.fact}<textarea value={fact} onChange={(event) => setFact(event.target.value)} required /></label>
+        <label>{c.askField}<input value={ask} onChange={(event) => setAsk(event.target.value)} /></label>
+        <label>{c.byWhen}<input value={byWhen} onChange={(event) => setByWhen(event.target.value)} placeholder="Friday 18:00" /></label>
+        <label className="biff-urgent"><input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} /> {c.urgent}</label>
         <button className="btn primary" type="submit">{c.send}</button>
       </form>
-      {hold && <div className="fiscal-banner"><strong>{c.heatTitle}</strong><p>{c.heatLead}</p><p>{hold.flags.join(' · ')}</p><textarea value={hold.softer} onChange={(event) => setHold({ ...hold, softer: event.target.value })} /><div className="ask-switch"><button type="button" className="btn primary sm" onClick={() => post(hold.softer)}>{c.sendCalm}</button><button type="button" className="btn ghost sm" onClick={() => post(hold.original)}>{c.sendAnyway}</button></div></div>}
+      {status && <p className="lock-hint">{status}</p>}
+      {hold && (
+        <div className="fiscal-banner">
+          <strong>{c.heatTitle}</strong>
+          <p>{c.heatLead}</p>
+          <p>{hold.flags.join(' · ')}</p>
+          <textarea value={hold.fact} onChange={(event) => setHold({ ...hold, fact: event.target.value })} />
+          <div className="ask-switch">
+            <button type="button" className="btn primary sm" onClick={() => post(hold).catch((error) => setStatus(error.message))}>{c.sendCalm}</button>
+            <button type="button" className="btn ghost sm" onClick={() => post({ fact, ask, byWhen }).catch((error) => setStatus(error.message))}>{c.sendAnyway}</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
 } from 'lucide-react'
 import './style.css'
-import { HandoverView, Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
+import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 
 /* ─── i18n ─── */
@@ -1066,13 +1066,16 @@ function ExpensesView() {
       <div className="expense-list">
         {items.length === 0 && <p className="empty">{tr.noExp}</p>}
         {items.map((it) => (
-          <div key={it.id} className="expense-row">
-            <div>
-              <strong>{it.desc}</strong>
-              <span className="meta">{tr.paidBy} {it.paidBy} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? '100% A' : '100% B'}</span>
+          <div key={it.id} className="expense-block">
+            <div className="expense-row">
+              <div>
+                <strong>{it.desc}</strong>
+                <span className="meta">{tr.paidBy} {it.paidBy} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? '100% A' : '100% B'}</span>
+              </div>
+              <div className="amt">{it.amount.toFixed(2)}</div>
+              <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
             </div>
-            <div className="amt">{it.amount.toFixed(2)}</div>
-            <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
+            <NoteThread channel={`expense:${it.id}`} title="Notes" />
           </div>
         ))}
       </div>

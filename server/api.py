@@ -8,9 +8,10 @@ import hashlib
 import json
 import os
 import secrets
-import string
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import unquote
+from zoneinfo import ZoneInfo
 
 import psycopg2
 import psycopg2.extras
@@ -19,6 +20,7 @@ HOST = os.environ.get("COPARENTS_HOST", "127.0.0.1")
 PORT = int(os.environ.get("COPARENTS_PORT", "8787"))
 DSN = os.environ["DATABASE_URL"]
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+LU = ZoneInfo("Europe/Luxembourg")
 
 
 def db():
@@ -36,6 +38,14 @@ def new_code(cur) -> str:
         if cur.fetchone() is None:
             return code
     raise RuntimeError("could not allocate a household code")
+
+
+def deliver_at(urgent: bool):
+    now = datetime.now(LU)
+    if urgent or now.hour < 21:
+        return datetime.now(timezone.utc)
+    morning = (now + timedelta(days=1)).replace(hour=7, minute=0, second=0, microsecond=0)
+    return morning.astimezone(timezone.utc)
 
 
 def member_from_token(cur, token: str):
@@ -92,6 +102,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/state":
             self._get_state()
             return
+        if path == "/api/notes":
+            self._get_notes()
+            return
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -101,6 +114,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/households/join":
             self._join()
+            return
+        if path == "/api/notes":
+            self._post_note()
             return
         self._send(404, {"error": "not found"})
 
@@ -210,6 +226,87 @@ class Handler(BaseHTTPRequestHandler):
                 (psycopg2.extras.Json(state), now, household_id),
             )
         self._send(200, {"code": code, "updated_at": now.isoformat()})
+
+    def _get_notes(self):
+        token = self._bearer()
+        if not token:
+            self._send(401, {"error": "missing token"})
+            return
+        channel = ""
+        if "?" in self.path:
+            for part in self.path.split("?", 1)[1].split("&"):
+                if part.startswith("channel="):
+                    channel = unquote(part.split("=", 1)[1])
+        with db() as conn, conn.cursor() as cur:
+            member = member_from_token(cur, token)
+            if member is None:
+                self._send(401, {"error": "unknown token"})
+                return
+            role, household_id, _ = member
+            cur.execute(
+                """
+                select id, author, channel, fact, ask, by_when, urgent, sent_at, deliver_at
+                from notes
+                where household_id = %s
+                  and (%s = '' or channel = %s)
+                  and (deliver_at <= now() or author = %s)
+                order by sent_at
+                """,
+                (household_id, channel, channel, role),
+            )
+            rows = cur.fetchall()
+        self._send(200, {"notes": [self._note(row) for row in rows]})
+
+    def _post_note(self):
+        token = self._bearer()
+        if not token:
+            self._send(401, {"error": "missing token"})
+            return
+        try:
+            body = self._read_json()
+        except ValueError:
+            self._send(400, {"error": "bad request"})
+            return
+        fact = str(body.get("fact", "")).strip()
+        ask = str(body.get("ask", "")).strip()
+        by_when = str(body.get("by_when", "")).strip()
+        channel = str(body.get("channel", "handover")).strip()[:80]
+        urgent = bool(body.get("urgent"))
+        if not fact or not channel:
+            self._send(400, {"error": "a note needs a fact"})
+            return
+        when = deliver_at(urgent)
+        with db() as conn, conn.cursor() as cur:
+            member = member_from_token(cur, token)
+            if member is None:
+                self._send(401, {"error": "unknown token"})
+                return
+            role, household_id, _ = member
+            cur.execute(
+                """
+                insert into notes (household_id, author, channel, fact, ask, by_when, urgent, deliver_at)
+                values (%s, %s, %s, %s, %s, %s, %s, %s)
+                returning id, author, channel, fact, ask, by_when, urgent, sent_at, deliver_at
+                """,
+                (household_id, role, channel, fact, ask, by_when, urgent, when),
+            )
+            row = cur.fetchone()
+        self._send(201, self._note(row))
+
+    def _note(self, row):
+        note_id, author, channel, fact, ask, by_when, urgent, sent_at, ready = row
+        return {
+            "id": str(note_id),
+            "author": author,
+            "channel": channel,
+            "fact": fact,
+            "ask": ask,
+            "by_when": by_when,
+            "urgent": urgent,
+            "sent_at": sent_at.astimezone(timezone.utc).isoformat(),
+            "deliver_at": ready.astimezone(timezone.utc).isoformat(),
+            "waiting": ready > datetime.now(timezone.utc),
+        }
 
 
 def main():
