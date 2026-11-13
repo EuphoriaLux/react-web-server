@@ -526,7 +526,7 @@ function luxHolidays(year, tr) {
 }
 
 
-function generateFairPlan(year, month, answers, holidays) {
+function generateFairPlan(year, month, answers, holidays, school) {
   const days = new Date(year, month + 1, 0).getDate()
   const plan = {}
   const isWeekend = (d) => { const dow = (new Date(year, month, d).getDay() + 6) % 7; return dow >= 5 }
@@ -534,7 +534,11 @@ function generateFairPlan(year, month, answers, holidays) {
     const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
     return !!holidays[key]
   }
-  // 1. Assign pure holiday days first — strict equal (±1)
+  const isSchool = (d) => {
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    return !!school[key]
+  }
+  // 1. Assign pure public-holiday days first — strict equal (±1)
   const holDays = []
   for (let d = 1; d <= days; d++) if (isHoliday(d)) holDays.push(d)
   let aH = 0, bH = 0
@@ -542,6 +546,15 @@ function generateFairPlan(year, month, answers, holidays) {
     const who = aH <= bH ? 'A' : 'B'
     plan[d] = who
     if (who === 'A') aH++; else bH++
+  })
+  // 1b. Assign school-holiday days (not already a public holiday) — strict equal (±1)
+  const schoolDays = []
+  for (let d = 1; d <= days; d++) if (isSchool(d) && !plan[d]) schoolDays.push(d)
+  let aS = 0, bS = 0
+  schoolDays.forEach((d) => {
+    const who = aS <= bS ? 'A' : 'B'
+    plan[d] = who
+    if (who === 'A') aS++; else bS++
   })
   // 2. Assign remaining weekends, honour preference but keep overall special close
   const weekends = []
@@ -573,20 +586,23 @@ function generateFairPlan(year, month, answers, holidays) {
   return plan
 }
 
-function Questionnaire({ year, month, holidays, onApply, onClose, tr }) {
+function Questionnaire({ year, month, holidays, school, onApply, onClose, tr }) {
   const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split' })
   const [preview, setPreview] = useState(null)
   const generate = () => {
-    const plan = generateFairPlan(year, month, answers, holidays)
-    // count holiday days
-    let aH = 0, bH = 0
-    for (let d = 1; d <= new Date(year, month+1, 0).getDate(); d++) {
+    const plan = generateFairPlan(year, month, answers, holidays, school || {})
+    let aH = 0, bH = 0, aS = 0, bS = 0
+    const last = new Date(year, month+1, 0).getDate()
+    for (let d = 1; d <= last; d++) {
       const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
       if (holidays[key]) {
         if (plan[d] === 'A') aH++; else if (plan[d] === 'B') bH++
       }
+      if (school && school[key] && !holidays[key]) {
+        if (plan[d] === 'A') aS++; else if (plan[d] === 'B') bS++
+      }
     }
-    setPreview({ plan, aH, bH })
+    setPreview({ plan, aH, bH, aS, bS })
   }
   return (
     <div className="q-overlay" onClick={onClose}>
@@ -621,6 +637,8 @@ function Questionnaire({ year, month, holidays, onApply, onClose, tr }) {
             <div className="kid-summary">
               <span className="pill a">{tr.balance} A · {preview.aH}</span>
               <span className="pill b">{tr.balance} B · {preview.bH}</span>
+              <span className="pill school">{tr.school || 'School'} A · {preview.aS}</span>
+              <span className="pill school">{tr.school || 'School'} B · {preview.bS}</span>
             </div>
             <button className="btn primary" type="button" onClick={() => onApply(preview.plan)}>{tr.apply}</button>
           </div>
@@ -628,6 +646,42 @@ function Questionnaire({ year, month, holidays, onApply, onClose, tr }) {
       </div>
     </div>
   )
+}
+
+
+/* ─── Luxembourg school holidays (public schools) ─── */
+const SCHOOL_RANGES = {
+  2026: [
+    { name: 'All Saints', start: '2026-10-31', end: '2026-11-08' },
+    { name: 'Christmas', start: '2026-12-19', end: '2027-01-03' },
+  ],
+  2027: [
+    { name: 'Christmas', start: '2026-12-19', end: '2027-01-03' },
+    { name: 'Carnival', start: '2027-02-06', end: '2027-02-14' },
+    { name: 'Easter', start: '2027-03-27', end: '2027-04-11' },
+    { name: 'Pentecost', start: '2027-05-29', end: '2027-06-06' },
+    { name: 'Summer', start: '2027-07-16', end: '2027-09-14' },
+  ],
+}
+function daysInRange(start, end) {
+  const out = []
+  const d = new Date(start + 'T12:00:00')
+  const last = new Date(end + 'T12:00:00')
+  while (d <= last) {
+    out.push(d.toISOString().slice(0, 10))
+    d.setDate(d.getDate() + 1)
+  }
+  return out
+}
+function schoolHolidayMap(year) {
+  const map = {}
+  const ranges = [...(SCHOOL_RANGES[year] || []), ...(SCHOOL_RANGES[year - 1] || [])]
+  for (const r of ranges) {
+    for (const iso of daysInRange(r.start, r.end)) {
+      if (iso.startsWith(String(year))) map[iso] = r.name
+    }
+  }
+  return map
 }
 
 function CalendarView() {
@@ -655,7 +709,7 @@ function CalendarView() {
   const iso = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en'
   const monthLabel = cursor.toLocaleString(locale, { month: 'long', year: 'numeric' })
-  const hols = luxHolidays(year, tr)
+  const hols = luxHolidays(year, tr)\n    school: 'Schoul',\n    school: 'Schule',\n    school: 'École',\n    school: 'School',\n  const school = schoolHolidayMap(year)
 
   const setDay = (d, who) => {
     const key = iso(d)
@@ -769,19 +823,21 @@ function CalendarView() {
           const who = custody[key]
           const dayEvents = events.filter((ev) => ev.date === key)
           const hol = hols[key]
+          const sch = school[key]
           return (
             <button
               key={i}
               type="button"
-              className={`cal-cell day ${who || ''} ${hol ? 'holiday' : ''}`}
+              className={`cal-cell day ${who || ''} ${hol ? 'holiday' : ''} ${sch ? 'school' : ''}`}
               onClick={() => paintDay(d)}
               onDoubleClick={() => cycleDay(d)}
-              aria-label={`${d} ${who || 'none'} ${hol || ''}`}
-              title={hol || undefined}
+              aria-label={`${d} ${who || 'none'} ${hol || ''} ${sch || ''}`}
+              title={hol || sch || undefined}
             >
               <span className="cal-day">{d}</span>
               {who && <span className="who">{who === 'both' ? 'AB' : who}</span>}
               {hol && <span className="hol-name">{hol}</span>}
+              {!hol && sch && <span className="sch-name">{sch}</span>}
               {dayEvents.length > 0 && <span className="dot" />}
             </button>
           )
@@ -803,6 +859,7 @@ function CalendarView() {
           year={year}
           month={month}
           holidays={hols}
+          school={school}
           tr={tr}
           onClose={() => setShowQ(false)}
           onApply={(plan) => {
