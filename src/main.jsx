@@ -63,6 +63,25 @@ const t = {
     tabCal: 'Calendar', tabExp: 'Expenses', tabMsg: 'Messages', tabDoc: 'Docs',
     calTitle: 'Shared calendar',
     both: 'Both', paintAs: 'Assign', clear: 'Clear', altWeeks: 'Alt. weeks (A)', altWeeksB: 'Alt. weeks (B)', weekendA: 'Every other weekend A', monthA: 'Whole month A', monthB: 'Whole month B', clearMonth: 'Clear month', addEvent: 'Add note / event',
+    propose: 'Propose a fair plan',
+    qTitle: 'A few questions for a fair proposal',
+    qLead: 'Answer quickly. We’ll suggest a month where both parents get similar holiday time with the child.',
+    q1: 'Preferred base rhythm',
+    q1a: 'Alternate full weeks',
+    q1b: 'Every other weekend + mid-week',
+    q1c: 'Mostly 50/50 weekdays',
+    q2: 'Who prefers more weekends?',
+    q2a: 'Parent A',
+    q2b: 'Parent B',
+    q2c: 'Equal',
+    q3: 'School holidays priority',
+    q3a: 'Split each holiday period',
+    q3b: 'Alternate whole periods',
+    q4: 'Start the proposal from',
+    generate: 'Generate proposal',
+    apply: 'Apply this month',
+    balance: 'Holiday days',
+    close: 'Close',
     holidays: 'Holidays',
     h_newyear: 'New Year',
     h_eastermon: 'Easter Monday',
@@ -137,6 +156,25 @@ const t = {
     tabCal: 'Calendrier', tabExp: 'Dépenses', tabMsg: 'Messages', tabDoc: 'Documents',
     calTitle: 'Calendrier partagé',
     both: 'Les deux', paintAs: 'Attribuer', clear: 'Effacer', altWeeks: 'Semaines alt. (A)', altWeeksB: 'Semaines alt. (B)', weekendA: 'Un week-end sur deux A', monthA: 'Tout le mois A', monthB: 'Tout le mois B', clearMonth: 'Effacer le mois', addEvent: 'Ajouter une note / événement',
+    propose: 'Proposer un plan équitable',
+    qTitle: 'Quelques questions pour une proposition équitable',
+    qLead: 'Répondez rapidement. Nous proposerons un mois où les deux parents ont un temps de vacances similaire avec l’enfant.',
+    q1: 'Rythme de base préféré',
+    q1a: 'Semaines complètes en alternance',
+    q1b: 'Un week-end sur deux + milieu de semaine',
+    q1c: 'Principalement 50/50 en semaine',
+    q2: 'Qui préfère plus de week-ends ?',
+    q2a: 'Parent A',
+    q2b: 'Parent B',
+    q2c: 'Égal',
+    q3: 'Priorité vacances scolaires',
+    q3a: 'Partager chaque période',
+    q3b: 'Alterner des périodes entières',
+    q4: 'Commencer la proposition à partir de',
+    generate: 'Générer la proposition',
+    apply: 'Appliquer ce mois',
+    balance: 'Jours de vacances',
+    close: 'Fermer',
     holidays: 'Jours fériés',
     h_newyear: 'Jour de l’An',
     h_eastermon: 'Lundi de Pâques',
@@ -211,6 +249,25 @@ const t = {
     tabCal: 'Kalender', tabExp: 'Ausgaben', tabMsg: 'Nachrichten', tabDoc: 'Dokumente',
     calTitle: 'Gemeinsamer Kalender',
     both: 'Beide', paintAs: 'Zuweisen', clear: 'Löschen', altWeeks: 'Wechselnde Wochen (A)', altWeeksB: 'Wechselnde Wochen (B)', weekendA: 'Jedes zweite Wochenende A', monthA: 'Ganzer Monat A', monthB: 'Ganzer Monat B', clearMonth: 'Monat löschen', addEvent: 'Notiz / Ereignis',
+    propose: 'Fairen Plan vorschlagen',
+    qTitle: 'Ein paar Fragen für einen fairen Vorschlag',
+    qLead: 'Schnell beantworten. Wir schlagen einen Monat vor, in dem beide Eltern ähnliche Ferienzeit mit dem Kind haben.',
+    q1: 'Bevorzugter Grundrhythmus',
+    q1a: 'Ganze Wochen im Wechsel',
+    q1b: 'Jedes zweite Wochenende + Mitte der Woche',
+    q1c: 'Überwiegend 50/50 unter der Woche',
+    q2: 'Wer bevorzugt mehr Wochenenden?',
+    q2a: 'Elternteil A',
+    q2b: 'Elternteil B',
+    q2c: 'Gleich',
+    q3: 'Priorität Schulferien',
+    q3a: 'Jede Ferienperiode teilen',
+    q3b: 'Ganze Perioden abwechseln',
+    q4: 'Vorschlag starten ab',
+    generate: 'Vorschlag erzeugen',
+    apply: 'Diesen Monat anwenden',
+    balance: 'Ferientage',
+    close: 'Schließen',
     holidays: 'Feiertage',
     h_newyear: 'Neujahr',
     h_eastermon: 'Ostermontag',
@@ -288,6 +345,25 @@ const t = {
     altWeeks: 'Wiesselnd Woch (A)', altWeeksB: 'Wiesselnd Woch (B)',
     weekendA: 'All zweet Weekend A', monthA: 'Ganze Mount A', monthB: 'Ganze Mount B',
     clearMonth: 'Mount läschen', addEvent: 'Notiz / Evenement',
+    propose: 'E faire Plang proposéieren',
+    qTitle: 'E puer Froen fir e faire Virschlag',
+    qLead: 'Séier äntweren. Mir proposéieren e Mount wou béid Elteren ähnlech Vakanzenzäit mam Kand hunn.',
+    q1: 'Bevorzuchten Basisrhythmus',
+    q1a: 'Ganz Wochen am Wiessel',
+    q1b: 'All zweet Weekend + Mëtt vun der Woch',
+    q1c: 'Haaptsächlech 50/50 an der Woch',
+    q2: 'Wie bevorzugt méi Weekenden?',
+    q2a: 'Elterendeel A',
+    q2b: 'Elterendeel B',
+    q2c: 'Gläich',
+    q3: 'Prioritéit Schoulvakanzen',
+    q3a: 'All Period deelen',
+    q3b: 'Ganz Perioden wiesselen',
+    q4: 'Virschlag starten vun',
+    generate: 'Virschlag generéieren',
+    apply: 'Dëse Mount uwenden',
+    balance: 'Vakanzendeeg',
+    close: 'Zoumaachen',
     eventTitle: 'Evenementstitel', add: 'Dobäisetzen',
     typeEvent: 'Evenement', typeHandover: 'Iwwergab', typeSchool: 'Schoul', typeMedical: 'Medezinesch',
     expTitle: 'Transparent Ausgaben',
@@ -449,9 +525,109 @@ function luxHolidays(year, tr) {
   return map
 }
 
+
+function generateFairPlan(year, month, answers, holidays) {
+  const days = new Date(year, month + 1, 0).getDate()
+  const plan = {}
+  const isWeekend = (d) => { const dow = (new Date(year, month, d).getDay() + 6) % 7; return dow >= 5 }
+  const isHoliday = (d) => {
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    return !!holidays[key]
+  }
+  // Collect holiday + weekend days that need balancing
+  const special = []
+  for (let d = 1; d <= days; d++) {
+    if (isHoliday(d) || isWeekend(d)) special.push(d)
+  }
+  // Assign special days aiming for equal count
+  let aCount = 0, bCount = 0
+  const preferA = answers.weekends === 'A'
+  const preferB = answers.weekends === 'B'
+  special.forEach((d, i) => {
+    let who
+    if (preferA && aCount <= bCount + 1) who = 'A'
+    else if (preferB && bCount <= aCount + 1) who = 'B'
+    else who = aCount <= bCount ? 'A' : 'B'
+    plan[d] = who
+    if (who === 'A') aCount++; else bCount++
+  })
+  // Fill remaining weekdays according to rhythm
+  for (let d = 1; d <= days; d++) {
+    if (plan[d]) continue
+    if (answers.rhythm === 'weeks') {
+      const week = Math.floor((d + ((new Date(year, month, 1).getDay()+6)%7) - 1) / 7)
+      plan[d] = week % 2 === 0 ? 'A' : 'B'
+    } else if (answers.rhythm === 'weekend-mid') {
+      const dow = (new Date(year, month, d).getDay() + 6) % 7
+      plan[d] = dow === 2 || dow === 3 ? 'B' : 'A' // mid-week B, rest A as base
+    } else {
+      plan[d] = d % 2 === 0 ? 'A' : 'B'
+    }
+  }
+  return plan
+}
+
+function Questionnaire({ year, month, holidays, onApply, onClose, tr }) {
+  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split' })
+  const [preview, setPreview] = useState(null)
+  const generate = () => {
+    const plan = generateFairPlan(year, month, answers, holidays)
+    // count holiday days
+    let aH = 0, bH = 0
+    for (let d = 1; d <= new Date(year, month+1, 0).getDate(); d++) {
+      const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+      if (holidays[key]) {
+        if (plan[d] === 'A') aH++; else if (plan[d] === 'B') bH++
+      }
+    }
+    setPreview({ plan, aH, bH })
+  }
+  return (
+    <div className="q-overlay" onClick={onClose}>
+      <div className="q-card" onClick={(e) => e.stopPropagation()}>
+        <div className="q-head">
+          <h3>{tr.qTitle}</h3>
+          <button className="btn ghost" type="button" onClick={onClose}>{tr.close}</button>
+        </div>
+        <p className="q-lead">{tr.qLead}</p>
+        <label>{tr.q1}</label>
+        <div className="q-options">
+          <button type="button" className={answers.rhythm==='weeks'?'on':''} onClick={() => setAnswers({...answers, rhythm:'weeks'})}>{tr.q1a}</button>
+          <button type="button" className={answers.rhythm==='weekend-mid'?'on':''} onClick={() => setAnswers({...answers, rhythm:'weekend-mid'})}>{tr.q1b}</button>
+          <button type="button" className={answers.rhythm==='half'?'on':''} onClick={() => setAnswers({...answers, rhythm:'half'})}>{tr.q1c}</button>
+        </div>
+        <label>{tr.q2}</label>
+        <div className="q-options">
+          <button type="button" className={answers.weekends==='A'?'on':''} onClick={() => setAnswers({...answers, weekends:'A'})}>{tr.q2a}</button>
+          <button type="button" className={answers.weekends==='B'?'on':''} onClick={() => setAnswers({...answers, weekends:'B'})}>{tr.q2b}</button>
+          <button type="button" className={answers.weekends==='equal'?'on':''} onClick={() => setAnswers({...answers, weekends:'equal'})}>{tr.q2c}</button>
+        </div>
+        <label>{tr.q3}</label>
+        <div className="q-options">
+          <button type="button" className={answers.holidays==='split'?'on':''} onClick={() => setAnswers({...answers, holidays:'split'})}>{tr.q3a}</button>
+          <button type="button" className={answers.holidays==='alternate'?'on':''} onClick={() => setAnswers({...answers, holidays:'alternate'})}>{tr.q3b}</button>
+        </div>
+        <div className="q-actions">
+          <button className="btn primary" type="button" onClick={generate}>{tr.generate}</button>
+        </div>
+        {preview && (
+          <div className="q-preview">
+            <div className="kid-summary">
+              <span className="pill a">{tr.balance} A · {preview.aH}</span>
+              <span className="pill b">{tr.balance} B · {preview.bH}</span>
+            </div>
+            <button className="btn primary" type="button" onClick={() => onApply(preview.plan)}>{tr.apply}</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function CalendarView() {
   const { tr } = useLang()
   const [custody, setCustody] = useState(() => load('cp-custody', {}))
+  const [showQ, setShowQ] = useState(false)
   const [events, setEvents] = useState(() => load('cp-events', []))
   const [cursor, setCursor] = useState(() => new Date())
   const [mode, setMode] = useState('paint') // paint | event
@@ -607,6 +783,7 @@ function CalendarView() {
       </div>
 
       <div className="plan-row">
+        <button type="button" className="btn primary sm" onClick={() => setShowQ(true)}>{tr.propose}</button>
         <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('A')}>{tr.altWeeks || 'Alt. weeks (A start)'}</button>
         <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('B')}>{tr.altWeeksB || 'Alt. weeks (B start)'}</button>
         <button type="button" className="btn ghost sm" onClick={() => planEveryOtherWeekend('A')}>{tr.weekendA || 'Every other weekend A'}</button>
@@ -615,6 +792,24 @@ function CalendarView() {
         <button type="button" className="btn ghost sm" onClick={clearMonth}>{tr.clearMonth || 'Clear month'}</button>
       </div>
 
+      {showQ && (
+        <Questionnaire
+          year={year}
+          month={month}
+          holidays={hols}
+          tr={tr}
+          onClose={() => setShowQ(false)}
+          onApply={(plan) => {
+            const next = { ...custody }
+            for (const [d, who] of Object.entries(plan)) {
+              const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+              next[key] = who
+            }
+            setCustody(next)
+            setShowQ(false)
+          }}
+        />
+      )}
       <details className="holiday-list" open>
         <summary>{tr.holidays || 'Holidays'} · {year}</summary>
         <ul>
