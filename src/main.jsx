@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
 } from 'lucide-react'
 import './style.css'
-import { Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
+import { HandoverView, Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 
 /* ─── i18n ─── */
@@ -1125,13 +1125,14 @@ function DeployLog() {
 
 function AppShell({ onExit }) {
   const { tr } = useLang()
-  const [tab, setTab] = useState('today')
+  const [tab, setTab] = useState('handover')
   return (
     <div className="app-shell">
       <header className="app-header">
         <div className="app-brand"><Heart size={18} /> {tr.appTitle}</div>
         <nav className="app-tabs">
           <button className={tab === 'today' ? 'active' : ''} onClick={() => setTab('today')}><Heart size={16} /> Today</button>
+          <button className={tab === 'handover' ? 'active' : ''} onClick={() => setTab('handover')}><Clock size={16} /> Handover</button>
           <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}><Calendar size={16} /> {tr.tabCal}</button>
           <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><Wallet size={16} /> {tr.tabExp}</button>
           <button className={tab === 'messages' ? 'active' : ''} onClick={() => setTab('messages')}><MessageSquare size={16} /> {tr.tabMsg}</button>
@@ -1145,6 +1146,7 @@ function AppShell({ onExit }) {
       <main className="app-main">
         <ShareBar />
         {tab === 'today' && <TodayBoard />}
+        {tab === 'handover' && <HandoverView />}
         {tab === 'calendar' && <CalendarView />}
         {tab === 'expenses' && <ExpensesView />}
         {tab === 'messages' && <Threads />}

@@ -22,6 +22,12 @@ const COPY = {
   en: {
     today: 'Today', resolve: 'Resolve', with: 'is with', open: 'Today is not planned yet',
     next: 'Next handover', none: 'No change in the next six weeks.',
+    handTitle: 'Handover', handKicker: 'The next change', handEmpty: 'No handover in the next six weeks. Paint the calendar so you both know the next change.',
+    from: 'From', to: 'To', time: 'Time', place: 'Place', bring: 'Bring',
+    addItem: 'Add an item', confirm: 'I will be there', confirmed: 'Confirmed',
+    waitingFor: 'Waiting for', bothReady: 'Both confirmed. Noa is expected.',
+    youAre: 'You are', schoolGate: 'School gate',
+    bag: 'School bag', coat: 'Coat', medicine: 'Medicine', sport: 'Sports kit', comfort: 'Comfort item',
     ask: 'Ask for a day', need: 'Day you need', offer: 'Day you can offer',
     needHint: 'Tap a day the other parent has.', offerHint: 'These are your days. Tap one to offer it.',
     offerDays: 'Days you can offer', askDays: 'Days you can ask for', noneMonth: 'None this month.',
@@ -42,6 +48,12 @@ const COPY = {
   fr: {
     today: 'Aujourd’hui', resolve: 'Apaiser', with: 'est avec', open: 'Aujourd’hui n’est pas encore prévu',
     next: 'Prochain passage', none: 'Aucun changement dans les six semaines.',
+    handTitle: 'Passage', handKicker: 'Le prochain changement', handEmpty: 'Aucun passage dans les six semaines. Colorez le calendrier pour que vous sachiez tous les deux.',
+    from: 'De', to: 'Vers', time: 'Heure', place: 'Lieu', bring: 'À emporter',
+    addItem: 'Ajouter', confirm: 'Je serai là', confirmed: 'Confirmé',
+    waitingFor: 'En attente de', bothReady: 'Vous avez confirmé. Noa est attendu.',
+    youAre: 'Vous êtes', schoolGate: 'Portail de l’école',
+    bag: 'Cartable', coat: 'Manteau', medicine: 'Médicament', sport: 'Tenue de sport', comfort: 'Doudou',
     ask: 'Demander un jour', need: 'Jour dont vous avez besoin', offer: 'Jour que vous pouvez offrir',
     needHint: 'Touchez un jour de l’autre parent.', offerHint: 'Voici vos jours. Touchez-en un pour l’offrir.',
     offerDays: 'Jours que vous pouvez offrir', askDays: 'Jours que vous pouvez demander', noneMonth: 'Aucun ce mois-ci.',
@@ -62,6 +74,12 @@ const COPY = {
   de: {
     today: 'Heute', resolve: 'Klären', with: 'ist bei', open: 'Heute ist noch nicht geplant',
     next: 'Nächste Übergabe', none: 'Keine Änderung in den nächsten sechs Wochen.',
+    handTitle: 'Übergabe', handKicker: 'Der nächste Wechsel', handEmpty: 'Keine Übergabe in den nächsten sechs Wochen. Malt den Kalender, damit ihr beide den nächsten Wechsel kennt.',
+    from: 'Von', to: 'Zu', time: 'Uhrzeit', place: 'Ort', bring: 'Mitnehmen',
+    addItem: 'Etwas hinzufügen', confirm: 'Ich bin da', confirmed: 'Bestätigt',
+    waitingFor: 'Wartet auf', bothReady: 'Ihr habt bestätigt. Noa wird erwartet.',
+    youAre: 'Du bist', schoolGate: 'Schultor',
+    bag: 'Schultasche', coat: 'Jacke', medicine: 'Medizin', sport: 'Sportsachen', comfort: 'Kuscheltier',
     ask: 'Einen Tag bitten', need: 'Tag, den du brauchst', offer: 'Tag, den du anbieten kannst',
     needHint: 'Tippe einen Tag des anderen Elternteils.', offerHint: 'Das sind deine Tage. Tippe einen zum Anbieten.',
     offerDays: 'Tage, die du anbieten kannst', askDays: 'Tage, die du bitten kannst', noneMonth: 'Keine in diesem Monat.',
@@ -82,6 +100,12 @@ const COPY = {
   lb: {
     today: 'Haut', resolve: 'Klären', with: 'ass bei', open: 'Haut ass nach net geplangt',
     next: 'Nächst Iwwergab', none: 'Keng Ännerung an deenen nächste sechs Wochen.',
+    handTitle: 'Iwwergab', handKicker: 'Deen nächsten Wiessel', handEmpty: 'Keng Iwwergab an deenen nächste sechs Wochen. Mollt de Kalenner, fir datt dir béid de Wiessel kennt.',
+    from: 'Vun', to: 'Bei', time: 'Zäit', place: 'Plaz', bring: 'Mathuelen',
+    addItem: 'Eppes derbäi', confirm: 'Ech sinn do', confirmed: 'Bestätegt',
+    waitingFor: 'Waart op', bothReady: 'Dir hutt bestätegt. Noa gëtt erwaart.',
+    youAre: 'Du bass', schoolGate: 'Schoulpaart',
+    bag: 'Schoulsak', coat: 'Jackett', medicine: 'Medezin', sport: 'Sportssachen', comfort: 'Kuscheldéier',
     ask: 'En Dag froen', need: 'Dag, deen dir braucht', offer: 'Dag, deen dir ubidde kënnt',
     needHint: 'Tipp en Dag vum aneren Elterendeel.', offerHint: 'Dat sinn deng Deeg. Tipp een fir unzebidden.',
     offerDays: 'Deeg, déi dir ubidde kënnt', askDays: 'Deeg, déi dir froe kënnt', noneMonth: 'Keng dëse Mount.',
@@ -168,6 +192,139 @@ export function TodayBoard() {
       <p>{change ? `${pretty(change.date, lang)} · ${label(change.from)} → ${label(change.to)}` : c.none}</p>
       <AskDay custody={custody} setCustody={setCustody} locked={locked} swaps={swaps} setSwaps={setSwaps} writer={writer} setWriter={setWriter} />
     </div>
+  )
+}
+
+function upcomingHandovers(custody, from, days = 42) {
+  const found = []
+  let prev = custody[isoDate(from)]
+  for (let i = 1; i <= days; i += 1) {
+    const date = new Date(from)
+    date.setDate(from.getDate() + i)
+    const key = isoDate(date)
+    const owner = custody[key]
+    if (owner !== 'A' && owner !== 'B') continue
+    if ((prev === 'A' || prev === 'B') && owner !== prev) found.push({ date: key, from: prev, to: owner })
+    prev = owner
+  }
+  return found
+}
+
+function defaultItems(c) {
+  return [c.bag, c.coat, c.medicine, c.sport, c.comfort].map((label, index) => ({ id: `d${index}`, label, done: false }))
+}
+
+export function HandoverView() {
+  const { lang } = useLang()
+  const c = useCopy()
+  const [custody] = useState(() => load('cp-custody', {}))
+  const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
+  const [book, setBook] = useState(() => load('cp-handovers', {}))
+  const [picked, setPicked] = useState('')
+  const [draft, setDraft] = useState('')
+  useEffect(() => { save('cp-writer', writer) }, [writer])
+  useEffect(() => { save('cp-handovers', book) }, [book])
+  const today = useMemo(() => new Date(), [])
+  const changes = useMemo(() => upcomingHandovers(custody, today), [custody, today])
+  const current = changes.find((item) => item.date === picked) || changes[0]
+  const label = (id) => (id === 'A' ? 'Alex' : 'Sam')
+  const entry = current ? (book[current.date] || { time: '18:00', place: c.schoolGate, items: defaultItems(c), yesA: false, yesB: false }) : null
+
+  function patch(next) {
+    if (!current) return
+    setBook({ ...book, [current.date]: { ...entry, ...next } })
+  }
+  function toggleItem(id) {
+    patch({ items: entry.items.map((item) => item.id === id ? { ...item, done: !item.done } : item) })
+  }
+
+  if (!current || !entry) {
+    return (
+      <section className="handover-screen">
+        <p className="hand-kicker">{c.handKicker}</p>
+        <h2>{c.handTitle}</h2>
+        <p className="hand-empty">{c.handEmpty}</p>
+      </section>
+    )
+  }
+
+  const mine = writer === 'A' ? entry.yesA : entry.yesB
+  const both = entry.yesA && entry.yesB
+  const other = writer === 'A' ? 'B' : 'A'
+  return (
+    <section className="handover-screen">
+      <div className="hand-top">
+        <div>
+          <p className="hand-kicker">{c.handKicker}</p>
+          <h2>{pretty(current.date, lang)}</h2>
+        </div>
+        <div className="ask-switch">
+          <span>{c.youAre}</span>
+          {['A', 'B'].map((id) => (
+            <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{label(id)}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hand-pass">
+        <div className={`hand-who ${current.from === 'A' ? 'a' : 'b'}`}>
+          <span>{c.from}</span>
+          <strong>{label(current.from)}</strong>
+        </div>
+        <span className="hand-arrow" aria-hidden="true">→</span>
+        <div className={`hand-who ${current.to === 'A' ? 'a' : 'b'}`}>
+          <span>{c.to}</span>
+          <strong>{label(current.to)}</strong>
+        </div>
+      </div>
+
+      <div className="hand-facts">
+        <label>{c.time}
+          <input type="time" value={entry.time} onChange={(event) => patch({ time: event.target.value, yesA: false, yesB: false })} />
+        </label>
+        <label>{c.place}
+          <input value={entry.place} onChange={(event) => patch({ place: event.target.value, yesA: false, yesB: false })} />
+        </label>
+      </div>
+
+      <div className="hand-bring">
+        <h3>{c.bring}</h3>
+        {entry.items.map((item) => (
+          <button key={item.id} type="button" className={`hand-item ${item.done ? 'done' : ''}`} onClick={() => toggleItem(item.id)}>
+            <span className="hand-check">{item.done ? '✓' : ''}</span>
+            {item.label}
+          </button>
+        ))}
+        <form className="hand-add" onSubmit={(event) => {
+          event.preventDefault()
+          const labelText = draft.trim()
+          if (!labelText) return
+          patch({ items: [...entry.items, { id: String(Date.now()), label: labelText, done: false }] })
+          setDraft('')
+        }}>
+          <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={c.addItem} />
+          <button className="btn ghost sm" type="submit">{c.addItem}</button>
+        </form>
+      </div>
+
+      <div className={`hand-status ${both ? 'ready' : ''}`}>
+        <p>{both ? c.bothReady : mine ? `${c.confirmed}. ${c.waitingFor} ${label(other)}.` : `${c.waitingFor} ${label(writer)}.`}</p>
+        <button type="button" className={`btn ${mine ? 'ghost' : 'primary'}`} onClick={() => patch(writer === 'A' ? { yesA: !entry.yesA } : { yesB: !entry.yesB })}>
+          {mine ? c.confirmed : c.confirm}
+        </button>
+      </div>
+
+      {changes.length > 1 && (
+        <div className="hand-later">
+          {changes.slice(0, 4).map((item) => (
+            <button key={item.date} type="button" className={`hand-later-item ${item.date === current.date ? 'on' : ''}`} onClick={() => setPicked(item.date)}>
+              <span>{pretty(item.date, lang)}</span>
+              <strong>{label(item.from)} → {label(item.to)}</strong>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
