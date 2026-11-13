@@ -1242,4 +1242,4 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <LangProvider><App /></LangProvider>
   </React.StrictMode>
-)\n    scope: 'Uwenden op',\n    thisMonth: 'Dëse Mount',\n    fullYear: 'Ganzt Joer',\n    scope: 'Anwenden auf',\n    thisMonth: 'Dieser Monat',\n    fullYear: 'Ganzes Jahr',\n    scope: 'Appliquer à',\n    thisMonth: 'Ce mois',\n    fullYear: 'Année complète',\n    scope: 'Apply to',\n    thisMonth: 'This month',\n    fullYear: 'Full year',\n    scope: 'Appliquer à',\n    thisMonth: 'Ce mois',\n    fullYear: 'Année complète',\n    scope: 'Apply to',\n    thisMonth: 'This month',\n    fullYear: 'Full year',
+)
