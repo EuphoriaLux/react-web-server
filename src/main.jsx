@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowRight,
@@ -12,11 +12,19 @@ import {
   Sparkles,
   Info,
   HelpCircle,
+  Calendar,
+  Wallet,
+  MessageSquare,
+  FileText,
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Trash2,
 } from 'lucide-react'
 import './style.css'
 
-/* ─── Custom SVG illustrations ─── */
-
+/* ─── Custom SVG illustrations (unchanged) ─── */
 function HeroArt() {
   return (
     <svg className="hero-art" viewBox="0 0 520 440" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -251,7 +259,198 @@ const fiscalCards = [
   { title: 'Shared care ≠ double credits', body: 'Joint custody does not automatically mean each parent gets the full set of child credits. Where both parents live with the child, many benefits are split 50/50; a sole parent may claim 100%.' },
 ]
 
-function App() {
+/* ─── localStorage helpers ─── */
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+function save(key, value) {
+  localStorage.setItem(key, JSON.stringify(value))
+}
+
+/* ─── Calendar view ─── */
+function CalendarView() {
+  const [events, setEvents] = useState(() => load('cp-events', []))
+  const [cursor, setCursor] = useState(() => new Date())
+  const [form, setForm] = useState({ title: '', date: '', type: 'event' })
+
+  useEffect(() => { save('cp-events', events) }, [events])
+
+  const year = cursor.getFullYear()
+  const month = cursor.getMonth()
+  const first = new Date(year, month, 1)
+  const startPad = (first.getDay() + 6) % 7
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+
+  const cells = []
+  for (let i = 0; i < startPad; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  const add = (e) => {
+    e.preventDefault()
+    if (!form.title || !form.date) return
+    setEvents((prev) => [...prev, { id: Date.now(), ...form }])
+    setForm({ title: '', date: '', type: 'event' })
+  }
+  const remove = (id) => setEvents((prev) => prev.filter((x) => x.id !== id))
+
+  const monthLabel = cursor.toLocaleString('default', { month: 'long', year: 'numeric' })
+
+  return (
+    <div className="app-panel">
+      <div className="panel-head">
+        <h2>Shared calendar</h2>
+        <div className="month-nav">
+          <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month - 1, 1))}><ChevronLeft size={18} /></button>
+          <strong>{monthLabel}</strong>
+          <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month + 1, 1))}><ChevronRight size={18} /></button>
+        </div>
+      </div>
+
+      <div className="cal-grid">
+        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map((d) => <div key={d} className="cal-dow">{d}</div>)}
+        {cells.map((d, i) => {
+          const iso = d ? `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}` : null
+          const dayEvents = events.filter((ev) => ev.date === iso)
+          return (
+            <div key={i} className={`cal-cell ${d ? '' : 'empty'}`}>
+              {d && <span className="cal-day">{d}</span>}
+              {dayEvents.map((ev) => (
+                <div key={ev.id} className={`cal-event ${ev.type}`}>
+                  {ev.title}
+                  <button type="button" onClick={() => remove(ev.id)} aria-label="Remove"><Trash2 size={12} /></button>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+
+      <form className="add-form" onSubmit={add}>
+        <input placeholder="Event title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+        <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+          <option value="event">Event</option>
+          <option value="handover">Handover</option>
+          <option value="school">School</option>
+          <option value="medical">Medical</option>
+        </select>
+        <button className="btn primary" type="submit"><Plus size={16} /> Add</button>
+      </form>
+    </div>
+  )
+}
+
+/* ─── Expenses view ─── */
+function ExpensesView() {
+  const [items, setItems] = useState(() => load('cp-expenses', []))
+  const [form, setForm] = useState({ desc: '', amount: '', paidBy: 'A', split: '50' })
+
+  useEffect(() => { save('cp-expenses', items) }, [items])
+
+  const add = (e) => {
+    e.preventDefault()
+    const amt = parseFloat(form.amount)
+    if (!form.desc || isNaN(amt) || amt <= 0) return
+    setItems((prev) => [...prev, { id: Date.now(), ...form, amount: amt }])
+    setForm({ desc: '', amount: '', paidBy: 'A', split: '50' })
+  }
+  const remove = (id) => setItems((prev) => prev.filter((x) => x.id !== id))
+
+  const balance = useMemo(() => {
+    let a = 0, b = 0
+    for (const it of items) {
+      const shareA = it.split === '50' ? it.amount / 2 : it.split === 'A' ? it.amount : 0
+      const shareB = it.amount - shareA
+      if (it.paidBy === 'A') { a += it.amount; b -= shareB }
+      else { b += it.amount; a -= shareA }
+    }
+    return { a, b }
+  }, [items])
+
+  return (
+    <div className="app-panel">
+      <div className="panel-head">
+        <h2>Transparent expenses</h2>
+        <div className="balance-pill">
+          <span>A: {balance.a >= 0 ? '+' : ''}{balance.a.toFixed(2)}</span>
+          <span>B: {balance.b >= 0 ? '+' : ''}{balance.b.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="expense-list">
+        {items.length === 0 && <p className="empty">No expenses yet. Add the first one below.</p>}
+        {items.map((it) => (
+          <div key={it.id} className="expense-row">
+            <div>
+              <strong>{it.desc}</strong>
+              <span className="meta">Paid by {it.paidBy} · split {it.split === '50' ? '50/50' : it.split === 'A' ? '100% A' : '100% B'}</span>
+            </div>
+            <div className="amt">{it.amount.toFixed(2)}</div>
+            <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
+          </div>
+        ))}
+      </div>
+
+      <form className="add-form" onSubmit={add}>
+        <input placeholder="Description" value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
+        <input type="number" step="0.01" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+        <select value={form.paidBy} onChange={(e) => setForm({ ...form, paidBy: e.target.value })}>
+          <option value="A">Paid by A</option>
+          <option value="B">Paid by B</option>
+        </select>
+        <select value={form.split} onChange={(e) => setForm({ ...form, split: e.target.value })}>
+          <option value="50">50/50</option>
+          <option value="A">100% A</option>
+          <option value="B">100% B</option>
+        </select>
+        <button className="btn primary" type="submit"><Plus size={16} /> Add</button>
+      </form>
+    </div>
+  )
+}
+
+function Placeholder({ title, text }) {
+  return (
+    <div className="app-panel">
+      <h2>{title}</h2>
+      <p className="empty">{text}</p>
+    </div>
+  )
+}
+
+/* ─── App shell ─── */
+function AppShell({ onExit }) {
+  const [tab, setTab] = useState('calendar')
+
+  return (
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="app-brand"><Heart size={18} /> CoParents demo</div>
+        <nav className="app-tabs">
+          <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}><Calendar size={16} /> Calendar</button>
+          <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><Wallet size={16} /> Expenses</button>
+          <button className={tab === 'messages' ? 'active' : ''} onClick={() => setTab('messages')}><MessageSquare size={16} /> Messages</button>
+          <button className={tab === 'docs' ? 'active' : ''} onClick={() => setTab('docs')}><FileText size={16} /> Docs</button>
+        </nav>
+        <button className="btn ghost" type="button" onClick={onExit}><Home size={16} /> Back to site</button>
+      </header>
+      <main className="app-main">
+        {tab === 'calendar' && <CalendarView />}
+        {tab === 'expenses' && <ExpensesView />}
+        {tab === 'messages' && <Placeholder title="Messages" text="Structured threads coming next. For now, use the calendar and expenses." />}
+        {tab === 'docs' && <Placeholder title="Documents" text="Shared vault coming next. Store agreements and notes here later." />}
+      </main>
+    </div>
+  )
+}
+
+/* ─── Landing page (extracted) ─── */
+function Landing({ onEnter }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -283,8 +482,8 @@ function App() {
             <a href="#fiscal">Fiscal help (LU)</a>
           </nav>
           <div className="nav-actions">
-            <button className="btn ghost" type="button">Sign in</button>
-            <button className="btn primary" type="button">Get early access</button>
+            <button className="btn ghost" type="button" onClick={onEnter}>Demo</button>
+            <button className="btn primary" type="button" onClick={onEnter}>Enter shared space</button>
           </div>
           <button className="menu-btn" type="button" aria-label={menuOpen ? 'Close menu' : 'Open menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>
             {menuOpen ? <X size={22} /> : <Menu size={22} />}
@@ -296,7 +495,7 @@ function App() {
             <a href="#solution" onClick={closeMenu}>How it helps</a>
             <a href="#how" onClick={closeMenu}>How it works</a>
             <a href="#fiscal" onClick={closeMenu}>Fiscal help (LU)</a>
-            <button className="btn primary full" type="button" onClick={closeMenu}>Get early access</button>
+            <button className="btn primary full" type="button" onClick={() => { closeMenu(); onEnter() }}>Enter shared space</button>
           </div>
         )}
       </header>
@@ -314,7 +513,7 @@ function App() {
               <h1>Co-parenting<span className="h1-line">without the chaos</span></h1>
               <p className="lead">One calm, shared space for schedules, expenses, messages and documents. Less friction between you. More clarity for your child.</p>
               <div className="hero-cta">
-                <button className="btn primary large" type="button">Start your shared space<ArrowRight size={18} /></button>
+                <button className="btn primary large" type="button" onClick={onEnter}>Enter shared space<ArrowRight size={18} /></button>
                 <a className="btn text" href="#solution">See how it works</a>
               </div>
               <div className="hero-trust">
@@ -449,8 +648,8 @@ function App() {
               <div className="cta-glow" aria-hidden="true" />
               <h2>Ready to lower the temperature?</h2>
               <p>Create a shared space that keeps logistics clear and the focus where it belongs — on your child.</p>
-              <button className="btn primary large light" type="button">Get early access<ArrowRight size={18} /></button>
-              <p className="cta-note">No credit card. Private beta starting soon.</p>
+              <button className="btn primary large light" type="button" onClick={onEnter}>Enter shared space<ArrowRight size={18} /></button>
+              <p className="cta-note">No account needed. Demo runs in this browser.</p>
             </div>
           </div>
         </section>
@@ -465,6 +664,12 @@ function App() {
       </footer>
     </div>
   )
+}
+
+function App() {
+  const [mode, setMode] = useState('landing')
+  if (mode === 'app') return <AppShell onExit={() => setMode('landing')} />
+  return <Landing onEnter={() => setMode('app')} />
 }
 
 createRoot(document.getElementById('root')).render(
