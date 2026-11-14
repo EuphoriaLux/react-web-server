@@ -17,6 +17,10 @@ export function names() {
   const profile = load('cp-profile', DEFAULT_PROFILE)
   return { A: profile.nameA || 'Alex', B: profile.nameB || 'Sam', child: profile.child || 'Noa' }
 }
+export function logActivity(text) {
+  const all = load('cp-activity', [])
+  save('cp-activity', [{ id: String(Date.now()), at: new Date().toISOString(), text }, ...all].slice(0, 40))
+}
 function isoDate(date) {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
@@ -68,6 +72,8 @@ const COPY = {
     calmer: 'Calmer version', sendCalm: 'Send the calmer note', sendAnyway: 'Send as written',
     papers: 'Papers', papersLead: 'Agreements and notes both of you can find.', emptyPapers: 'No papers yet.',
     names: 'Names', done: 'Done', parentA: 'Parent A', parentB: 'Parent B', child: 'Child',
+    activity: 'What changed', noActivity: 'Nothing yet. A note, a confirm, or a settled cost will show here.',
+    settled: 'Settled', markSettled: 'Mark settled', install: 'Add to your home screen to get reminders later.',
   },
   fr: {
     today: 'Aujourd’hui', resolve: 'Apaiser', with: 'est avec', open: 'Aujourd’hui n’est pas encore prévu',
@@ -113,6 +119,8 @@ const COPY = {
     calmer: 'Version plus calme', sendCalm: 'Envoyer la version calme', sendAnyway: 'Envoyer tel quel',
     papers: 'Papiers', papersLead: 'Accords et notes pour vous deux.', emptyPapers: 'Aucun document.',
     names: 'Noms', done: 'Terminé', parentA: 'Parent A', parentB: 'Parent B', child: 'Enfant',
+    activity: 'Ce qui a changé', noActivity: 'Rien encore. Une note, une confirmation ou un coût réglé apparaîtra ici.',
+    settled: 'Réglé', markSettled: 'Marquer réglé', install: 'Ajoutez à l’écran d’accueil pour les rappels plus tard.',
   },
   de: {
     today: 'Heute', resolve: 'Klären', with: 'ist bei', open: 'Heute ist noch nicht geplant',
@@ -158,6 +166,8 @@ const COPY = {
     calmer: 'Ruhigere Fassung', sendCalm: 'Die ruhige Notiz senden', sendAnyway: 'So senden',
     papers: 'Papiere', papersLead: 'Vereinbarungen, die ihr beide findet.', emptyPapers: 'Noch keine Dokumente.',
     names: 'Namen', done: 'Fertig', parentA: 'Elternteil A', parentB: 'Elternteil B', child: 'Kind',
+    activity: 'Was sich geändert hat', noActivity: 'Noch nichts. Eine Notiz, eine Bestätigung oder eine beglichene Ausgabe erscheint hier.',
+    settled: 'Beglichen', markSettled: 'Als beglichen markieren', install: 'Zum Home-Bildschirm hinzufügen, für spätere Erinnerungen.',
   },
   lb: {
     today: 'Haut', resolve: 'Klären', with: 'ass bei', open: 'Haut ass nach net geplangt',
@@ -203,6 +213,8 @@ const COPY = {
     calmer: 'Roueg Fassong', sendCalm: 'Déi roueg Notiz schécken', sendAnyway: 'Esou schécken',
     papers: 'Pabeier', papersLead: 'Ofkommes fir iech béid.', emptyPapers: 'Nach keng Dokumenter.',
     names: 'Nimm', done: 'Fäerdeg', parentA: 'Elterendeel A', parentB: 'Elterendeel B', child: 'Kand',
+    activity: 'Wat geännert huet', noActivity: 'Nach näischt. Eng Notiz, eng Bestätegung oder e beglachene Käschte erschéngt hei.',
+    settled: 'Beglach', markSettled: 'Als beglach markéieren', install: 'Op den Home-Écran setzen, fir spéider Erënnerungen.',
   },
 }
 function useCopy() {
@@ -274,6 +286,7 @@ export function TodayBoard() {
     <div className="app-panel today-home">
       <p className="hand-kicker">{c.today}</p>
       <h2>{who === 'A' || who === 'B' ? `${n.child} ${c.with} ${label(who)}` : c.open}</h2>
+      {typeof window !== 'undefined' && !window.matchMedia('(display-mode: standalone)').matches && <p className="install-hint">{c.install}</p>}
       <article className="today-card">
         <span>{c.next}</span>
         <strong>{change ? pretty(change.date, lang) : c.none}</strong>
@@ -284,6 +297,13 @@ export function TodayBoard() {
         <strong>{open.length}</strong>
         <p>{open.length ? open.map((row) => pretty(row.want, lang)).join(' · ') : c.noSwaps}</p>
       </article>
+      <section className="today-activity">
+        <h3>{c.activity}</h3>
+        {load('cp-activity', []).slice(0, 6).map((item) => (
+          <p key={item.id}><time>{new Date(item.at).toLocaleString(lang === 'fr' ? 'fr' : lang === 'de' ? 'de' : 'en', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time> {item.text}</p>
+        ))}
+        {load('cp-activity', []).length === 0 && <p className="empty">{c.noActivity}</p>}
+      </section>
       <button type="button" className="btn ghost sm" onClick={() => setEditing((v) => !v)}>{editing ? c.done : c.names}</button>
       {editing && (
         <form className="biff" onSubmit={(event) => { event.preventDefault(); setEditing(false) }}>
@@ -335,7 +355,11 @@ export function HandoverView() {
 
   function patch(next) {
     if (!current) return
-    setBook({ ...book, [current.date]: { ...entry, ...next } })
+    const merged = { ...entry, ...next }
+    setBook({ ...book, [current.date]: merged })
+    if ((next.yesA && !entry.yesA) || (next.yesB && !entry.yesB)) {
+      logActivity(`${names()[writer]} confirmed the handover on ${pretty(current.date, lang)}`)
+    }
   }
   function toggleItem(id) {
     patch({ items: entry.items.map((item) => item.id === id ? { ...item, done: !item.done } : item) })
@@ -520,6 +544,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
         if (!want) return
         if (locked[want.slice(0, 7)] || (give && locked[give.slice(0, 7)])) { setWarn(c.locked); return }
         setSwaps([{ id: String(Date.now()), by: writer, want, give, note: note.trim(), status: 'open' }, ...swaps])
+        logActivity(`${names()[writer]} asked for ${pretty(want, lang)} and offered ${pretty(give, lang)}`)
         setWant(''); setGive(''); setNote(''); setPick('need')
       }}>
         <input value={note} onChange={(event) => setNote(event.target.value)} placeholder={c.note} />
@@ -536,6 +561,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
             if (item.give) next[item.give] = item.by === 'A' ? 'B' : 'A'
             setCustody(next)
             setSwaps(swaps.map((row) => row.id === item.id ? { ...row, status: 'yes' } : row))
+            logActivity(`${names()[writer]} accepted the swap for ${pretty(item.want, lang)}`)
           }}>{c.accept}</button>
           <button className="btn ghost sm" type="button" onClick={() => setSwaps(swaps.map((row) => row.id === item.id ? { ...row, status: 'no' } : row))}>{c.decline}</button>
         </div>
@@ -741,6 +767,7 @@ export function NoteThread({ channel, title, writer }) {
       save('cp-notes', [...all, stamp(clean, waiting)])
     }
     setFact(''); setAsk(''); setByWhen(''); setUrgent(false); setHold(null)
+    logActivity(`${names()[who]} wrote: ${clean.fact.slice(0, 80)}`)
     await loadNotes()
   }
 

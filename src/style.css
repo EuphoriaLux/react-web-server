@@ -858,6 +858,12 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .today-card strong { display: block; font-family: var(--display); font-size: 1.35rem; margin-top: 2px; }
 .today-card p { margin: 4px 0 0; color: var(--ink-soft); }
 .expense-block .note-thread { margin-top: 8px; }
+.expense-block.settled { opacity: 0.62; }
+.today-activity { margin: 8px 0 18px; }
+.today-activity h3 { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.today-activity p { margin: 6px 0; color: var(--ink-soft); }
+.today-activity time { color: var(--muted); font-size: 0.82rem; margin-right: 8px; }
+.install-hint { margin: 0 0 12px; padding: 12px 14px; border-radius: 14px; background: var(--teal-soft); color: var(--teal-deep); font-size: 0.92rem; }
 
 /* ─── Polished app chrome ─── */
 .app-header {

@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
 } from 'lucide-react'
 import './style.css'
-import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard } from './extra.jsx'
+import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 
 /* ─── i18n ─── */
@@ -1040,14 +1040,21 @@ function CalendarView() {
 }
 function ExpensesView() {
   const { tr } = useLang()
+  const n = names()
   const [items, setItems] = useState(() => load('cp-expenses', []))
   const [form, setForm] = useState({ desc: '', amount: '', paidBy: 'A', split: '50' })
   useEffect(() => { save('cp-expenses', items) }, [items])
-  const add = (e) => { e.preventDefault(); const amt = parseFloat(form.amount); if (!form.desc || isNaN(amt) || amt <= 0) return; setItems((p) => [...p, { id: Date.now(), ...form, amount: amt }]); setForm({ desc: '', amount: '', paidBy: 'A', split: '50' }) }
+  const add = (e) => { e.preventDefault(); const amt = parseFloat(form.amount); if (!form.desc || isNaN(amt) || amt <= 0) return; setItems((p) => [...p, { id: Date.now(), ...form, amount: amt, settled: false }]); setForm({ desc: '', amount: '', paidBy: 'A', split: '50' }) }
   const remove = (id) => setItems((p) => p.filter((x) => x.id !== id))
+  const settle = (id) => {
+    setItems((p) => p.map((x) => x.id === id ? { ...x, settled: true } : x))
+    const item = items.find((x) => x.id === id)
+    if (item) logActivity(`${n[item.paidBy]} marked “${item.desc}” settled`)
+  }
   const balance = useMemo(() => {
     let a = 0, b = 0
     for (const it of items) {
+      if (it.settled) continue
       const shareA = it.split === '50' ? it.amount / 2 : it.split === 'A' ? it.amount : 0
       const shareB = it.amount - shareA
       if (it.paidBy === 'A') { a += it.amount; b -= shareB } else { b += it.amount; a -= shareA }
@@ -1059,20 +1066,22 @@ function ExpensesView() {
       <div className="panel-head">
         <h2>{tr.expTitle}</h2>
         <div className="balance-pill">
-          <span>A: {balance.a >= 0 ? '+' : ''}{balance.a.toFixed(2)}</span>
-          <span>B: {balance.b >= 0 ? '+' : ''}{balance.b.toFixed(2)}</span>
+          <span>{n.A}: {balance.a >= 0 ? '+' : ''}{balance.a.toFixed(2)}</span>
+          <span>{n.B}: {balance.b >= 0 ? '+' : ''}{balance.b.toFixed(2)}</span>
         </div>
       </div>
       <div className="expense-list">
         {items.length === 0 && <p className="empty">{tr.noExp}</p>}
         {items.map((it) => (
-          <div key={it.id} className="expense-block">
+          <div key={it.id} className={`expense-block ${it.settled ? 'settled' : ''}`}>
             <div className="expense-row">
               <div>
                 <strong>{it.desc}</strong>
-                <span className="meta">{tr.paidBy} {it.paidBy} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? '100% A' : '100% B'}</span>
+                <span className="meta">{tr.paidBy} {n[it.paidBy]} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? `100% ${n.A}` : `100% ${n.B}`}</span>
               </div>
               <div className="amt">{it.amount.toFixed(2)}</div>
+              {!it.settled && <button className="btn ghost sm" type="button" onClick={() => settle(it.id)}>Settled</button>}
+              {it.settled && <span className="meta">Settled</span>}
               <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
             </div>
             <NoteThread channel={`expense:${it.id}`} title="Notes" />
@@ -1083,13 +1092,13 @@ function ExpensesView() {
         <input placeholder={tr.desc} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
         <input type="number" step="0.01" placeholder={tr.amount} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
         <select value={form.paidBy} onChange={(e) => setForm({ ...form, paidBy: e.target.value })}>
-          <option value="A">{tr.paidA}</option>
-          <option value="B">{tr.paidB}</option>
+          <option value="A">{n.A}</option>
+          <option value="B">{n.B}</option>
         </select>
         <select value={form.split} onChange={(e) => setForm({ ...form, split: e.target.value })}>
           <option value="50">{tr.split50}</option>
-          <option value="A">{tr.splitA}</option>
-          <option value="B">{tr.splitB}</option>
+          <option value="A">{n.A}</option>
+          <option value="B">{n.B}</option>
         </select>
         <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
       </form>
@@ -1361,6 +1370,9 @@ function Landing({ onEnter }) {
 
 function App() {
   const [mode, setMode] = useState('landing')
+  useEffect(() => {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+  }, [])
   if (mode === 'app') return <AppShell onExit={() => setMode('landing')} />
   return <Landing onEnter={() => setMode('app')} />
 }
