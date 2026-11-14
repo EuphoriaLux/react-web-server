@@ -83,7 +83,7 @@ jobs:
           echo "Commit: ${{ github.sha }}"
           echo "Actor: ${{ github.actor }}"
           echo "Started: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          tar -czf site.tgz -C dist index.html assets
+          tar -czf site.tgz -C dist index.html assets manifest.webmanifest sw.js
           echo "Archive size: $(du -h site.tgz | cut -f1)"
           ssh -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
