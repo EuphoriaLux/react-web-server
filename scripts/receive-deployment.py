@@ -3,6 +3,7 @@
 import fcntl, os, pathlib, re, shutil, sys, tarfile, tempfile, time
 ROOT = pathlib.Path('/var/www/html')
 STATE = pathlib.Path('/var/lib/cloudmargin-deploy')
+ROOT_FILES = {'index.html', 'manifest.webmanifest', 'sw.js'}
 
 def command(value):
     match = re.fullmatch(r'(deploy|remove) (production|pr-[1-9][0-9]*)', value)
@@ -20,10 +21,10 @@ def extract(archive, target):
             if path.is_absolute() or '..' in path.parts or m.name in seen:
                 raise ValueError('Unsafe or duplicate archive path')
             seen.add(m.name)
-            if not (m.name=='index.html' or path.parts and path.parts[0]=='assets'):
-                raise ValueError('Only index.html and assets are accepted')
+            if not (m.name in ROOT_FILES or path.parts and path.parts[0]=='assets'):
+                raise ValueError('Only index.html, manifest.webmanifest, sw.js, and assets are accepted')
             if not (m.isfile() or m.isdir()): raise ValueError('Links and special files are forbidden')
-            if m.name=='index.html' and not m.isfile(): raise ValueError('Entry point must be a regular file')
+            if m.name in ROOT_FILES and not m.isfile(): raise ValueError('Root entry must be a regular file')
             total+=m.size
             if total>50*1024*1024: raise ValueError('Uncompressed site exceeds 50 MiB')
         for m in members:
@@ -67,8 +68,11 @@ def main():
                 for old in sorted(backups.glob('index-*.html'))[:-10]: old.unlink()
             shutil.copytree(stage/'assets',destination/'assets',dirs_exist_ok=True)
             for p in (destination/'assets').rglob('*'): p.chmod(0o755 if p.is_dir() else 0o644)
-            tmp_index=destination/'.index-new';shutil.copyfile(stage/'index.html',tmp_index);tmp_index.chmod(0o644)
-            os.replace(tmp_index,destination/'index.html')
+            for fname in ('manifest.webmanifest', 'sw.js', 'index.html'):
+                src = stage/fname
+                if src.is_file():
+                    tmp_file=destination/f'.{fname}-new';shutil.copyfile(src,tmp_file);tmp_file.chmod(0o644)
+                    os.replace(tmp_file,destination/fname)
             print(f'Deployed {name}')
 if __name__=='__main__':
     try: main()

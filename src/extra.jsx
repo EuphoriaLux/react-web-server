@@ -10,7 +10,10 @@ function load(key, fallback) {
   }
 }
 function save(key, value) {
-  localStorage.setItem(key, JSON.stringify(value))
+  const next = JSON.stringify(value)
+  if (localStorage.getItem(key) === next) return
+  localStorage.setItem(key, next)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('cp-local-change'))
 }
 const DEFAULT_PROFILE = { nameA: 'Alex', nameB: 'Sam', child: 'Noa' }
 export function names() {
@@ -226,7 +229,7 @@ function pretty(iso, lang) {
   const locale = lang === 'fr' ? 'fr' : lang === 'de' ? 'de' : lang === 'lb' ? 'lb' : 'en'
   return new Date(y, m - 1, d).toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short' })
 }
-const HEAT = [/\byou always\b/i, /\byou never\b/i, /\balways\b/i, /\bnever\b/i, /\balways\b/i, /\btoujours\b/i, /\bjamais\b/i, /\bimmer\b/i, /\bniemals\b/i, /\bëmmer\b/i]
+const HEAT = [/\byou always\b/i, /\byou never\b/i, /\balways\b/i, /\bnever\b/i, /\btoujours\b/i, /\bjamais\b/i, /\bimmer\b/i, /\bniemals\b/i, /\bëmmer\b/i]
 function heatFlags(text) {
   const found = []
   for (const pattern of HEAT) {
@@ -240,7 +243,14 @@ function heatFlags(text) {
   return [...new Set(found)]
 }
 function soften(text) {
-  return text
+  if (!text) return ''
+  let out = text
+  const letters = out.replace(/[^A-Za-zÀ-ÿ]/g, '')
+  const caps = out.replace(/[^A-ZÀ-Ý]/g, '')
+  if (letters.length > 8 && caps.length / letters.length > 0.6) {
+    out = out.toLowerCase().replace(/(^|[.!?]\s+)([a-zà-ÿ])/g, (_, sep, ch) => sep + ch.toUpperCase())
+  }
+  return out
     .replace(/\byou always\b/gi, 'I need us to')
     .replace(/\byou never\b/gi, 'I need us to')
     .replace(/\b(always|never|toujours|jamais|immer|niemals|ëmmer)\b/gi, '')
@@ -252,13 +262,13 @@ function soften(text) {
 export function TodayBoard() {
   const { lang } = useLang()
   const c = useCopy()
-  const n = names()
   const [custody, setCustody] = useState(() => load('cp-custody', {}))
   const [locked] = useState(() => load('cp-locked', {}))
   const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
   const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
   const [profile, setProfile] = useState(() => load('cp-profile', DEFAULT_PROFILE))
   const [editing, setEditing] = useState(false)
+  const n = { A: profile.nameA || 'Alex', B: profile.nameB || 'Sam', child: profile.child || 'Noa' }
   useEffect(() => { save('cp-custody', custody) }, [custody])
   useEffect(() => { save('cp-swaps', swaps) }, [swaps])
   useEffect(() => { save('cp-writer', writer) }, [writer])
@@ -544,7 +554,9 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
         if (!want) return
         if (locked[want.slice(0, 7)] || (give && locked[give.slice(0, 7)])) { setWarn(c.locked); return }
         setSwaps([{ id: String(Date.now()), by: writer, want, give, note: note.trim(), status: 'open' }, ...swaps])
-        logActivity(`${names()[writer]} asked for ${pretty(want, lang)} and offered ${pretty(give, lang)}`)
+        logActivity(give
+          ? `${names()[writer]} asked for ${pretty(want, lang)} and offered ${pretty(give, lang)}`
+          : `${names()[writer]} asked for ${pretty(want, lang)}`)
         setWant(''); setGive(''); setNote(''); setPick('need')
       }}>
         <input value={note} onChange={(event) => setNote(event.target.value)} placeholder={c.note} />
@@ -621,7 +633,7 @@ export function ResolveBoard() {
             <div key={rule.id} className={`rule-row ${both ? 'ready' : ''}`}>
               <p>{c[rule.key]}</p>
               <button type="button" className={`btn sm ${mine ? 'primary' : 'ghost'}`} onClick={() => patchRule(rule.id, writer === 'A' ? { yesA: !rule.yesA } : { yesB: !rule.yesB })}>
-                {both ? c.bothReady : mine ? c.confirmed : c.agreeRule}
+                {both ? c.agreed : mine ? c.confirmed : c.agreeRule}
               </button>
             </div>
           )
@@ -696,13 +708,14 @@ export function Threads() {
   )
 }
 
-function quietNow() {
-  return new Date().getHours() >= 21
+function quietNow(now = new Date()) {
+  const hour = now.getHours()
+  return hour >= 21 || hour < 7
 }
 
-function nextMorning() {
-  const date = new Date()
-  date.setDate(date.getDate() + 1)
+function nextMorning(now = new Date()) {
+  const date = new Date(now)
+  if (date.getHours() >= 21) date.setDate(date.getDate() + 1)
   date.setHours(7, 0, 0, 0)
   return date.toISOString()
 }
@@ -775,28 +788,35 @@ export function NoteThread({ channel, title, writer }) {
     event.preventDefault()
     const text = `${fact} ${ask}`
     const flags = heatFlags(text)
-    if (flags.length) { setHold({ fact, ask, byWhen, flags }); return }
+    if (flags.length) {
+      setHold({ fact: soften(fact), ask: soften(ask), byWhen, flags })
+      return
+    }
     post({ fact, ask, byWhen }).catch((error) => setStatus(error.message))
   }
 
   const locale = lang === 'fr' ? 'fr' : lang === 'de' ? 'de' : lang === 'lb' ? 'lb' : 'en'
+  const nowMs = Date.now()
   return (
     <div className="note-thread">
       {title && <h3>{title}</h3>}
       <p className="meta">{c.stuck}</p>
       {notes.length === 0 && <p className="empty">{c.emptyMsg}</p>}
-      {notes.map((item) => (
-        <article key={item.id} className={`note ${item.author === 'A' ? 'a' : 'b'}`}>
-          <header>
-            <strong>{names()[item.author]}</strong>
-            <time>{new Date(item.sent_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>
-          </header>
-          <p>{item.fact}</p>
-          {item.ask && <p><span>{c.askField}</span> {item.ask}</p>}
-          {item.by_when && <p><span>{c.byWhen}</span> {item.by_when}</p>}
-          {item.waiting && <p className="lock-hint">{c.waits}</p>}
-        </article>
-      ))}
+      {notes.map((item) => {
+        const isWaiting = Boolean(item.waiting && (!item.deliver_at || new Date(item.deliver_at).getTime() > nowMs))
+        return (
+          <article key={item.id} className={`note ${item.author === 'A' ? 'a' : 'b'}`}>
+            <header>
+              <strong>{names()[item.author]}</strong>
+              <time>{new Date(item.sent_at).toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>
+            </header>
+            <p>{item.fact}</p>
+            {item.ask && <p><span>{c.askField}</span> {item.ask}</p>}
+            {item.by_when && <p><span>{c.byWhen}</span> {item.by_when}</p>}
+            {isWaiting && <p className="lock-hint">{c.waits}</p>}
+          </article>
+        )
+      })}
       {quietNow() && !urgent && <p className="lock-hint">{c.quiet}</p>}
       <form className="biff" onSubmit={submit}>
         <label>{c.fact}<textarea value={fact} onChange={(event) => setFact(event.target.value)} required /></label>
@@ -812,6 +832,9 @@ export function NoteThread({ channel, title, writer }) {
           <p>{c.heatLead}</p>
           <p>{hold.flags.join(' · ')}</p>
           <textarea value={hold.fact} onChange={(event) => setHold({ ...hold, fact: event.target.value })} />
+          {hold.ask !== ask && (
+            <input value={hold.ask} onChange={(event) => setHold({ ...hold, ask: event.target.value })} placeholder={c.askField} />
+          )}
           <div className="ask-switch">
             <button type="button" className="btn primary sm" onClick={() => post(hold).catch((error) => setStatus(error.message))}>{c.sendCalm}</button>
             <button type="button" className="btn ghost sm" onClick={() => post({ fact, ask, byWhen }).catch((error) => setStatus(error.message))}>{c.sendAnyway}</button>

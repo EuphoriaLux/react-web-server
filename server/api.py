@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import secrets
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote
@@ -18,13 +19,22 @@ import psycopg2.extras
 
 HOST = os.environ.get("COPARENTS_HOST", "127.0.0.1")
 PORT = int(os.environ.get("COPARENTS_PORT", "8787"))
-DSN = os.environ["DATABASE_URL"]
+DSN = os.environ.get("DATABASE_URL", "")
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 LU = ZoneInfo("Europe/Luxembourg")
 
 
+@contextmanager
 def db():
-    return psycopg2.connect(DSN)
+    dsn = DSN or os.environ.get("DATABASE_URL", "")
+    if not dsn:
+        raise RuntimeError("DATABASE_URL is not set")
+    conn = psycopg2.connect(dsn)
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def token_hash(token: str) -> str:
@@ -40,11 +50,14 @@ def new_code(cur) -> str:
     raise RuntimeError("could not allocate a household code")
 
 
-def deliver_at(urgent: bool):
-    now = datetime.now(LU)
-    if urgent or now.hour < 21:
-        return datetime.now(timezone.utc)
-    morning = (now + timedelta(days=1)).replace(hour=7, minute=0, second=0, microsecond=0)
+def deliver_at(urgent: bool, now: datetime | None = None):
+    now = now.astimezone(LU) if now else datetime.now(LU)
+    if urgent or (7 <= now.hour < 21):
+        return now.astimezone(timezone.utc)
+    if now.hour >= 21:
+        morning = (now + timedelta(days=1)).replace(hour=7, minute=0, second=0, microsecond=0)
+    else:
+        morning = now.replace(hour=7, minute=0, second=0, microsecond=0)
     return morning.astimezone(timezone.utc)
 
 
@@ -156,25 +169,29 @@ class Handler(BaseHTTPRequestHandler):
             self._send(400, {"error": "code must be 6 characters"})
             return
         token = secrets.token_urlsafe(32)
-        with db() as conn, conn.cursor() as cur:
-            cur.execute("select id from households where code = %s", (code,))
-            row = cur.fetchone()
-            if row is None:
-                self._send(404, {"error": "no plan with that code"})
-                return
-            household_id = row[0]
-            cur.execute(
-                "select role from members where household_id = %s",
-                (household_id,),
-            )
-            roles = {item[0] for item in cur.fetchall()}
-            if "B" in roles:
-                self._send(409, {"error": "this plan already has two parents"})
-                return
-            cur.execute(
-                "insert into members (household_id, role, token_hash) values (%s, 'B', %s)",
-                (household_id, token_hash(token)),
-            )
+        try:
+            with db() as conn, conn.cursor() as cur:
+                cur.execute("select id from households where code = %s", (code,))
+                row = cur.fetchone()
+                if row is None:
+                    self._send(404, {"error": "no plan with that code"})
+                    return
+                household_id = row[0]
+                cur.execute(
+                    "select role from members where household_id = %s",
+                    (household_id,),
+                )
+                roles = {item[0] for item in cur.fetchall()}
+                if "B" in roles:
+                    self._send(409, {"error": "this plan already has two parents"})
+                    return
+                cur.execute(
+                    "insert into members (household_id, role, token_hash) values (%s, 'B', %s)",
+                    (household_id, token_hash(token)),
+                )
+        except psycopg2.errors.UniqueViolation:
+            self._send(409, {"error": "this plan already has two parents"})
+            return
         self._send(200, {"code": code, "token": token, "role": "B"})
 
     def _get_state(self):
@@ -310,6 +327,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    if not (DSN or os.environ.get("DATABASE_URL")):
+        raise RuntimeError("DATABASE_URL is not set")
     server = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"coparents api on http://{HOST}:{PORT}")
     server.serve_forever()

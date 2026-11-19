@@ -34,4 +34,12 @@ class Tests(unittest.TestCase):
    class Input:buffer=io.BytesIO(archive([('index.html',b'new',tarfile.REGTYPE),('assets/a.js',b'example',tarfile.REGTYPE)]))
    with patch.dict(os.environ,SSH_ORIGINAL_COMMAND='deploy production'),patch('sys.stdin',Input()):r.main()
    self.assertEqual((r.ROOT/'index.html').read_text(),'new');self.assertEqual(next((r.STATE/'backups').glob('*')).read_text(),'previous')
+ def test_pwa_root_files_are_accepted(self):
+  with tempfile.TemporaryDirectory() as d:
+   p=pathlib.Path(d);r.ROOT=p/'web';r.ROOT.mkdir();r.STATE=p/'state'
+   data=archive([('index.html',b'app',tarfile.REGTYPE),('manifest.webmanifest',b'{"name":"CoParents"}',tarfile.REGTYPE),('sw.js',b'self.skipWaiting()',tarfile.REGTYPE),('assets/a.js',b'ok',tarfile.REGTYPE)])
+   class Input:buffer=io.BytesIO(data)
+   with patch.dict(os.environ,SSH_ORIGINAL_COMMAND='deploy production'),patch('sys.stdin',Input()):r.main()
+   self.assertEqual((r.ROOT/'manifest.webmanifest').read_text(),'{"name":"CoParents"}')
+   self.assertEqual((r.ROOT/'sw.js').read_text(),'self.skipWaiting()')
 if __name__=='__main__':unittest.main()

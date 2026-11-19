@@ -7,10 +7,52 @@ const KEYS = [
 const TOKEN_KEY = 'cp-token'
 const CODE_KEY = 'cp-code'
 const ROLE_KEY = 'cp-role'
+const STAMP_KEY = 'cp-sync-stamp'
+const BASE_KEY = 'cp-sync-base'
 
-function sameState(a, b) {
+export const SYNC_KEYS = KEYS
+
+export function sameState(a, b) {
   const keys = [...new Set([...Object.keys(a || {}), ...Object.keys(b || {})])].sort()
   return keys.every((key) => (a || {})[key] === (b || {})[key])
+}
+
+export function mergeStates(base, local, remote) {
+  const merged = {}
+  let changedLocal = false
+  for (const key of KEYS) {
+    const baseVal = base ? base[key] : undefined
+    const localVal = local ? local[key] : undefined
+    const remoteVal = remote ? remote[key] : undefined
+    const localChanged = localVal !== baseVal
+    const remoteChanged = remoteVal !== baseVal
+    let chosen
+    if (localChanged && !remoteChanged) {
+      chosen = localVal
+    } else if (remoteChanged) {
+      chosen = remoteVal
+    } else {
+      chosen = localVal
+    }
+    if (chosen != null) merged[key] = chosen
+    if (chosen !== localVal) changedLocal = true
+  }
+  return { merged, changedLocal }
+}
+
+function readBase() {
+  try {
+    const raw = sessionStorage.getItem(BASE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function writeBase(state, stamp) {
+  sessionStorage.setItem(BASE_KEY, JSON.stringify(state || {}))
+  if (stamp) sessionStorage.setItem(STAMP_KEY, stamp)
+  else sessionStorage.removeItem(STAMP_KEY)
 }
 
 function snapshot() {
@@ -39,7 +81,7 @@ async function api(path, options = {}) {
   return body
 }
 
-export function ShareBar() {
+export function ShareBar({ onSync }) {
   const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) || '')
   const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || '')
   const [join, setJoin] = useState('')
@@ -50,47 +92,110 @@ export function ShareBar() {
     const token = localStorage.getItem(TOKEN_KEY)
     if (!token) return undefined
     let stopped = false
-    let lastSent = ''
+    let syncing = false
+    let pushTimer = null
 
-    async function pull() {
+    async function syncNow() {
+      if (stopped || syncing) return
+      syncing = true
       try {
         const remote = await api('/api/state')
         if (stopped) return
         const remoteState = remote.state || {}
+        const remoteStamp = remote.updated_at || ''
         const localState = snapshot()
-        if (!sameState(remoteState, localState) && Object.keys(remoteState).length > 0) {
-          const stamp = remote.updated_at || 'remote'
-          if (sessionStorage.getItem('cp-sync-stamp') === stamp) {
-            setStatus('Shared plan is open')
+        const baseState = readBase()
+        const lastStamp = sessionStorage.getItem(STAMP_KEY) || ''
+        const remoteHasData = Object.keys(remoteState).length > 0
+
+        if (remote.role) {
+          localStorage.setItem(ROLE_KEY, remote.role)
+          setRole(remote.role)
+        }
+
+        // First sync after joining or opening a session with existing remote data
+        if (!baseState && !lastStamp) {
+          if (remoteHasData) {
+            const changed = !sameState(remoteState, localState)
+            applyState(remoteState)
+            if (remote.role) localStorage.setItem('cp-writer', remote.role)
+            writeBase(remoteState, remoteStamp)
+            if (changed && onSync) onSync()
+            if (!stopped) setStatus('Shared plan is open')
             return
           }
-          sessionStorage.setItem('cp-sync-stamp', stamp)
-          applyState(remoteState)
-          if (remote.role) {
-            localStorage.setItem(ROLE_KEY, remote.role)
-            localStorage.setItem('cp-writer', remote.role)
+          // Remote is empty: push local snapshot if non-empty
+          if (Object.keys(localState).length > 0) {
+            const saved = await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: localState }) })
+            writeBase(localState, saved.updated_at || remoteStamp)
+            if (!stopped) setStatus('Saved')
+            return
           }
-          window.location.reload()
+          writeBase(remoteState, remoteStamp)
+          if (!stopped) setStatus('Shared plan is open')
           return
         }
-        sessionStorage.removeItem('cp-sync-stamp')
-        const local = JSON.stringify(localState)
-        if (local !== lastSent && !sameState(remoteState, localState)) {
-          await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: localState }) })
-          lastSent = local
-          if (!stopped) setStatus('Saved')
-        } else if (!stopped) {
-          setStatus('Shared plan is open')
+
+        const effectiveBase = baseState || {}
+        const localChanged = !sameState(localState, effectiveBase)
+        const remoteChanged = Boolean(remoteStamp && remoteStamp !== lastStamp) || !sameState(remoteState, effectiveBase)
+
+        if (!localChanged && !remoteChanged) {
+          if (remoteStamp && remoteStamp !== lastStamp) writeBase(effectiveBase, remoteStamp)
+          if (!stopped) setStatus('Shared plan is open')
+          return
         }
+
+        if (localChanged && !remoteChanged) {
+          const saved = await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: localState }) })
+          writeBase(localState, saved.updated_at || remoteStamp)
+          if (!stopped) setStatus('Saved')
+          return
+        }
+
+        if (!localChanged && remoteChanged) {
+          applyState(remoteState)
+          writeBase(remoteState, remoteStamp)
+          if (onSync) onSync()
+          if (!stopped) setStatus('Updated from shared plan')
+          return
+        }
+
+        // Both sides changed: merge per-key so edits on different tabs don't clobber each other
+        const { merged, changedLocal } = mergeStates(effectiveBase, localState, remoteState)
+        if (changedLocal) applyState(merged)
+        if (!sameState(merged, remoteState)) {
+          const saved = await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: merged }) })
+          writeBase(merged, saved.updated_at || remoteStamp)
+          if (!stopped) setStatus('Saved')
+        } else {
+          writeBase(merged, remoteStamp)
+          if (!stopped) setStatus('Updated from shared plan')
+        }
+        if (changedLocal && onSync) onSync()
       } catch (error) {
         if (!stopped) setStatus(error.message)
+      } finally {
+        syncing = false
       }
     }
 
-    pull()
-    const timer = setInterval(pull, 8000)
-    return () => { stopped = true; clearInterval(timer) }
-  }, [code])
+    function schedulePush() {
+      if (stopped) return
+      clearTimeout(pushTimer)
+      pushTimer = setTimeout(syncNow, 700)
+    }
+
+    syncNow()
+    const timer = setInterval(syncNow, 8000)
+    window.addEventListener('cp-local-change', schedulePush)
+    return () => {
+      stopped = true
+      clearInterval(timer)
+      clearTimeout(pushTimer)
+      window.removeEventListener('cp-local-change', schedulePush)
+    }
+  }, [code, onSync])
 
   async function create() {
     setBusy(true)
@@ -101,9 +206,11 @@ export function ShareBar() {
       localStorage.setItem(CODE_KEY, created.code)
       localStorage.setItem(ROLE_KEY, created.role)
       localStorage.setItem('cp-writer', created.role)
+      const localState = snapshot()
+      const saved = await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: localState }) })
+      writeBase(localState, saved.updated_at)
       setCode(created.code)
       setRole(created.role)
-      await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: snapshot() }) })
       setStatus('Plan created. Send the code to the other parent.')
     } catch (error) {
       setStatus(error.message)
@@ -121,6 +228,8 @@ export function ShareBar() {
         method: 'POST',
         body: JSON.stringify({ code: join.trim().toUpperCase() }),
       })
+      sessionStorage.removeItem(STAMP_KEY)
+      sessionStorage.removeItem(BASE_KEY)
       localStorage.setItem(TOKEN_KEY, joined.token)
       localStorage.setItem(CODE_KEY, joined.code)
       localStorage.setItem(ROLE_KEY, joined.role)
@@ -144,6 +253,8 @@ export function ShareBar() {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(CODE_KEY)
     localStorage.removeItem(ROLE_KEY)
+    sessionStorage.removeItem(STAMP_KEY)
+    sessionStorage.removeItem(BASE_KEY)
     setCode('')
     setRole('')
     setStatus('Left this shared plan on this phone. The plan is still on the server.')

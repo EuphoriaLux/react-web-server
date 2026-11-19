@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, createContext, useContext } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   Activity, ArrowRight, Check, Shield, Heart, Clock, Users, Menu, X, Sparkles,
@@ -512,7 +512,12 @@ function IconScatter() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidde
 function ValuesArt() { return (<svg className="values-art" viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ccfbf1" /><stop offset="100%" stopColor="#e0f2fe" /></linearGradient></defs><rect x="20" y="30" width="280" height="160" rx="24" fill="url(#vg)" opacity="0.55" /><g transform="translate(70 55)"><circle cx="40" cy="36" r="16" fill="#0d9488" opacity="0.9" /><rect x="24" y="54" width="32" height="40" rx="12" fill="#0d9488" opacity="0.75" /><circle cx="140" cy="36" r="16" fill="#0f766e" opacity="0.9" /><rect x="124" y="54" width="32" height="40" rx="12" fill="#0f766e" opacity="0.75" /><circle cx="90" cy="52" r="12" fill="#fbbf24" /><rect x="78" y="66" width="24" height="28" rx="10" fill="#f59e0b" opacity="0.9" /><path className="va-arc" d="M56 40 C70 20, 110 20, 124 40" pathLength="1" stroke="#0d9488" strokeWidth="2.5" strokeDasharray="0.12 0.1" strokeLinecap="round" opacity="0.55" fill="none" /></g><circle className="va-orb" cx="52" cy="48" r="6" fill="#99f6e4" /><circle className="va-orb va-orb-2" cx="268" cy="170" r="8" fill="#bae6fd" /><circle className="va-orb va-orb-3" cx="250" cy="50" r="5" fill="#99f6e4" opacity="0.8" /></svg>) }
 
 function load(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback } catch { return fallback } }
-function save(key, value) { localStorage.setItem(key, JSON.stringify(value)) }
+function save(key, value) {
+  const next = JSON.stringify(value)
+  if (localStorage.getItem(key) === next) return
+  localStorage.setItem(key, next)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('cp-local-change'))
+}
 
 
 /* ─── Luxembourg public holidays ─── */
@@ -534,7 +539,12 @@ function easterSunday(y) {
   return new Date(y, month - 1, day)
 }
 function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x }
-function isoDate(d) { return d.toISOString().slice(0, 10) }
+function isoDate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 function luxHolidays(year, tr) {
   const easter = easterSunday(year)
   const fixed = [
@@ -758,7 +768,7 @@ function daysInRange(start, end) {
   const d = new Date(start + 'T12:00:00')
   const last = new Date(end + 'T12:00:00')
   while (d <= last) {
-    out.push(d.toISOString().slice(0, 10))
+    out.push(isoDate(d))
     d.setDate(d.getDate() + 1)
   }
   return out
@@ -838,6 +848,7 @@ function CalendarView() {
   }
 
   const cycleDay = (d) => {
+    if (isLocked) return
     const key = iso(d)
     const cur = custody[key]
     const order = [null, 'A', 'B', 'both']
@@ -852,6 +863,7 @@ function CalendarView() {
 
   // Quick plans
   const planAlternateWeeks = (startWith) => {
+    if (isLocked) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
@@ -861,6 +873,7 @@ function CalendarView() {
     setCustody(next)
   }
   const planEveryOtherWeekend = (who) => {
+    if (isLocked) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
@@ -873,11 +886,13 @@ function CalendarView() {
     setCustody(next)
   }
   const planWholeMonth = (who) => {
+    if (isLocked) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) next[iso(d)] = who
     setCustody(next)
   }
   const clearMonth = () => {
+    if (isLocked) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) delete next[iso(d)]
     setCustody(next)
@@ -992,8 +1007,10 @@ function CalendarView() {
           onApply={(res) => {
             const next = { ...custody }
             if (res.scope === 'year') {
-              Object.assign(next, res.plan)
-            } else {
+              for (const [key, who] of Object.entries(res.plan)) {
+                if (!locked[key.slice(0, 7)]) next[key] = who
+              }
+            } else if (!isLocked) {
               for (const [d, who] of Object.entries(res.plan)) {
                 const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
                 next[key] = who
@@ -1057,9 +1074,9 @@ function ExpensesView() {
       if (it.settled) continue
       const shareA = it.split === '50' ? it.amount / 2 : it.split === 'A' ? it.amount : 0
       const shareB = it.amount - shareA
-      if (it.paidBy === 'A') { a += it.amount; b -= shareB } else { b += it.amount; a -= shareA }
+      if (it.paidBy === 'A') { a += shareB; b -= shareB } else { b += shareA; a -= shareA }
     }
-    return { a, b }
+    return { a: Math.abs(a) < 0.005 ? 0 : a, b: Math.abs(b) < 0.005 ? 0 : b }
   }, [items])
   return (
     <div className="app-panel">
@@ -1138,6 +1155,8 @@ function DeployLog() {
 function AppShell({ onExit }) {
   const { tr } = useLang()
   const [tab, setTab] = useState('today')
+  const [syncRev, setSyncRev] = useState(0)
+  const handleSync = useCallback(() => setSyncRev((n) => n + 1), [])
   const primary = [
     { id: 'today', label: 'Today', Icon: Heart },
     { id: 'handover', label: 'Handover', Icon: Clock },
@@ -1164,15 +1183,17 @@ function AppShell({ onExit }) {
         </div>
       </header>
       <main className="app-main">
-        <ShareBar />
-        {tab === 'today' && <TodayBoard />}
-        {tab === 'handover' && <HandoverView />}
-        {tab === 'calendar' && <CalendarView />}
-        {tab === 'expenses' && <ExpensesView />}
-        {tab === 'messages' && <Threads />}
-        {tab === 'resolve' && <ResolveBoard />}
-        {tab === 'docs' && <Papers />}
-        {tab === 'deploy' && <DeployLog />}
+        <ShareBar onSync={handleSync} />
+        <div key={syncRev}>
+          {tab === 'today' && <TodayBoard />}
+          {tab === 'handover' && <HandoverView />}
+          {tab === 'calendar' && <CalendarView />}
+          {tab === 'expenses' && <ExpensesView />}
+          {tab === 'messages' && <Threads />}
+          {tab === 'resolve' && <ResolveBoard />}
+          {tab === 'docs' && <Papers />}
+          {tab === 'deploy' && <DeployLog />}
+        </div>
       </main>
       <nav className="dock" aria-label="App">
         {primary.map(({ id, label, Icon }) => {
@@ -1369,7 +1390,10 @@ function Landing({ onEnter }) {
 }
 
 function App() {
-  const [mode, setMode] = useState('landing')
+  const [mode, setMode] = useState(() => sessionStorage.getItem('cp-mode') || (localStorage.getItem('cp-token') ? 'app' : 'landing'))
+  useEffect(() => {
+    sessionStorage.setItem('cp-mode', mode)
+  }, [mode])
   useEffect(() => {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
   }, [])
