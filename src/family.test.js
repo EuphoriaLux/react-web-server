@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   emptyFamily, familyFromProfile, normalizeFamily, childrenLabel, profileFromFamily, canFinish,
-  cleanFamily, rhythmOwner, fillCustody, activitiesOn, describeChanges, emptyChild,
+  cleanFamily, rhythmOwner, fillCustody, activitiesOn, describeChanges, emptyChild, rhythmAnchor, anchorRecord,
 } from './family.js'
 
 test('old profile names carry over, demo names do not', () => {
@@ -102,4 +102,19 @@ test('changes are described for the activity feed', () => {
   after.custody.rhythm = 'weeks'
   assert.deepEqual(describeChanges(before, after), ['health', 'custody'])
   assert.deepEqual(describeChanges(null, after), [])
+})
+
+test('a later fill stays in step with the first one', () => {
+  const first = new Date(2026, 10, 23)
+  const family = { rhythmFrom: anchorRecord('weeks', first) }
+  const later = new Date(2026, 10, 30)
+  const anchor = rhythmAnchor(family, 'weeks', later)
+  assert.equal(anchor.getTime(), first.getTime())
+  const { custody } = fillCustody({}, 'weeks', later, 12, {}, anchor)
+  // Weeks of Feb 8 and Feb 15 2027 alternate, counted from Nov 23 (A).
+  assert.equal(custody['2027-02-08'], 'B')
+  assert.equal(custody['2027-02-15'], 'A')
+  assert.equal(custody['2026-11-23'], undefined)
+  // A new rhythm starts counting again from today.
+  assert.equal(rhythmAnchor(family, '2-2-3', later).getTime(), later.getTime())
 })

@@ -156,9 +156,10 @@ export function rhythmOwner(rhythm, date, start) {
   }
 }
 
-// Fill empty calendar days for the next `weeks` weeks. Days already planned,
-// and days in locked months, are left alone.
-export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}) {
+// Fill empty calendar days for the next `weeks` weeks from `start`, counting
+// the rhythm's weeks from `anchor`. Days already planned, and days in locked
+// months, are left alone.
+export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}, anchor = start) {
   const next = { ...custody }
   let added = 0
   if (!RHYTHMS.includes(rhythm) || rhythm === 'undecided') return { custody: next, added }
@@ -166,13 +167,28 @@ export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}) {
     const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
     const key = isoDate(date)
     if (next[key] || locked[key.slice(0, 7)]) continue
-    const who = rhythmOwner(rhythm, date, start)
+    const who = rhythmOwner(rhythm, date, anchor)
     if (who) {
       next[key] = who
       added += 1
     }
   }
   return { custody: next, added }
+}
+
+// The date weeks are counted from for a rhythm. Kept once the calendar is
+// filled, so filling more days later stays in step with the days already set.
+export function rhythmAnchor(family, rhythm, today) {
+  const saved = family?.rhythmFrom
+  if (saved && saved.rhythm === rhythm && /^\d{4}-\d{2}-\d{2}$/.test(saved.date || '')) {
+    const [y, m, d] = saved.date.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate())
+}
+
+export function anchorRecord(rhythm, date) {
+  return { rhythm, date: isoDate(date) }
 }
 
 export function activitiesOn(family, date) {

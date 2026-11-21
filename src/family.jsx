@@ -4,6 +4,7 @@ import { FAMILY_COPY, fill } from './family-copy.js'
 import {
   CARE_TYPES, RHYTHMS, RULINGS, emptyChild, emptyActivity, familyFromProfile, normalizeFamily,
   profileFromFamily, canFinish, cleanFamily, fillCustody, activitiesOn, describeChanges, namedChildren,
+  rhythmAnchor, anchorRecord,
 } from './family.js'
 
 const LATER_KEY = 'cp-family-later'
@@ -78,8 +79,10 @@ export function FamilySetup({ onClose }) {
   const setCustody = (patch) => setDraft({ ...draft, custody: { ...draft.custody, ...patch } })
 
   // Answers are kept as the parent goes, so closing the page loses nothing.
+  // Never overwrite a family the other parent finished while this was open.
   function keep(next = draft) {
-    if (!before?.done) save('cp-family', { ...next, done: false })
+    if (before?.done || loadFamily()?.done) return
+    save('cp-family', { ...next, done: false })
   }
   function go(to) {
     keep()
@@ -98,24 +101,33 @@ export function FamilySetup({ onClose }) {
       return
     }
     const clean = cleanFamily(draft)
-    const changes = describeChanges(before, clean)
+    // Compare with what is shared now: the other parent may have finished meanwhile.
+    const current = loadFamily()
+    const base = current?.done ? current : before
+    const changes = describeChanges(base, clean)
     const next = {
       ...clean,
       done: true,
-      filledBy: before?.filledBy || role,
+      filledBy: base?.filledBy || role,
       editedBy: role,
-      confirmed: before?.done && changes.length
+      rhythmFrom: current?.rhythmFrom || before?.rhythmFrom,
+      confirmed: base?.done && changes.length
         ? { [role]: true, [other]: false }
-        : { ...clean.confirmed, [role]: true },
+        : { ...(base?.confirmed || clean.confirmed), [role]: true },
+    }
+    const rhythm = next.custody.rhythm
+    const fillNow = prefill && rhythm && rhythm !== 'undecided'
+    if (fillNow) {
+      const today = new Date()
+      const anchor = rhythmAnchor(next, rhythm, today)
+      next.rhythmFrom = anchorRecord(rhythm, anchor)
+      const filled = fillCustody(load('cp-custody', {}), rhythm, today, 12, load('cp-locked', {}), anchor)
+      if (filled.added) save('cp-custody', filled.custody)
     }
     storeFamily(next)
     const me = parentName(next, role)
-    if (!before?.done) addActivity(fill(c.actFilled, { name: me }))
+    if (!base?.done) addActivity(fill(c.actFilled, { name: me }))
     else if (changes.length) addActivity(fill(c.actChanged, { name: me, what: changes.map((key) => c.what[key]).join(', ') }))
-    if (prefill && next.custody.rhythm && next.custody.rhythm !== 'undecided') {
-      const filled = fillCustody(load('cp-custody', {}), next.custody.rhythm, new Date(), 12, load('cp-locked', {}))
-      if (filled.added) save('cp-custody', filled.custody)
-    }
     localStorage.removeItem(LATER_KEY)
     onClose()
   }
