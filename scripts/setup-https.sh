@@ -169,6 +169,12 @@ fi
 
 echo "==> Check"
 sudo systemctl is-enabled --quiet certbot.timer && echo "Automatic renewal is on."
+# A reload hands over gradually: for a moment the previous workers still answer,
+# with the previous certificates. Give the new ones a few seconds before judging.
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+  curl --max-time 15 -fsS "https://$DOMAIN/" >/dev/null 2>&1 && break
+  sleep 1
+done
 curl --max-time 15 -fsS "https://$DOMAIN/" >/dev/null
 for name in "${ALIASES[@]}" "${OLD_NAMES[@]}"; do
   curl --max-time 15 -fsS -o /dev/null -w "https://$name/ forwards to %{redirect_url}\n" "https://$name/"
