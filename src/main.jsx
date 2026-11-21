@@ -15,6 +15,7 @@ import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 import { pickLang } from './lang.js'
+import { holidayOwners, schoolHolidayMap, schoolYearOf, firstPeriod } from './holidays.js'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -90,9 +91,14 @@ const t = {
     q2a: 'Parent A',
     q2b: 'Parent B',
     q2c: 'Equal',
-    q3: 'School holidays priority',
-    q3a: 'Split each holiday period',
-    q3b: 'Alternate whole periods',
+    q3: 'How do you share school holidays?',
+    q3a: 'Each holiday in two halves',
+    q3b: 'Alternate whole holidays',
+    q3c: 'Keep the usual rhythm',
+    qFirst: 'Who has the first half, or all, of the {name} holiday {year}?',
+    qFirstAny: 'Who has the first holiday?',
+    q3aHint: 'One parent has the first half of every school holiday, the other the second half. It swaps each school year.',
+    q3bHint: 'Whole holidays go to one parent, then the other, through the school year. It swaps each school year, so nobody always has Christmas or the same summer.',
     q4: 'Start the proposal from',
     generate: 'Generate proposal',
     apply: 'Apply this month',
@@ -192,9 +198,14 @@ const t = {
     q2a: 'Parent A',
     q2b: 'Parent B',
     q2c: 'Égal',
-    q3: 'Priorité vacances scolaires',
-    q3a: 'Partager chaque période',
-    q3b: 'Alterner des périodes entières',
+    q3: 'Comment partagez-vous les vacances scolaires ?',
+    q3a: 'Chaque vacance en deux moitiés',
+    q3b: 'Alterner des vacances entières',
+    q3c: 'Garder le rythme habituel',
+    qFirst: 'Qui a la première moitié, ou la totalité, des vacances de {name} {year} ?',
+    qFirstAny: 'Qui a les premières vacances ?',
+    q3aHint: 'Un parent a la première moitié de chaque vacance scolaire, l’autre la seconde. On inverse chaque année scolaire.',
+    q3bHint: 'Chaque vacance entière va à un parent, puis à l’autre, au fil de l’année scolaire. On inverse chaque année scolaire : personne n’a toujours Noël ou le même été.',
     q4: 'Commencer la proposition à partir de',
     generate: 'Générer la proposition',
     apply: 'Appliquer ce mois',
@@ -295,9 +306,14 @@ const t = {
     q2a: 'Elternteil A',
     q2b: 'Elternteil B',
     q2c: 'Gleich',
-    q3: 'Priorität Schulferien',
-    q3a: 'Jede Ferienperiode teilen',
-    q3b: 'Ganze Perioden abwechseln',
+    q3: 'Wie teilen Sie die Schulferien?',
+    q3a: 'Alle Ferien in zwei Hälften',
+    q3b: 'Ganze Ferien abwechseln',
+    q3c: 'Den üblichen Rhythmus behalten',
+    qFirst: 'Wer hat die erste Hälfte oder alle Ferien zu {name} {year}?',
+    qFirstAny: 'Wer hat die ersten Ferien?',
+    q3aHint: 'Ein Elternteil hat die erste Hälfte aller Schulferien, der andere die zweite. Jedes Schuljahr wird getauscht.',
+    q3bHint: 'Ganze Ferien gehen abwechselnd an einen Elternteil, dann an den anderen. Jedes Schuljahr wird getauscht, damit niemand immer Weihnachten oder denselben Sommer hat.',
     q4: 'Vorschlag starten ab',
     generate: 'Vorschlag erzeugen',
     apply: 'Diesen Monat anwenden',
@@ -401,9 +417,14 @@ const t = {
     q2a: 'Elterendeel A',
     q2b: 'Elterendeel B',
     q2c: 'Gläich',
-    q3: 'Prioritéit Schoulvakanzen',
-    q3a: 'All Period deelen',
-    q3b: 'Ganz Perioden wiesselen',
+    q3: 'Wéi deelt Dir d’Schoulvakanzen?',
+    q3a: 'All Vakanz an zwou Hällefte',
+    q3b: 'Ganz Vakanzen ofwiesselen',
+    q3c: 'Den üblechen Rhythmus halen',
+    qFirst: 'Wien huet déi éischt Hällef, oder déi ganz Vakanz, vun {name} {year}?',
+    qFirstAny: 'Wien huet déi éischt Vakanz?',
+    q3aHint: 'Een Elterendeel huet déi éischt Hällef vun all Schoulvakanz, deen aneren déi zweet. All Schouljoer gëtt gewiesselt.',
+    q3bHint: 'Ganz Vakanze ginn ofwiesselnd un een Elterendeel, dann un deen aneren. All Schouljoer gëtt gewiesselt, sou datt keen ëmmer Chrëschtdag oder dee selwechte Summer huet.',
     q4: 'Virschlag starten vun',
     generate: 'Virschlag generéieren',
     apply: 'Dëse Mount uwenden',
@@ -596,126 +617,111 @@ function luxHolidays(year, tr) {
 }
 
 
+// Shared by the month and year proposals.
+// School holidays first (as the parents chose), then public holidays outside them
+// kept equal, then the usual rhythm. With "rhythm", holidays are not special.
+function proposalRhythm(answers, year, m, d) {
+  if (answers.rhythm === 'weeks') {
+    const week = Math.floor((d + ((new Date(year, m, 1).getDay() + 6) % 7) - 1) / 7)
+    return week % 2 === 0 ? 'A' : 'B'
+  }
+  if (answers.rhythm === 'weekend-mid') {
+    const dow = (new Date(year, m, d).getDay() + 6) % 7
+    return dow === 2 || dow === 3 ? 'B' : 'A'
+  }
+  return d % 2 === 0 ? 'A' : 'B'
+}
+const keyOf = (year, m, d) => `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
 function generateYearPlan(year, answers) {
-  const hols = {}
-  const school = schoolHolidayMap(year)
-  // Build full-year holiday map
+  const owners = holidayOwners(answers.holidays, answers.first || 'A', answers.refYear ?? year - 1)
+  const special = answers.holidays !== 'rhythm'
   const easter = easterSunday(year)
   const fixed = [
-    [new Date(year, 0, 1), 'h'], [addDays(easter, 1), 'h'], [new Date(year, 4, 1), 'h'],
-    [new Date(year, 4, 9), 'h'], [addDays(easter, 39), 'h'], [addDays(easter, 50), 'h'],
-    [new Date(year, 5, 23), 'h'], [new Date(year, 7, 15), 'h'], [new Date(year, 10, 1), 'h'],
-    [new Date(year, 11, 25), 'h'], [new Date(year, 11, 26), 'h'],
-  ]
-  const holMap = {}
-  for (const [d] of fixed) holMap[isoDate(d)] = true
+    new Date(year, 0, 1), addDays(easter, 1), new Date(year, 4, 1), new Date(year, 4, 9),
+    addDays(easter, 39), addDays(easter, 50), new Date(year, 5, 23), new Date(year, 7, 15),
+    new Date(year, 10, 1), new Date(year, 11, 25), new Date(year, 11, 26),
+  ].map(isoDate)
   const plan = {}
-  // Collect all holiday and school days
-  const holDays = Object.keys(holMap).sort()
-  const schoolDays = Object.keys(school).filter(k => !holMap[k]).sort()
-  let aH = 0, bH = 0
-  holDays.forEach((key) => {
-    const who = aH <= bH ? 'A' : 'B'
-    plan[key] = who
-    if (who === 'A') aH++; else bH++
-  })
-  let aS = 0, bS = 0
-  schoolDays.forEach((key) => {
-    const who = aS <= bS ? 'A' : 'B'
+  let aS = 0, bS = 0, aH = 0, bH = 0
+  for (const [key, who] of Object.entries(owners)) {
+    if (!key.startsWith(String(year))) continue
     plan[key] = who
     if (who === 'A') aS++; else bS++
-  })
-  // Fill remaining days of the year according to rhythm
+  }
+  if (special) {
+    for (const key of fixed) {
+      if (plan[key]) continue
+      const who = aH <= bH ? 'A' : 'B'
+      plan[key] = who
+      if (who === 'A') aH++; else bH++
+    }
+  }
   for (let m = 0; m < 12; m++) {
     const days = new Date(year, m + 1, 0).getDate()
     for (let d = 1; d <= days; d++) {
-      const key = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-      if (plan[key]) continue
-      if (answers.rhythm === 'weeks') {
-        const week = Math.floor((d + ((new Date(year, m, 1).getDay()+6)%7) - 1) / 7)
-        plan[key] = week % 2 === 0 ? 'A' : 'B'
-      } else if (answers.rhythm === 'weekend-mid') {
-        const dow = (new Date(year, m, d).getDay() + 6) % 7
-        plan[key] = dow === 2 || dow === 3 ? 'B' : 'A'
-      } else {
-        plan[key] = d % 2 === 0 ? 'A' : 'B'
-      }
+      const key = keyOf(year, m, d)
+      if (!plan[key]) plan[key] = proposalRhythm(answers, year, m, d)
     }
   }
   return { plan, aH, bH, aS, bS }
 }
 
-function generateFairPlan(year, month, answers, holidays, school) {
+function generateFairPlan(year, month, answers, holidays) {
   const days = new Date(year, month + 1, 0).getDate()
+  const owners = holidayOwners(answers.holidays, answers.first || 'A', answers.refYear ?? schoolYearOf(year, month))
+  const special = answers.holidays !== 'rhythm'
   const plan = {}
-  const isWeekend = (d) => { const dow = (new Date(year, month, d).getDay() + 6) % 7; return dow >= 5 }
-  const isHoliday = (d) => {
-    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    return !!holidays[key]
+  // 1. School holidays, as the parents chose.
+  for (let d = 1; d <= days; d++) {
+    const who = owners[keyOf(year, month, d)]
+    if (who) plan[d] = who
   }
-  const isSchool = (d) => {
-    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    return !!school[key]
+  if (special) {
+    // 2. Public holidays outside school holidays: equal (±1), counting the prior balance.
+    let aH = answers.priorA || 0, bH = answers.priorB || 0
+    for (let d = 1; d <= days; d++) {
+      if (plan[d] || !holidays[keyOf(year, month, d)]) continue
+      const who = aH <= bH ? 'A' : 'B'
+      plan[d] = who
+      if (who === 'A') aH++; else bH++
+    }
   }
-  // 1. Assign pure public-holiday days first — strict equal (±1)
-  const holDays = []
-  for (let d = 1; d <= days; d++) if (isHoliday(d)) holDays.push(d)
-  let aH = answers.priorA || 0, bH = answers.priorB || 0
-  holDays.forEach((d) => {
-    const who = aH <= bH ? 'A' : 'B'
-    plan[d] = who
-    if (who === 'A') aH++; else bH++
-  })
-  // 1b. Assign school-holiday days (not already a public holiday) — strict equal (±1)
-  const schoolDays = []
-  for (let d = 1; d <= days; d++) if (isSchool(d) && !plan[d]) schoolDays.push(d)
-  let aS = 0, bS = 0
-  schoolDays.forEach((d) => {
-    const who = aS <= bS ? 'A' : 'B'
-    plan[d] = who
-    if (who === 'A') aS++; else bS++
-  })
-  // 2. Assign remaining weekends, honour preference but keep overall special close
-  const weekends = []
-  for (let d = 1; d <= days; d++) if (isWeekend(d) && !plan[d]) weekends.push(d)
+  // 3. Remaining weekends: honour the preference, keep them close.
+  const isWeekend = (d) => ((new Date(year, month, d).getDay() + 6) % 7) >= 5
   let aW = 0, bW = 0
   const preferA = answers.weekends === 'A'
   const preferB = answers.weekends === 'B'
-  weekends.forEach((d) => {
+  for (let d = 1; d <= days; d++) {
+    if (plan[d] || !isWeekend(d)) continue
     let who
     if (preferA && aW <= bW + 1) who = 'A'
     else if (preferB && bW <= aW + 1) who = 'B'
     else who = aW <= bW ? 'A' : 'B'
     plan[d] = who
     if (who === 'A') aW++; else bW++
-  })
-  // 3. Fill remaining weekdays according to rhythm
-  for (let d = 1; d <= days; d++) {
-    if (plan[d]) continue
-    if (answers.rhythm === 'weeks') {
-      const week = Math.floor((d + ((new Date(year, month, 1).getDay()+6)%7) - 1) / 7)
-      plan[d] = week % 2 === 0 ? 'A' : 'B'
-    } else if (answers.rhythm === 'weekend-mid') {
-      const dow = (new Date(year, month, d).getDay() + 6) % 7
-      plan[d] = dow === 2 || dow === 3 ? 'B' : 'A'
-    } else {
-      plan[d] = d % 2 === 0 ? 'A' : 'B'
-    }
   }
+  // 4. Everything else follows the usual rhythm.
+  for (let d = 1; d <= days; d++) if (!plan[d]) plan[d] = proposalRhythm(answers, year, month, d)
   return plan
 }
 
 function Questionnaire({ year, month, holidays, school, prior, onApply, onClose, tr }) {
-  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split', scope: 'month' })
+  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'halves', first: 'A', scope: 'month' })
+  const refYear = answers.scope === 'year' ? year - 1 : schoolYearOf(year, month)
+  const firstHol = firstPeriod(refYear)
+  const firstLabel = firstHol
+    ? (tr.qFirst || 'Who has the first {name} holiday of {year}?').replace('{name}', (tr.schoolNames || {})[firstHol.name] || firstHol.name).replace('{year}', firstHol.start.slice(0, 4))
+    : (tr.qFirstAny || 'Who has the first holiday?')
   const [preview, setPreview] = useState(null)
   const generate = () => {
-    const withPrior = { ...answers, priorA: prior?.a || 0, priorB: prior?.b || 0 }
+    const withPrior = { ...answers, refYear, priorA: prior?.a || 0, priorB: prior?.b || 0 }
     if (answers.scope === 'year') {
-      const res = generateYearPlan(year, answers)
+      const res = generateYearPlan(year, withPrior)
       setPreview({ ...res, scope: 'year' })
       return
     }
-    const plan = generateFairPlan(year, month, withPrior, holidays, school || {})
+    const plan = generateFairPlan(year, month, withPrior, holidays)
     let aH = 0, bH = 0, aS = 0, bS = 0
     const last = new Date(year, month+1, 0).getDate()
     for (let d = 1; d <= last; d++) {
@@ -751,9 +757,18 @@ function Questionnaire({ year, month, holidays, school, prior, onApply, onClose,
         </div>
         <label>{tr.q3}</label>
         <div className="q-options">
-          <button type="button" className={answers.holidays==='split'?'on':''} onClick={() => setAnswers({...answers, holidays:'split'})}>{tr.q3a}</button>
+          <button type="button" className={answers.holidays==='halves'?'on':''} onClick={() => setAnswers({...answers, holidays:'halves'})}>{tr.q3a}</button>
           <button type="button" className={answers.holidays==='alternate'?'on':''} onClick={() => setAnswers({...answers, holidays:'alternate'})}>{tr.q3b}</button>
+          <button type="button" className={answers.holidays==='rhythm'?'on':''} onClick={() => setAnswers({...answers, holidays:'rhythm'})}>{tr.q3c}</button>
         </div>
+        {answers.holidays !== 'rhythm' && (<>
+          <label>{firstLabel}</label>
+          <div className="q-options">
+            <button type="button" className={answers.first==='A'?'on':''} onClick={() => setAnswers({...answers, first:'A'})}>{names().A}</button>
+            <button type="button" className={answers.first==='B'?'on':''} onClick={() => setAnswers({...answers, first:'B'})}>{names().B}</button>
+          </div>
+          <p className="q-lead">{answers.holidays === 'halves' ? tr.q3aHint : tr.q3bHint}</p>
+        </>)}
         <label>{tr.scope || 'Apply to'}</label>
         <div className="q-options">
           <button type="button" className={answers.scope==='month'?'on':''} onClick={() => setAnswers({...answers, scope:'month'})}>{tr.thisMonth || 'This month'}</button>
@@ -776,42 +791,6 @@ function Questionnaire({ year, month, holidays, school, prior, onApply, onClose,
       </div>
     </div>
   )
-}
-
-
-/* ─── Luxembourg school holidays (public schools) ─── */
-const SCHOOL_RANGES = {
-  2026: [
-    { name: 'All Saints', start: '2026-10-31', end: '2026-11-08' },
-    { name: 'Christmas', start: '2026-12-19', end: '2027-01-03' },
-  ],
-  2027: [
-    { name: 'Christmas', start: '2026-12-19', end: '2027-01-03' },
-    { name: 'Carnival', start: '2027-02-06', end: '2027-02-14' },
-    { name: 'Easter', start: '2027-03-27', end: '2027-04-11' },
-    { name: 'Pentecost', start: '2027-05-29', end: '2027-06-06' },
-    { name: 'Summer', start: '2027-07-16', end: '2027-09-14' },
-  ],
-}
-function daysInRange(start, end) {
-  const out = []
-  const d = new Date(start + 'T12:00:00')
-  const last = new Date(end + 'T12:00:00')
-  while (d <= last) {
-    out.push(isoDate(d))
-    d.setDate(d.getDate() + 1)
-  }
-  return out
-}
-function schoolHolidayMap(year) {
-  const map = {}
-  const ranges = [...(SCHOOL_RANGES[year] || []), ...(SCHOOL_RANGES[year - 1] || [])]
-  for (const r of ranges) {
-    for (const iso of daysInRange(r.start, r.end)) {
-      if (iso.startsWith(String(year))) map[iso] = r.name
-    }
-  }
-  return map
 }
 
 
