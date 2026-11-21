@@ -96,6 +96,6 @@ fi
 echo "==> Check"
 sudo systemctl is-enabled --quiet certbot.timer && echo "Automatic renewal is on."
 curl --max-time 15 -fsS "https://$DOMAIN/" >/dev/null
-curl --max-time 15 -fsS -o /dev/null -w 'http://%{url_effective} answers %{http_code}\n' "http://$PUBLIC_IP/"
+curl --max-time 15 -fsS -o /dev/null -w '%{url_effective} answers %{http_code}\n' "http://$PUBLIC_IP/"
 echo "Live: https://$DOMAIN"
 REMOTE
