@@ -15,14 +15,17 @@ Phones that created or joined a plan before this change hold a device token. The
 
 ## Server setup
 
-Run from Oracle Cloud Shell, as with the other scripts:
+Run from Oracle Cloud Shell, as with the other scripts. The domain's DNS A record must already point at the VM.
 
 ```bash
 cd ~/react-web-server && git pull --ff-only
 bash scripts/update-api.sh
+bash scripts/setup-https.sh
 ```
 
-This adds the account tables, restarts the API, and creates `/etc/coparents/app.env` on the VM if it is missing:
+`setup-https.sh` gets a free Let's Encrypt certificate for `coparents.powerup.lu`, serves the site on https, redirects http on that name to https, and renews on its own. Pass another domain as the first argument when the app moves. The plain `http://<ip>/` site keeps working for PR previews. Sign-in needs https, because the session cookie is `Secure`.
+
+`update-api.sh` adds the account tables, restarts the API, and creates `/etc/coparents/app.env` on the VM if it is missing:
 
 ```
 COPARENTS_APP_URL=https://coparents.powerup.lu
@@ -43,7 +46,7 @@ sudo journalctl -u coparents-api -n 20 | grep 'sign-in link'
 
 Run `update-api.sh` before the new web app goes live, because the new app needs the new API.
 
-Changing domain later means changing `COPARENTS_APP_URL` and the sender address, nothing else.
+Changing domain later means a new DNS record, `bash scripts/setup-https.sh new.domain` (which also updates `COPARENTS_APP_URL`), and a new sender address.
 
 ## Local development
 
