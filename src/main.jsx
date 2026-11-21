@@ -10,10 +10,13 @@ import '@fontsource-variable/dm-sans/opsz.css'
 import '@fontsource-variable/dm-sans/opsz-italic.css'
 import '@fontsource-variable/manrope/wght.css'
 import './style.css'
-import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity } from './extra.jsx'
+import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity, useCopy } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
+import { pickLang } from './lang.js'
+import { ExpensesView } from './money.jsx'
+import { holidayOwners, schoolHolidayMap, schoolYearOf, firstPeriod } from './holidays.js'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -89,9 +92,14 @@ const t = {
     q2a: 'Parent A',
     q2b: 'Parent B',
     q2c: 'Equal',
-    q3: 'School holidays priority',
-    q3a: 'Split each holiday period',
-    q3b: 'Alternate whole periods',
+    q3: 'How do you share school holidays?',
+    q3a: 'Each holiday in two halves',
+    q3b: 'Alternate whole holidays',
+    q3c: 'Keep the usual rhythm',
+    qFirst: 'Who has the first half, or all, of the {name} holiday {year}?',
+    qFirstAny: 'Who has the first holiday?',
+    q3aHint: 'One parent has the first half of every school holiday, the other the second half. It swaps each school year.',
+    q3bHint: 'Whole holidays go to one parent, then the other, through the school year. It swaps each school year, so nobody always has Christmas or the same summer.',
     q4: 'Start the proposal from',
     generate: 'Generate proposal',
     apply: 'Apply this month',
@@ -117,6 +125,8 @@ const t = {
     paidA: 'Paid by A', paidB: 'Paid by B',
     split50: '50/50', splitA: '100% A', splitB: '100% B',
     paidBy: 'Paid by', split: 'split',
+    markSettled: 'Mark settled', settled: 'Settled', notes: 'Notes',
+    scope: 'Apply to', thisMonth: 'This month', fullYear: 'Full year', school: 'School holidays',
     msgTitle: 'Messages', msgText: 'Structured threads coming next. For now, use the calendar and expenses.',
     docTitle: 'Documents', docText: 'Shared vault coming next. Store agreements and notes here later.',
   },
@@ -189,9 +199,14 @@ const t = {
     q2a: 'Parent A',
     q2b: 'Parent B',
     q2c: 'Égal',
-    q3: 'Priorité vacances scolaires',
-    q3a: 'Partager chaque période',
-    q3b: 'Alterner des périodes entières',
+    q3: 'Comment partagez-vous les vacances scolaires ?',
+    q3a: 'Chaque vacance en deux moitiés',
+    q3b: 'Alterner des vacances entières',
+    q3c: 'Garder le rythme habituel',
+    qFirst: 'Qui a la première moitié, ou la totalité, des vacances de {name} {year} ?',
+    qFirstAny: 'Qui a les premières vacances ?',
+    q3aHint: 'Un parent a la première moitié de chaque vacance scolaire, l’autre la seconde. On inverse chaque année scolaire.',
+    q3bHint: 'Chaque vacance entière va à un parent, puis à l’autre, au fil de l’année scolaire. On inverse chaque année scolaire : personne n’a toujours Noël ou le même été.',
     q4: 'Commencer la proposition à partir de',
     generate: 'Générer la proposition',
     apply: 'Appliquer ce mois',
@@ -217,6 +232,9 @@ const t = {
     paidA: 'Payé par A', paidB: 'Payé par B',
     split50: '50/50', splitA: '100 % A', splitB: '100 % B',
     paidBy: 'Payé par', split: 'répartition',
+    markSettled: 'Marquer réglé', settled: 'Réglé', notes: 'Notes',
+    schoolNames: { 'All Saints': 'Toussaint', Christmas: 'Noël', Carnival: 'Carnaval', Easter: 'Pâques', Pentecost: 'Pentecôte', Summer: 'Été' },
+    scope: 'Appliquer à', thisMonth: 'Ce mois', fullYear: 'Toute l’année', school: 'Vacances scolaires',
     msgTitle: 'Messages', msgText: 'Les fils structurés arrivent bientôt. Pour l’instant, utilisez le calendrier et les dépenses.',
     docTitle: 'Documents', docText: 'Le coffre partagé arrive bientôt. Vous pourrez y stocker accords et notes.',
   },
@@ -289,9 +307,14 @@ const t = {
     q2a: 'Elternteil A',
     q2b: 'Elternteil B',
     q2c: 'Gleich',
-    q3: 'Priorität Schulferien',
-    q3a: 'Jede Ferienperiode teilen',
-    q3b: 'Ganze Perioden abwechseln',
+    q3: 'Wie teilen Sie die Schulferien?',
+    q3a: 'Alle Ferien in zwei Hälften',
+    q3b: 'Ganze Ferien abwechseln',
+    q3c: 'Den üblichen Rhythmus behalten',
+    qFirst: 'Wer hat die erste Hälfte oder alle Ferien zu {name} {year}?',
+    qFirstAny: 'Wer hat die ersten Ferien?',
+    q3aHint: 'Ein Elternteil hat die erste Hälfte aller Schulferien, der andere die zweite. Jedes Schuljahr wird getauscht.',
+    q3bHint: 'Ganze Ferien gehen abwechselnd an einen Elternteil, dann an den anderen. Jedes Schuljahr wird getauscht, damit niemand immer Weihnachten oder denselben Sommer hat.',
     q4: 'Vorschlag starten ab',
     generate: 'Vorschlag erzeugen',
     apply: 'Diesen Monat anwenden',
@@ -317,6 +340,9 @@ const t = {
     paidA: 'Bezahlt von A', paidB: 'Bezahlt von B',
     split50: '50/50', splitA: '100 % A', splitB: '100 % B',
     paidBy: 'Bezahlt von', split: 'Aufteilung',
+    markSettled: 'Als beglichen markieren', settled: 'Beglichen', notes: 'Notizen',
+    schoolNames: { 'All Saints': 'Allerheiligen', Christmas: 'Weihnachten', Carnival: 'Fastnacht', Easter: 'Ostern', Pentecost: 'Pfingsten', Summer: 'Sommer' },
+    scope: 'Anwenden auf', thisMonth: 'Diesen Monat', fullYear: 'Ganzes Jahr', school: 'Schulferien',
     msgTitle: 'Nachrichten', msgText: 'Strukturierte Threads kommen als Nächstes. Bis dahin Kalender und Ausgaben nutzen.',
     docTitle: 'Dokumente', docText: 'Der gemeinsame Tresor kommt als Nächstes. Hier könnt ihr später Vereinbarungen und Notizen ablegen.',
   },
@@ -392,9 +418,14 @@ const t = {
     q2a: 'Elterendeel A',
     q2b: 'Elterendeel B',
     q2c: 'Gläich',
-    q3: 'Prioritéit Schoulvakanzen',
-    q3a: 'All Period deelen',
-    q3b: 'Ganz Perioden wiesselen',
+    q3: 'Wéi deelt Dir d’Schoulvakanzen?',
+    q3a: 'All Vakanz an zwou Hällefte',
+    q3b: 'Ganz Vakanzen ofwiesselen',
+    q3c: 'Den üblechen Rhythmus halen',
+    qFirst: 'Wien huet déi éischt Hällef, oder déi ganz Vakanz, vun {name} {year}?',
+    qFirstAny: 'Wien huet déi éischt Vakanz?',
+    q3aHint: 'Een Elterendeel huet déi éischt Hällef vun all Schoulvakanz, deen aneren déi zweet. All Schouljoer gëtt gewiesselt.',
+    q3bHint: 'Ganz Vakanze ginn ofwiesselnd un een Elterendeel, dann un deen aneren. All Schouljoer gëtt gewiesselt, sou datt keen ëmmer Chrëschtdag oder dee selwechte Summer huet.',
     q4: 'Virschlag starten vun',
     generate: 'Virschlag generéieren',
     apply: 'Dëse Mount uwenden',
@@ -408,6 +439,9 @@ const t = {
     paidA: 'Bezuelt vun A', paidB: 'Bezuelt vun B',
     split50: '50/50', splitA: '100 % A', splitB: '100 % B',
     paidBy: 'Bezuelt vun', split: 'Opdeelung',
+    markSettled: 'Als bezuelt markéieren', settled: 'Bezuelt', notes: 'Notizen',
+    schoolNames: { 'All Saints': 'Allerhellegen', Christmas: 'Chrëschtdag', Carnival: 'Fuesend', Easter: 'Ouschteren', Pentecost: 'Péngschten', Summer: 'Summer' },
+    scope: 'Uwenden op', thisMonth: 'Dëse Mount', fullYear: 'Ganzt Joer', school: 'Schoulvakanz',
     msgTitle: 'Messagen', msgText: 'Strukturéiert Threads kommen als Nächstes. Bis dohin Kalenner an Ausgaben benotzen.',
     docTitle: 'Dokumenter', docText: 'De gemeinsame Tresor kënnt als Nächstes. Hei kënnt dir spéider Ofkommes a Notizen ofleeën.',
     holidays: 'Feierdeeg',
@@ -419,9 +453,21 @@ const t = {
 
 }
 
+function startLang() {
+  let saved = null, chosen = false
+  try { saved = localStorage.getItem('cp-lang'); chosen = localStorage.getItem('cp-lang-chosen') === '1' } catch { /* private mode */ }
+  const phone = navigator.languages?.length ? navigator.languages : [navigator.language]
+  return pickLang(saved, chosen, phone)
+}
+
 function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('cp-lang') || 'en')
-  useEffect(() => { localStorage.setItem('cp-lang', lang) }, [lang])
+  const [lang, setLangState] = useState(startLang)
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  // Only a tap on the switch is remembered, so everyone else follows their phone.
+  const setLang = (code) => {
+    setLangState(code)
+    try { localStorage.setItem('cp-lang', code); localStorage.setItem('cp-lang-chosen', '1') } catch { /* private mode */ }
+  }
   const value = { lang, setLang, tr: t[lang] || t.en }
   return <LangCtx.Provider value={value}>{children}</LangCtx.Provider>
 }
@@ -572,126 +618,111 @@ function luxHolidays(year, tr) {
 }
 
 
+// Shared by the month and year proposals.
+// School holidays first (as the parents chose), then public holidays outside them
+// kept equal, then the usual rhythm. With "rhythm", holidays are not special.
+function proposalRhythm(answers, year, m, d) {
+  if (answers.rhythm === 'weeks') {
+    const week = Math.floor((d + ((new Date(year, m, 1).getDay() + 6) % 7) - 1) / 7)
+    return week % 2 === 0 ? 'A' : 'B'
+  }
+  if (answers.rhythm === 'weekend-mid') {
+    const dow = (new Date(year, m, d).getDay() + 6) % 7
+    return dow === 2 || dow === 3 ? 'B' : 'A'
+  }
+  return d % 2 === 0 ? 'A' : 'B'
+}
+const keyOf = (year, m, d) => `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
 function generateYearPlan(year, answers) {
-  const hols = {}
-  const school = schoolHolidayMap(year)
-  // Build full-year holiday map
+  const owners = holidayOwners(answers.holidays, answers.first || 'A', answers.refYear ?? year - 1)
+  const special = answers.holidays !== 'rhythm'
   const easter = easterSunday(year)
   const fixed = [
-    [new Date(year, 0, 1), 'h'], [addDays(easter, 1), 'h'], [new Date(year, 4, 1), 'h'],
-    [new Date(year, 4, 9), 'h'], [addDays(easter, 39), 'h'], [addDays(easter, 50), 'h'],
-    [new Date(year, 5, 23), 'h'], [new Date(year, 7, 15), 'h'], [new Date(year, 10, 1), 'h'],
-    [new Date(year, 11, 25), 'h'], [new Date(year, 11, 26), 'h'],
-  ]
-  const holMap = {}
-  for (const [d] of fixed) holMap[isoDate(d)] = true
+    new Date(year, 0, 1), addDays(easter, 1), new Date(year, 4, 1), new Date(year, 4, 9),
+    addDays(easter, 39), addDays(easter, 50), new Date(year, 5, 23), new Date(year, 7, 15),
+    new Date(year, 10, 1), new Date(year, 11, 25), new Date(year, 11, 26),
+  ].map(isoDate)
   const plan = {}
-  // Collect all holiday and school days
-  const holDays = Object.keys(holMap).sort()
-  const schoolDays = Object.keys(school).filter(k => !holMap[k]).sort()
-  let aH = 0, bH = 0
-  holDays.forEach((key) => {
-    const who = aH <= bH ? 'A' : 'B'
-    plan[key] = who
-    if (who === 'A') aH++; else bH++
-  })
-  let aS = 0, bS = 0
-  schoolDays.forEach((key) => {
-    const who = aS <= bS ? 'A' : 'B'
+  let aS = 0, bS = 0, aH = 0, bH = 0
+  for (const [key, who] of Object.entries(owners)) {
+    if (!key.startsWith(String(year))) continue
     plan[key] = who
     if (who === 'A') aS++; else bS++
-  })
-  // Fill remaining days of the year according to rhythm
+  }
+  if (special) {
+    for (const key of fixed) {
+      if (plan[key]) continue
+      const who = aH <= bH ? 'A' : 'B'
+      plan[key] = who
+      if (who === 'A') aH++; else bH++
+    }
+  }
   for (let m = 0; m < 12; m++) {
     const days = new Date(year, m + 1, 0).getDate()
     for (let d = 1; d <= days; d++) {
-      const key = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-      if (plan[key]) continue
-      if (answers.rhythm === 'weeks') {
-        const week = Math.floor((d + ((new Date(year, m, 1).getDay()+6)%7) - 1) / 7)
-        plan[key] = week % 2 === 0 ? 'A' : 'B'
-      } else if (answers.rhythm === 'weekend-mid') {
-        const dow = (new Date(year, m, d).getDay() + 6) % 7
-        plan[key] = dow === 2 || dow === 3 ? 'B' : 'A'
-      } else {
-        plan[key] = d % 2 === 0 ? 'A' : 'B'
-      }
+      const key = keyOf(year, m, d)
+      if (!plan[key]) plan[key] = proposalRhythm(answers, year, m, d)
     }
   }
   return { plan, aH, bH, aS, bS }
 }
 
-function generateFairPlan(year, month, answers, holidays, school) {
+function generateFairPlan(year, month, answers, holidays) {
   const days = new Date(year, month + 1, 0).getDate()
+  const owners = holidayOwners(answers.holidays, answers.first || 'A', answers.refYear ?? schoolYearOf(year, month))
+  const special = answers.holidays !== 'rhythm'
   const plan = {}
-  const isWeekend = (d) => { const dow = (new Date(year, month, d).getDay() + 6) % 7; return dow >= 5 }
-  const isHoliday = (d) => {
-    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    return !!holidays[key]
+  // 1. School holidays, as the parents chose.
+  for (let d = 1; d <= days; d++) {
+    const who = owners[keyOf(year, month, d)]
+    if (who) plan[d] = who
   }
-  const isSchool = (d) => {
-    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-    return !!school[key]
+  if (special) {
+    // 2. Public holidays outside school holidays: equal (±1), counting the prior balance.
+    let aH = answers.priorA || 0, bH = answers.priorB || 0
+    for (let d = 1; d <= days; d++) {
+      if (plan[d] || !holidays[keyOf(year, month, d)]) continue
+      const who = aH <= bH ? 'A' : 'B'
+      plan[d] = who
+      if (who === 'A') aH++; else bH++
+    }
   }
-  // 1. Assign pure public-holiday days first — strict equal (±1)
-  const holDays = []
-  for (let d = 1; d <= days; d++) if (isHoliday(d)) holDays.push(d)
-  let aH = answers.priorA || 0, bH = answers.priorB || 0
-  holDays.forEach((d) => {
-    const who = aH <= bH ? 'A' : 'B'
-    plan[d] = who
-    if (who === 'A') aH++; else bH++
-  })
-  // 1b. Assign school-holiday days (not already a public holiday) — strict equal (±1)
-  const schoolDays = []
-  for (let d = 1; d <= days; d++) if (isSchool(d) && !plan[d]) schoolDays.push(d)
-  let aS = 0, bS = 0
-  schoolDays.forEach((d) => {
-    const who = aS <= bS ? 'A' : 'B'
-    plan[d] = who
-    if (who === 'A') aS++; else bS++
-  })
-  // 2. Assign remaining weekends, honour preference but keep overall special close
-  const weekends = []
-  for (let d = 1; d <= days; d++) if (isWeekend(d) && !plan[d]) weekends.push(d)
+  // 3. Remaining weekends: honour the preference, keep them close.
+  const isWeekend = (d) => ((new Date(year, month, d).getDay() + 6) % 7) >= 5
   let aW = 0, bW = 0
   const preferA = answers.weekends === 'A'
   const preferB = answers.weekends === 'B'
-  weekends.forEach((d) => {
+  for (let d = 1; d <= days; d++) {
+    if (plan[d] || !isWeekend(d)) continue
     let who
     if (preferA && aW <= bW + 1) who = 'A'
     else if (preferB && bW <= aW + 1) who = 'B'
     else who = aW <= bW ? 'A' : 'B'
     plan[d] = who
     if (who === 'A') aW++; else bW++
-  })
-  // 3. Fill remaining weekdays according to rhythm
-  for (let d = 1; d <= days; d++) {
-    if (plan[d]) continue
-    if (answers.rhythm === 'weeks') {
-      const week = Math.floor((d + ((new Date(year, month, 1).getDay()+6)%7) - 1) / 7)
-      plan[d] = week % 2 === 0 ? 'A' : 'B'
-    } else if (answers.rhythm === 'weekend-mid') {
-      const dow = (new Date(year, month, d).getDay() + 6) % 7
-      plan[d] = dow === 2 || dow === 3 ? 'B' : 'A'
-    } else {
-      plan[d] = d % 2 === 0 ? 'A' : 'B'
-    }
   }
+  // 4. Everything else follows the usual rhythm.
+  for (let d = 1; d <= days; d++) if (!plan[d]) plan[d] = proposalRhythm(answers, year, month, d)
   return plan
 }
 
 function Questionnaire({ year, month, holidays, school, prior, onApply, onClose, tr }) {
-  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'split', scope: 'month' })
+  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'halves', first: 'A', scope: 'month' })
+  const refYear = answers.scope === 'year' ? year - 1 : schoolYearOf(year, month)
+  const firstHol = firstPeriod(refYear)
+  const firstLabel = firstHol
+    ? (tr.qFirst || 'Who has the first {name} holiday of {year}?').replace('{name}', (tr.schoolNames || {})[firstHol.name] || firstHol.name).replace('{year}', firstHol.start.slice(0, 4))
+    : (tr.qFirstAny || 'Who has the first holiday?')
   const [preview, setPreview] = useState(null)
   const generate = () => {
-    const withPrior = { ...answers, priorA: prior?.a || 0, priorB: prior?.b || 0 }
+    const withPrior = { ...answers, refYear, priorA: prior?.a || 0, priorB: prior?.b || 0 }
     if (answers.scope === 'year') {
-      const res = generateYearPlan(year, answers)
+      const res = generateYearPlan(year, withPrior)
       setPreview({ ...res, scope: 'year' })
       return
     }
-    const plan = generateFairPlan(year, month, withPrior, holidays, school || {})
+    const plan = generateFairPlan(year, month, withPrior, holidays)
     let aH = 0, bH = 0, aS = 0, bS = 0
     const last = new Date(year, month+1, 0).getDate()
     for (let d = 1; d <= last; d++) {
@@ -727,9 +758,18 @@ function Questionnaire({ year, month, holidays, school, prior, onApply, onClose,
         </div>
         <label>{tr.q3}</label>
         <div className="q-options">
-          <button type="button" className={answers.holidays==='split'?'on':''} onClick={() => setAnswers({...answers, holidays:'split'})}>{tr.q3a}</button>
+          <button type="button" className={answers.holidays==='halves'?'on':''} onClick={() => setAnswers({...answers, holidays:'halves'})}>{tr.q3a}</button>
           <button type="button" className={answers.holidays==='alternate'?'on':''} onClick={() => setAnswers({...answers, holidays:'alternate'})}>{tr.q3b}</button>
+          <button type="button" className={answers.holidays==='rhythm'?'on':''} onClick={() => setAnswers({...answers, holidays:'rhythm'})}>{tr.q3c}</button>
         </div>
+        {answers.holidays !== 'rhythm' && (<>
+          <label>{firstLabel}</label>
+          <div className="q-options">
+            <button type="button" className={answers.first==='A'?'on':''} onClick={() => setAnswers({...answers, first:'A'})}>{names().A}</button>
+            <button type="button" className={answers.first==='B'?'on':''} onClick={() => setAnswers({...answers, first:'B'})}>{names().B}</button>
+          </div>
+          <p className="q-lead">{answers.holidays === 'halves' ? tr.q3aHint : tr.q3bHint}</p>
+        </>)}
         <label>{tr.scope || 'Apply to'}</label>
         <div className="q-options">
           <button type="button" className={answers.scope==='month'?'on':''} onClick={() => setAnswers({...answers, scope:'month'})}>{tr.thisMonth || 'This month'}</button>
@@ -752,42 +792,6 @@ function Questionnaire({ year, month, holidays, school, prior, onApply, onClose,
       </div>
     </div>
   )
-}
-
-
-/* ─── Luxembourg school holidays (public schools) ─── */
-const SCHOOL_RANGES = {
-  2026: [
-    { name: 'All Saints', start: '2026-10-31', end: '2026-11-08' },
-    { name: 'Christmas', start: '2026-12-19', end: '2027-01-03' },
-  ],
-  2027: [
-    { name: 'Christmas', start: '2026-12-19', end: '2027-01-03' },
-    { name: 'Carnival', start: '2027-02-06', end: '2027-02-14' },
-    { name: 'Easter', start: '2027-03-27', end: '2027-04-11' },
-    { name: 'Pentecost', start: '2027-05-29', end: '2027-06-06' },
-    { name: 'Summer', start: '2027-07-16', end: '2027-09-14' },
-  ],
-}
-function daysInRange(start, end) {
-  const out = []
-  const d = new Date(start + 'T12:00:00')
-  const last = new Date(end + 'T12:00:00')
-  while (d <= last) {
-    out.push(isoDate(d))
-    d.setDate(d.getDate() + 1)
-  }
-  return out
-}
-function schoolHolidayMap(year) {
-  const map = {}
-  const ranges = [...(SCHOOL_RANGES[year] || []), ...(SCHOOL_RANGES[year - 1] || [])]
-  for (const r of ranges) {
-    for (const iso of daysInRange(r.start, r.end)) {
-      if (iso.startsWith(String(year))) map[iso] = r.name
-    }
-  }
-  return map
 }
 
 
@@ -970,7 +974,7 @@ function CalendarView() {
           const who = custody[key]
           const dayEvents = events.filter((ev) => ev.date === key)
           const hol = hols[key]
-          const sch = school[key]
+          const sch = school[key] && ((tr.schoolNames || {})[school[key]] || school[key])
           return (
             <button
               key={i}
@@ -1061,74 +1065,6 @@ function CalendarView() {
     </div>
   )
 }
-function ExpensesView() {
-  const { tr } = useLang()
-  const n = names()
-  const [items, setItems] = useState(() => load('cp-expenses', []))
-  const [form, setForm] = useState({ desc: '', amount: '', paidBy: 'A', split: '50' })
-  useEffect(() => { save('cp-expenses', items) }, [items])
-  const add = (e) => { e.preventDefault(); const amt = parseFloat(form.amount); if (!form.desc || isNaN(amt) || amt <= 0) return; setItems((p) => [...p, { id: Date.now(), ...form, amount: amt, settled: false }]); setForm({ desc: '', amount: '', paidBy: 'A', split: '50' }) }
-  const remove = (id) => setItems((p) => p.filter((x) => x.id !== id))
-  const settle = (id) => {
-    setItems((p) => p.map((x) => x.id === id ? { ...x, settled: true } : x))
-    const item = items.find((x) => x.id === id)
-    if (item) logActivity(`${n[item.paidBy]} marked “${item.desc}” settled`)
-  }
-  const balance = useMemo(() => {
-    let a = 0, b = 0
-    for (const it of items) {
-      if (it.settled) continue
-      const shareA = it.split === '50' ? it.amount / 2 : it.split === 'A' ? it.amount : 0
-      const shareB = it.amount - shareA
-      if (it.paidBy === 'A') { a += shareB; b -= shareB } else { b += shareA; a -= shareA }
-    }
-    return { a: Math.abs(a) < 0.005 ? 0 : a, b: Math.abs(b) < 0.005 ? 0 : b }
-  }, [items])
-  return (
-    <div className="app-panel">
-      <div className="panel-head">
-        <h2>{tr.expTitle}</h2>
-        <div className="balance-pill">
-          <span>{n.A}: {balance.a >= 0 ? '+' : ''}{balance.a.toFixed(2)}</span>
-          <span>{n.B}: {balance.b >= 0 ? '+' : ''}{balance.b.toFixed(2)}</span>
-        </div>
-      </div>
-      <div className="expense-list">
-        {items.length === 0 && <p className="empty">{tr.noExp}</p>}
-        {items.map((it) => (
-          <div key={it.id} className={`expense-block ${it.settled ? 'settled' : ''}`}>
-            <div className="expense-row">
-              <div>
-                <strong>{it.desc}</strong>
-                <span className="meta">{tr.paidBy} {n[it.paidBy]} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? `100% ${n.A}` : `100% ${n.B}`}</span>
-              </div>
-              <div className="amt">{it.amount.toFixed(2)}</div>
-              {!it.settled && <button className="btn ghost sm" type="button" onClick={() => settle(it.id)}>Settled</button>}
-              {it.settled && <span className="meta">Settled</span>}
-              <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
-            </div>
-            <NoteThread channel={`expense:${it.id}`} title="Notes" />
-          </div>
-        ))}
-      </div>
-      <form className="add-form" onSubmit={add}>
-        <input placeholder={tr.desc} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
-        <input type="number" step="0.01" placeholder={tr.amount} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-        <select value={form.paidBy} onChange={(e) => setForm({ ...form, paidBy: e.target.value })}>
-          <option value="A">{n.A}</option>
-          <option value="B">{n.B}</option>
-        </select>
-        <select value={form.split} onChange={(e) => setForm({ ...form, split: e.target.value })}>
-          <option value="50">{tr.split50}</option>
-          <option value="A">{n.A}</option>
-          <option value="B">{n.B}</option>
-        </select>
-        <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
-      </form>
-    </div>
-  )
-}
-
 function Placeholder({ title, text }) { return (<div className="app-panel"><h2>{title}</h2><p className="empty">{text}</p></div>) }
 
 
@@ -1164,6 +1100,7 @@ function AppShell({ onExit }) {
   const [syncRev, setSyncRev] = useState(0)
   const handleSync = useCallback(() => setSyncRev((n) => n + 1), [])
   const fc = useFamilyCopy()
+  const xc = useCopy()
   const [setup, setSetup] = useState(false)
   useEffect(() => {
     const open = () => setSetup(true)
@@ -1172,15 +1109,15 @@ function AppShell({ onExit }) {
   }, [])
   const closeSetup = useCallback(() => { setSetup(false); setSyncRev((n) => n + 1) }, [])
   const primary = [
-    { id: 'today', label: 'Today', Icon: Heart },
-    { id: 'handover', label: 'Handover', Icon: Clock },
+    { id: 'today', label: xc.today, Icon: Heart },
+    { id: 'handover', label: xc.handTitle, Icon: Clock },
     { id: 'calendar', label: tr.tabCal, Icon: Calendar },
     { id: 'expenses', label: tr.tabExp, Icon: Wallet },
     { id: 'messages', label: tr.tabMsg, Icon: MessageSquare },
   ]
   const extra = [
     { id: 'family', label: fc.family, Icon: Users },
-    { id: 'resolve', label: 'Resolve', Icon: Check },
+    { id: 'resolve', label: xc.resolve, Icon: Check },
     { id: 'docs', label: tr.tabDoc, Icon: FileText },
   ]
   return (
