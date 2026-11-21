@@ -68,7 +68,7 @@ export const PRIVACY_COPY = {
         h: 'Who can see it',
         list: [
           'The other parent in your shared plan sees everything in it, including what you wrote.',
-          'Two companies run parts of the service for us: Oracle Cloud Infrastructure hosts the server and database in Frankfurt, Germany, and Brevo (Paris, France) sends the sign-in emails, so it receives your email address.',
+          'Companies that run parts of the service for us: Oracle Cloud Infrastructure hosts the server and database in Frankfurt, Germany. Brevo (Paris, France) sends the sign-in emails, so it receives your email address. Microsoft 365 holds the mailbox for emails you send to {email}.',
           'Nobody else, unless the law requires it. Your data is stored in the European Union. The app and its fonts load from our own server, so no other company sees your visit.',
         ],
       },
@@ -172,7 +172,7 @@ export const PRIVACY_COPY = {
         h: 'Qui peut les voir',
         list: [
           'L’autre parent de votre planning partagé voit tout son contenu, y compris ce que vous avez écrit.',
-          'Deux sociétés font fonctionner une partie du service pour nous : Oracle Cloud Infrastructure héberge le serveur et la base de données à Francfort (Allemagne), et Brevo (Paris, France) envoie les e-mails de connexion et reçoit donc votre adresse e-mail.',
+          'Des sociétés font fonctionner une partie du service pour nous : Oracle Cloud Infrastructure héberge le serveur et la base de données à Francfort (Allemagne). Brevo (Paris, France) envoie les e-mails de connexion et reçoit donc votre adresse e-mail. Microsoft 365 héberge la boîte qui reçoit les e-mails envoyés à {email}.',
           'Personne d’autre, sauf obligation légale. Vos données sont stockées dans l’Union européenne. L’application et ses polices se chargent depuis notre propre serveur : aucune autre société ne voit votre visite.',
         ],
       },
@@ -276,7 +276,7 @@ export const PRIVACY_COPY = {
         h: 'Wer sie sehen kann',
         list: [
           'Der andere Elternteil in Ihrem gemeinsamen Plan sieht alles darin, auch was Sie geschrieben haben.',
-          'Zwei Unternehmen betreiben Teile des Dienstes für uns: Oracle Cloud Infrastructure stellt Server und Datenbank in Frankfurt (Deutschland) bereit, und Brevo (Paris, Frankreich) versendet die Anmelde-E-Mails und erhält dafür Ihre E-Mail-Adresse.',
+          'Unternehmen, die Teile des Dienstes für uns betreiben: Oracle Cloud Infrastructure stellt Server und Datenbank in Frankfurt (Deutschland) bereit. Brevo (Paris, Frankreich) versendet die Anmelde-E-Mails und erhält dafür Ihre E-Mail-Adresse. Microsoft 365 stellt das Postfach für E-Mails an {email} bereit.',
           'Sonst niemand, außer das Gesetz verlangt es. Ihre Daten werden in der Europäischen Union gespeichert. App und Schriften laden von unserem eigenen Server, kein anderes Unternehmen sieht Ihren Besuch.',
         ],
       },
@@ -380,7 +380,7 @@ export const PRIVACY_COPY = {
         h: 'Wien se gesi kann',
         list: [
           'Deen aneren Elterendeel an Ärem gemeinsame Plang gesäit alles dran, och dat, wat Dir geschriwwen hutt.',
-          'Zwou Firme bedreiwen Deeler vum Service fir eis: Oracle Cloud Infrastructure stellt de Server an d’Datebank zu Frankfurt (Däitschland), a Brevo (Paräis, Frankräich) schéckt d’Umeldungs-E-Mailen a kritt doduerch Är E-Mail-Adress.',
+          'Firmen, déi Deeler vum Service fir eis bedreiwen: Oracle Cloud Infrastructure stellt de Server an d’Datebank zu Frankfurt (Däitschland). Brevo (Paräis, Frankräich) schéckt d’Umeldungs-E-Mailen a kritt doduerch Är E-Mail-Adress. Microsoft 365 stellt d’Postfach fir E-Mailen un {email}.',
           'Soss keen, ausser d’Gesetz verlaangt et. Är Daten ginn an der Europäescher Unioun gespäichert. D’App an hir Schrëften lueden vun eisem eegene Server, keng aner Firma gesäit Äre Besuch.',
         ],
       },

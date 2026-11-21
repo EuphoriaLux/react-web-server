@@ -10,7 +10,7 @@ Keep the notice true when the app changes. The facts it states:
 | Sign-in links work once, 15 minutes, deleted a day after expiry | `LOGIN_TTL` and `_auth_request` |
 | Server logs about 14 days | journald `MaxRetentionSec=14day` (set by `scripts/update-api.sh`), Ubuntu's nginx logrotate (daily, 14 kept) |
 | Nightly backups kept 14 days on the same server | `/etc/cron.d/coparents-backup` (`scripts/install-postgres.sh`) |
-| Processors: Oracle Cloud (Frankfurt), Brevo (email) | Hosting and `COPARENTS_SMTP_HOST` |
+| Processors: Oracle Cloud (Frankfurt), Brevo (sign-in email), Microsoft 365 (the privacy@coparent.lu mailbox) | Hosting, `COPARENTS_SMTP_HOST`, coparent.lu MX record |
 | No other company sees a visit | Fonts are bundled with the app (`@fontsource-variable/*`), no analytics, no external scripts |
 
 Adding analytics, an external script or font, another email or hosting provider, or keeping data longer means updating the notice first.
