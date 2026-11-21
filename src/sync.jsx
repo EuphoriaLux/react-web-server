@@ -4,7 +4,7 @@ import { useLang } from './main.jsx'
 import { SYNC_COPY, fill } from './sync-copy.js'
 
 const KEYS = [
-  'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses',
+  'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses', 'cp-payments', 'cp-money',
   'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers', 'cp-rules', 'cp-profile', 'cp-activity', 'cp-family',
 ]
 const TOKEN_KEY = 'cp-token'

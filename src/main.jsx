@@ -15,6 +15,7 @@ import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 import { pickLang } from './lang.js'
+import { ExpensesView } from './money.jsx'
 import { holidayOwners, schoolHolidayMap, schoolYearOf, firstPeriod } from './holidays.js'
 
 /* ─── i18n ─── */
@@ -1064,74 +1065,6 @@ function CalendarView() {
     </div>
   )
 }
-function ExpensesView() {
-  const { tr } = useLang()
-  const n = names()
-  const [items, setItems] = useState(() => load('cp-expenses', []))
-  const [form, setForm] = useState({ desc: '', amount: '', paidBy: 'A', split: '50' })
-  useEffect(() => { save('cp-expenses', items) }, [items])
-  const add = (e) => { e.preventDefault(); const amt = parseFloat(form.amount); if (!form.desc || isNaN(amt) || amt <= 0) return; setItems((p) => [...p, { id: Date.now(), ...form, amount: amt, settled: false }]); setForm({ desc: '', amount: '', paidBy: 'A', split: '50' }) }
-  const remove = (id) => setItems((p) => p.filter((x) => x.id !== id))
-  const settle = (id) => {
-    setItems((p) => p.map((x) => x.id === id ? { ...x, settled: true } : x))
-    const item = items.find((x) => x.id === id)
-    if (item) logActivity(`${n[item.paidBy]} marked “${item.desc}” settled`)
-  }
-  const balance = useMemo(() => {
-    let a = 0, b = 0
-    for (const it of items) {
-      if (it.settled) continue
-      const shareA = it.split === '50' ? it.amount / 2 : it.split === 'A' ? it.amount : 0
-      const shareB = it.amount - shareA
-      if (it.paidBy === 'A') { a += shareB; b -= shareB } else { b += shareA; a -= shareA }
-    }
-    return { a: Math.abs(a) < 0.005 ? 0 : a, b: Math.abs(b) < 0.005 ? 0 : b }
-  }, [items])
-  return (
-    <div className="app-panel">
-      <div className="panel-head">
-        <h2>{tr.expTitle}</h2>
-        <div className="balance-pill">
-          <span>{n.A}: {balance.a >= 0 ? '+' : ''}{balance.a.toFixed(2)}</span>
-          <span>{n.B}: {balance.b >= 0 ? '+' : ''}{balance.b.toFixed(2)}</span>
-        </div>
-      </div>
-      <div className="expense-list">
-        {items.length === 0 && <p className="empty">{tr.noExp}</p>}
-        {items.map((it) => (
-          <div key={it.id} className={`expense-block ${it.settled ? 'settled' : ''}`}>
-            <div className="expense-row">
-              <div>
-                <strong>{it.desc}</strong>
-                <span className="meta">{tr.paidBy} {n[it.paidBy]} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? `100% ${n.A}` : `100% ${n.B}`}</span>
-              </div>
-              <div className="amt">{it.amount.toFixed(2)}</div>
-              {!it.settled && <button className="btn ghost sm" type="button" onClick={() => settle(it.id)}>{tr.markSettled}</button>}
-              {it.settled && <span className="meta">{tr.settled}</span>}
-              <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
-            </div>
-            <NoteThread channel={`expense:${it.id}`} title={tr.notes} />
-          </div>
-        ))}
-      </div>
-      <form className="add-form" onSubmit={add}>
-        <input placeholder={tr.desc} value={form.desc} onChange={(e) => setForm({ ...form, desc: e.target.value })} />
-        <input type="number" step="0.01" placeholder={tr.amount} value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
-        <select value={form.paidBy} onChange={(e) => setForm({ ...form, paidBy: e.target.value })}>
-          <option value="A">{n.A}</option>
-          <option value="B">{n.B}</option>
-        </select>
-        <select value={form.split} onChange={(e) => setForm({ ...form, split: e.target.value })}>
-          <option value="50">{tr.split50}</option>
-          <option value="A">{n.A}</option>
-          <option value="B">{n.B}</option>
-        </select>
-        <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
-      </form>
-    </div>
-  )
-}
-
 function Placeholder({ title, text }) { return (<div className="app-panel"><h2>{title}</h2><p className="empty">{text}</p></div>) }
 
 

@@ -1001,3 +1001,40 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .account-panel .account-danger input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
 .btn.danger { background: #b91c1c; color: #fff; border-color: #b91c1c; }
 .btn.danger:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ─── Expenses ─── */
+.money-section { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 16px; }
+.money-section h3 { font-size: 1rem; margin: 0 0 10px; }
+.money-section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.money-section-head h3 { margin: 0; }
+.money-month { min-width: 9em; text-align: center; text-transform: capitalize; }
+.money-mode { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--teal-deep); }
+.money-label { display: block; font-weight: 700; font-size: 0.9rem; margin: 6px 0 10px; }
+.money-option-text { display: block; font-weight: 400; font-size: 0.86rem; color: var(--ink-soft); margin-top: 4px; }
+.money-owed { font-weight: 700; margin: 0 0 10px; }
+.money-agreed { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.money-agreed label { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; font-weight: 700; color: var(--ink-soft); }
+.money-agreed input, .money-agreed select, .money-row input {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; font: inherit; background: white; width: 9em;
+}
+.money-history { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.money-history-row, .money-row {
+  display: grid; grid-template-columns: minmax(7em, 1fr) minmax(6em, auto) minmax(0, 2fr); gap: 10px; align-items: center;
+  padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fafcfe; font-size: 0.9rem;
+}
+.money-history-row { grid-template-columns: minmax(8em, 1fr) repeat(auto-fit, minmax(10em, 2fr)); }
+.money-cat { text-transform: capitalize; font-weight: 600; }
+.money-cell.none { color: var(--muted); }
+.money-x { padding: 0 6px; margin-left: 4px; color: var(--muted); }
+.money-summary { display: flex; flex-direction: column; gap: 6px; }
+.money-spent { font-weight: 700; text-align: right; }
+.money-budget { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: 0.84rem; }
+.money-bar { flex: 0 0 80px; height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.money-bar span { display: block; height: 100%; background: var(--teal); }
+.money-row.over .money-bar span { background: var(--amber); }
+.money-row.over .money-budget { color: #92400e; }
+.money-row.total { background: var(--teal-soft); border-color: transparent; }
+@media (max-width: 560px) {
+  .money-history-row, .money-row { grid-template-columns: 1fr auto; }
+  .money-history-row .money-cell, .money-row .money-budget, .money-row input { grid-column: 1 / -1; }
+}
