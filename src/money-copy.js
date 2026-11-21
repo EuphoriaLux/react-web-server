@@ -38,6 +38,14 @@ export const MONEY_COPY = {
     left: '{amount} left',
     remove: 'Remove',
     notes: 'Notes',
+    photoAdd: 'Receipt photo', photoSending: 'Sending…', photoOpen: 'Open the receipt photo', photoAlt: 'Receipt photo',
+    photoRemove: 'Remove photo', close: 'Close',
+    photoSignIn: 'Sign in and share the plan to add photos.', photoFailed: 'The photo could not be sent. Try again.',
+    photoErrors: {
+      'not a photo': 'This file is not a photo.', 'this file is not a photo': 'This file is not a photo.',
+      'this photo is too large': 'This photo is too large.',
+      'your plan has no room for more photos. Remove old ones first.': 'Your plan has no room for more photos. Remove old ones first.',
+    },
     categories: { food: 'Food', clothes: 'Clothes', school: 'School', activities: 'Activities', health: 'Health', holidays: 'Holidays', other: 'Other' },
   },
   fr: {
@@ -76,6 +84,14 @@ export const MONEY_COPY = {
     left: 'Reste {amount}',
     remove: 'Supprimer',
     notes: 'Notes',
+    photoAdd: 'Photo du ticket', photoSending: 'Envoi…', photoOpen: 'Ouvrir la photo du ticket', photoAlt: 'Photo du ticket',
+    photoRemove: 'Supprimer la photo', close: 'Fermer',
+    photoSignIn: 'Connectez-vous et partagez le planning pour ajouter des photos.', photoFailed: 'La photo n’a pas pu être envoyée. Réessayez.',
+    photoErrors: {
+      'not a photo': 'Ce fichier n’est pas une photo.', 'this file is not a photo': 'Ce fichier n’est pas une photo.',
+      'this photo is too large': 'Cette photo est trop grande.',
+      'your plan has no room for more photos. Remove old ones first.': 'Plus de place pour des photos dans votre planning. Supprimez d’abord des anciennes.',
+    },
     categories: { food: 'Nourriture', clothes: 'Vêtements', school: 'École', activities: 'Activités', health: 'Santé', holidays: 'Vacances', other: 'Autre' },
   },
   de: {
@@ -114,6 +130,14 @@ export const MONEY_COPY = {
     left: 'Noch {amount}',
     remove: 'Entfernen',
     notes: 'Notizen',
+    photoAdd: 'Foto vom Beleg', photoSending: 'Wird gesendet…', photoOpen: 'Belegfoto öffnen', photoAlt: 'Belegfoto',
+    photoRemove: 'Foto entfernen', close: 'Schließen',
+    photoSignIn: 'Melden Sie sich an und teilen Sie den Plan, um Fotos hinzuzufügen.', photoFailed: 'Das Foto konnte nicht gesendet werden. Bitte erneut versuchen.',
+    photoErrors: {
+      'not a photo': 'Diese Datei ist kein Foto.', 'this file is not a photo': 'Diese Datei ist kein Foto.',
+      'this photo is too large': 'Dieses Foto ist zu groß.',
+      'your plan has no room for more photos. Remove old ones first.': 'Ihr Plan hat keinen Platz für weitere Fotos. Entfernen Sie zuerst alte.',
+    },
     categories: { food: 'Essen', clothes: 'Kleidung', school: 'Schule', activities: 'Aktivitäten', health: 'Gesundheit', holidays: 'Ferien', other: 'Sonstiges' },
   },
   lb: {
@@ -152,6 +176,14 @@ export const MONEY_COPY = {
     left: 'Nach {amount}',
     remove: 'Ewechhuelen',
     notes: 'Notizen',
+    photoAdd: 'Foto vum Bong', photoSending: 'Gëtt geschéckt…', photoOpen: 'Foto vum Bong opmaachen', photoAlt: 'Foto vum Bong',
+    photoRemove: 'Foto ewechhuelen', close: 'Zoumaachen',
+    photoSignIn: 'Mellt Iech un an deelt de Plang, fir Fotoen derbäizesetzen.', photoFailed: 'D’Foto konnt net geschéckt ginn. Probéiert et nach eng Kéier.',
+    photoErrors: {
+      'not a photo': 'Dëse Fichier ass keng Foto.', 'this file is not a photo': 'Dëse Fichier ass keng Foto.',
+      'this photo is too large': 'Dës Foto ass ze grouss.',
+      'your plan has no room for more photos. Remove old ones first.': 'Äre Plang huet keng Plaz méi fir Fotoen. Huelt fir d’éischt al ewech.',
+    },
     categories: { food: 'Iessen', clothes: 'Kleeder', school: 'Schoul', activities: 'Aktivitéiten', health: 'Gesondheet', holidays: 'Vakanz', other: 'Aneres' },
   },
 }

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { useLang } from './main.jsx'
 import { NoteThread, names, logActivity } from './extra.jsx'
 import { MONEY_COPY } from './money-copy.js'
+import { receiptUrl, removeReceipt, uploadReceipt } from './receipts.js'
 import {
   CATEGORIES, MODES, balance, isoDay, monthOf, monthSummary, normalizeExpense, normalizeMoney,
   paymentHistory, recentMonths, shiftMonth, toAmount,
@@ -50,7 +51,33 @@ export function ExpensesView() {
     setForm({ ...blank, paidBy: form.paidBy, date: form.date, category: form.category })
     setMonth(monthOf(item.date))
   }
-  const remove = (id) => setItems((p) => p.filter((x) => x.id !== id))
+  const remove = (id) => {
+    const item = items.find((x) => x.id === id)
+    setItems((p) => p.filter((x) => x.id !== id))
+    for (const photo of item?.receipts || []) removeReceipt(photo).catch(() => {})
+  }
+  const [busyPhoto, setBusyPhoto] = useState(null)
+  const [photoError, setPhotoError] = useState({})
+  const [viewing, setViewing] = useState(null)
+  const addPhoto = async (id, file) => {
+    if (!file) return
+    setBusyPhoto(id)
+    setPhotoError((e) => ({ ...e, [id]: '' }))
+    try {
+      const photo = await uploadReceipt(file)
+      setItems((p) => p.map((x) => (x.id === id ? { ...x, receipts: [...(x.receipts || []), photo] } : x)))
+    } catch (error) {
+      const msg = error.status === 401 ? c.photoSignIn : (c.photoErrors[error.message] || c.photoFailed)
+      setPhotoError((e) => ({ ...e, [id]: msg }))
+    } finally {
+      setBusyPhoto(null)
+    }
+  }
+  const dropPhoto = async (id, photo) => {
+    setItems((p) => p.map((x) => (x.id === id ? { ...x, receipts: (x.receipts || []).filter((r) => r !== photo) } : x)))
+    setViewing(null)
+    removeReceipt(photo).catch(() => {})
+  }
   const settle = (id) => {
     const today = isoDay()
     setItems((p) => p.map((x) => (x.id === id ? { ...x, settled: true, settledAt: today } : x)))
@@ -87,6 +114,17 @@ export function ExpensesView() {
 
   return (
     <div className="app-panel money">
+      {viewing && (
+        <div className="q-overlay" onClick={() => setViewing(null)}>
+          <div className="receipt-view" onClick={(e) => e.stopPropagation()}>
+            <img src={receiptUrl(viewing.photo)} alt={c.photoAlt} />
+            <div className="receipt-view-actions">
+              <button className="btn ghost sm" type="button" onClick={() => dropPhoto(viewing.id, viewing.photo)}><Trash2 size={15} /> {c.photoRemove}</button>
+              <button className="btn primary sm" type="button" onClick={() => setViewing(null)}><X size={15} /> {c.close}</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="panel-head">
         <h2>{c.title}</h2>
         <div className="money-mode">
@@ -131,6 +169,19 @@ export function ExpensesView() {
                   ? <span className="meta">{it.settledAt ? fill(c.settledOn, { date: day(it.settledAt) }) : c.markSettled}</span>
                   : <button className="btn ghost sm" type="button" onClick={() => settle(it.id)}>{c.markSettled}</button>)}
                 <button className="btn ghost" type="button" onClick={() => remove(it.id)} aria-label={c.remove}><Trash2 size={16} /></button>
+              </div>
+              <div className="receipt-strip">
+                {(it.receipts || []).map((photo) => (
+                  <button key={photo} type="button" className="receipt-thumb" onClick={() => setViewing({ id: it.id, photo })} aria-label={c.photoOpen}>
+                    <img src={receiptUrl(photo)} alt={c.photoAlt} loading="lazy" />
+                  </button>
+                ))}
+                <label className={`btn ghost sm receipt-add ${busyPhoto === it.id ? 'busy' : ''}`}>
+                  <Camera size={15} /> {busyPhoto === it.id ? c.photoSending : c.photoAdd}
+                  <input type="file" accept="image/*" hidden disabled={busyPhoto === it.id}
+                    onChange={(e) => { addPhoto(it.id, e.target.files?.[0]); e.target.value = '' }} />
+                </label>
+                {photoError[it.id] && <span className="receipt-error">{photoError[it.id]}</span>}
               </div>
               <NoteThread channel={`expense:${it.id}`} title={c.notes} />
             </div>

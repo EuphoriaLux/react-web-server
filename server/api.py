@@ -8,6 +8,7 @@ parent with the 6-character code. The plan is one JSON document.
 Plans made before accounts existed still open with their old bearer token
 until that parent signs in and claims the plan.
 """
+import base64
 import hashlib
 import json
 import os
@@ -45,6 +46,10 @@ COOKIE = "cp_session"
 LOGIN_TTL = timedelta(minutes=15)
 SESSION_TTL = timedelta(days=60)
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# Receipt photos. The phone shrinks them to a few hundred KB; nginx refuses bodies over 1 MB.
+RECEIPT_MAX_BYTES = 900_000
+RECEIPT_PLAN_BYTES = 100_000_000
+RECEIPT_PATH = re.compile(r"^/api/receipts/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$")
 
 
 class RateLimiter:
@@ -138,6 +143,17 @@ def _unpack(value):
         except ValueError:
             return value
     return value
+
+
+def image_type(data: bytes):
+    """The real type from the first bytes, whatever the client says."""
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if len(data) > 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
 
 
 def member_from_token(cur, token: str):
@@ -276,6 +292,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/account/export":
             self._export()
             return
+        match = RECEIPT_PATH.match(path)
+        if match:
+            self._get_receipt(match.group(1))
+            return
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -306,6 +326,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/account/delete":
             self._delete_account()
+            return
+        if path == "/api/receipts":
+            self._post_receipt()
+            return
+        self._send(404, {"error": "not found"})
+
+    def do_DELETE(self):
+        if not self._same_origin():
+            self._send(403, {"error": "cross-site request refused"})
+            return
+        match = RECEIPT_PATH.match(self.path.split("?", 1)[0])
+        if match:
+            self._delete_receipt(match.group(1))
             return
         self._send(404, {"error": "not found"})
 
@@ -610,6 +643,19 @@ class Handler(BaseHTTPRequestHandler):
                     (household_id, role),
                 )
                 notes = [self._note(row) for row in cur.fetchall()]
+                cur.execute(
+                    "select id, uploaded_by, content_type, created_at, data from receipts where household_id = %s order by created_at",
+                    (household_id,),
+                )
+                receipts = [
+                    {
+                        "id": str(rid),
+                        "uploaded_by": by,
+                        "created_at": at.astimezone(timezone.utc).isoformat(),
+                        "photo": f"data:{ctype};base64,{base64.b64encode(bytes(data)).decode()}",
+                    }
+                    for rid, by, ctype, at, data in cur.fetchall()
+                ]
                 payload["plan"] = {
                     "code": code,
                     "your_role": role,
@@ -617,6 +663,7 @@ class Handler(BaseHTTPRequestHandler):
                     # The app stores each part as a JSON string. Unpack them so the file is readable.
                     "content": {key: _unpack(value) for key, value in (state or {}).items()},
                     "notes": notes,
+                    "receipt_photos": receipts,
                 }
         body = json.dumps(payload, ensure_ascii=False, indent=2).encode()
         self.send_response(200)
@@ -681,6 +728,81 @@ class Handler(BaseHTTPRequestHandler):
         # Ids only. The journal outlives a lost database, for re-deleting after a restore.
         print(f"account deleted: user {user_id} household {household_id} plan {plan or 'none'}", flush=True)
         self._send(200, {"ok": True, "plan": plan}, cookie=self._cookie("", 0))
+
+    # Receipt photos belong to the plan: both parents of it can see and remove them.
+
+    def _post_receipt(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0") or 0)
+        except ValueError:
+            length = 0
+        if length <= 0:
+            self._send(400, {"error": "no photo"})
+            return
+        if length > RECEIPT_MAX_BYTES:
+            self._send(413, {"error": "this photo is too large"})
+            return
+        data = self.rfile.read(length)
+        kind = image_type(data)
+        if kind is None:
+            self._send(400, {"error": "this file is not a photo"})
+            return
+        with db() as conn, conn.cursor() as cur:
+            member = self._member(cur)
+            if member is None:
+                self._send(401, {"error": "not signed in"})
+                return
+            role, household_id, _ = member
+            # Lock the plan so two uploads at once cannot both pass the cap.
+            cur.execute("select id from households where id = %s for update", (household_id,))
+            cur.execute("select coalesce(sum(size), 0) from receipts where household_id = %s", (household_id,))
+            if cur.fetchone()[0] + len(data) > RECEIPT_PLAN_BYTES:
+                self._send(413, {"error": "your plan has no room for more photos. Remove old ones first."})
+                return
+            cur.execute(
+                """
+                insert into receipts (household_id, uploaded_by, content_type, size, data)
+                values (%s, %s, %s, %s, %s) returning id
+                """,
+                (household_id, role, kind, len(data), psycopg2.Binary(data)),
+            )
+            receipt_id = cur.fetchone()[0]
+        self._send(201, {"id": str(receipt_id)})
+
+    def _get_receipt(self, receipt_id):
+        with db() as conn, conn.cursor() as cur:
+            member = self._member(cur)
+            if member is None:
+                self._send(401, {"error": "not signed in"})
+                return
+            cur.execute(
+                "select content_type, data from receipts where id = %s and household_id = %s",
+                (receipt_id, member[1]),
+            )
+            row = cur.fetchone()
+        if row is None:
+            self._send(404, {"error": "not found"})
+            return
+        content_type, data = row[0], bytes(row[1])
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        # Personal data: keep it out of shared caches, and never run it as a page.
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Content-Security-Policy", "default-src 'none'")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def _delete_receipt(self, receipt_id):
+        with db() as conn, conn.cursor() as cur:
+            member = self._member(cur)
+            if member is None:
+                self._send(401, {"error": "not signed in"})
+                return
+            cur.execute("delete from receipts where id = %s and household_id = %s", (receipt_id, member[1]))
+            gone = cur.rowcount
+        self._send(200 if gone else 404, {"ok": bool(gone)})
 
     def _get_notes(self):
         channel = ""

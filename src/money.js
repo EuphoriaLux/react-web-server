@@ -2,12 +2,13 @@
 //
 // Stored in the shared plan:
 //   cp-expenses  [{ id, desc, amount, paidBy: 'A'|'B'|'account', split: '50'|'A'|'B',
-//                  date: 'YYYY-MM-DD', category, settled, settledAt }]
+//                  date: 'YYYY-MM-DD', category, settled, settledAt, receipts: [photo id] }]
 //   cp-payments  [{ id, kind: 'deposit'|'support', who: 'A'|'B', amount, date, note }]
 //   cp-money     { mode: 'shared'|'own'|'support', monthly: { A, B }, support: { payer, amount }, budget: { [category]: amount } }
 
 export const CATEGORIES = ['food', 'clothes', 'school', 'activities', 'health', 'holidays', 'other']
 export const MODES = ['shared', 'own', 'support']
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export function isoDay(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -34,6 +35,8 @@ export function normalizeExpense(it) {
     split: ['50', 'A', 'B'].includes(it.split) ? it.split : '50',
     date: /^\d{4}-\d{2}-\d{2}$/.test(it.date || '') ? it.date : fromId,
     category: CATEGORIES.includes(it.category) ? it.category : 'other',
+    // Receipt photo ids on the server. Only well-formed ids, since they go into image addresses.
+    receipts: Array.isArray(it.receipts) ? it.receipts.filter((r) => typeof r === 'string' && UUID.test(r)) : [],
   }
 }
 

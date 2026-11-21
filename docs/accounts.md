@@ -70,7 +70,7 @@ Plans and accounts live on the server and are not affected. Browsers keep sign-i
 
 ```bash
 createdb cptest
-psql cptest -f db/schema.sql -f db/accounts.sql
+psql cptest -f db/schema.sql -f db/accounts.sql -f db/receipts.sql
 DATABASE_URL=postgresql:///cptest python3 server/api.py   # prints sign-in links
 npm run dev                                               # proxies /api to the API
 ```

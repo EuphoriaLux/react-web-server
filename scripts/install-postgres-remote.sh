@@ -16,7 +16,7 @@ SSH=(ssh -i "$ADMIN_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-n
 echo "Installing Postgres on $PUBLIC_IP"
 "${SSH[@]}" "ubuntu@$PUBLIC_IP" 'rm -rf /tmp/coparents-install && mkdir -p /tmp/coparents-install/db /tmp/coparents-install/server /tmp/coparents-install/scripts'
 scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes \
-  "$ROOT/db/schema.sql" "$ROOT/db/accounts.sql" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/db/"
+  "$ROOT/db/schema.sql" "$ROOT/db/accounts.sql" "$ROOT/db/receipts.sql" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/db/"
 scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes \
   "$ROOT/server/api.py" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/server/api.py"
 scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes \

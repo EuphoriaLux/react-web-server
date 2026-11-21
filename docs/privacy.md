@@ -17,12 +17,12 @@ Adding analytics, an external script or font, another email or hosting provider,
 
 ## Account deletion
 
-Signed-in parents open **Privacy & account** in the share bar. They can download their data (`GET /api/account/export`, one JSON file with the account, the plan and its notes) and delete their account (`POST /api/account/delete` with `{"confirm": "<their email>"}`).
+Signed-in parents open **Privacy & account** in the share bar. They can download their data (`GET /api/account/export`, one JSON file with the account, the plan, its notes and its receipt photos as data URLs) and delete their account (`POST /api/account/delete` with `{"confirm": "<their email>"}`).
 
 Deleting removes the user, their sessions and their sign-in links at once. What happens to the shared plan:
 
 - **The other parent is still in the plan:** the plan stays with them, with everything both parents entered. It is their record too, and deleting it would destroy the other parent's calendar, expenses and messages. The leaving parent's seat is freed and the invite code changes, so the old code (which the leaving parent knows) stops working. The remaining parent's app picks up the new code on its next sync. A new parent can join with the new code and takes the free seat.
-- **No other parent in the plan:** the plan, its notes and everything in it are deleted.
+- **No other parent in the plan:** the plan, its notes, its receipt photos and everything in it are deleted.
 
 What the leaving parent wrote stays in a kept plan, including their first name in the family details. The notice says so and tells them to ask the other parent, or the operator, to remove something specific.
 
@@ -58,3 +58,7 @@ A restored plan that was kept by the other parent gets back its old invite code.
 ```bash
 sudo -u postgres psql -d coparents -c "update households set code = upper(substr(md5(random()::text), 1, 6)) where id in (select household_id from account_deletions where not household_deleted);"
 ```
+
+## Receipt photos
+
+Photos live in the `receipts` table (`db/receipts.sql`), one row per photo, tied to the plan and deleted with it. The phone shrinks each photo to a JPEG under 800 KB (which also drops its location data); the API refuses more than 900 KB per photo and 100 MB per plan (`RECEIPT_MAX_BYTES`, `RECEIPT_PLAN_BYTES` in `server/api.py`). Only parents of that plan can open or remove a photo. The expense in the shared plan keeps only the photo ids. Photos are in the nightly backups like the rest of the database, so they leave the backups within 14 days of removal.
