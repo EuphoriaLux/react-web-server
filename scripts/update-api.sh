@@ -34,6 +34,10 @@ if [[ ! -f /etc/coparents/app.env ]]; then
   sudo chown root:coparents /etc/coparents/app.env
   sudo chmod 640 /etc/coparents/app.env
 fi
+# Server logs hold IP addresses. Keep them about 14 days, as the privacy notice says.
+sudo install -d /etc/systemd/journald.conf.d
+printf '[Journal]\nMaxRetentionSec=14day\n' | sudo tee /etc/systemd/journald.conf.d/coparents-retention.conf >/dev/null
+sudo systemctl restart systemd-journald
 sudo install -d /etc/systemd/system/coparents-api.service.d
 printf '[Service]\nEnvironmentFile=-/etc/coparents/app.env\n' | sudo tee /etc/systemd/system/coparents-api.service.d/app-env.conf >/dev/null
 sudo systemctl daemon-reload

@@ -5,10 +5,15 @@ import {
   Info, HelpCircle, Calendar, Wallet, MessageSquare, FileText, Plus,
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
 } from 'lucide-react'
+// Fonts are bundled with the app, so no visitor data goes to Google.
+import '@fontsource-variable/dm-sans/opsz.css'
+import '@fontsource-variable/dm-sans/opsz-italic.css'
+import '@fontsource-variable/manrope/wght.css'
 import './style.css'
 import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
+import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -1394,7 +1399,7 @@ function Landing({ onEnter }) {
         <div className="container footer-inner">
           <div className="footer-brand"><span className="logo-mark small"><Heart size={13} strokeWidth={2.4} /></span>CoParents</div>
           <p>{tr.footerTag}</p>
-          <span className="footer-meta">© {new Date().getFullYear()} {tr.footerMeta}</span>
+          <span className="footer-meta">© {new Date().getFullYear()} {tr.footerMeta} · <PrivacyLink /></span>
         </div>
       </footer>
     </div>
@@ -1414,6 +1419,22 @@ function App() {
   useEffect(() => {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
   }, [])
+  // The privacy notice lives at /#privacy, so it can be linked from anywhere.
+  const [privacy, setPrivacy] = useState(() => window.location.hash === PRIVACY_HASH)
+  useEffect(() => {
+    const onHash = () => {
+      const open = window.location.hash === PRIVACY_HASH
+      setPrivacy(open)
+      if (open) window.scrollTo(0, 0)
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+  const closePrivacy = useCallback(() => {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    setPrivacy(false)
+  }, [])
+  if (privacy) return <PrivacyPage onBack={closePrivacy} />
   if (mode === 'app') return <AppShell onExit={() => setMode('landing')} />
   return <Landing onEnter={() => setMode('app')} />
 }

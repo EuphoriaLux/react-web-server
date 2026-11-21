@@ -65,7 +65,7 @@ class ApiTest(unittest.TestCase):
         api.LIMITS = api.RateLimiter()
         self.links.clear()
         with api.db() as conn, conn.cursor() as cur:
-            cur.execute("truncate households, users, login_tokens cascade")
+            cur.execute("truncate households, users, login_tokens, account_deletions cascade")
 
     def sign_in(self, email):
         client = Client(self.base)
@@ -209,6 +209,83 @@ class ApiTest(unittest.TestCase):
         token = self.links["eve@example.com"].split("?login=", 1)[1]
         status, body = client.call("POST", "/api/auth/verify", {"token": token})
         self.assertEqual((status, body["household"]), (200, None))
+
+    def plan_for_two(self):
+        anna, _, _ = self.sign_in("anna@example.com")
+        ben, _, _ = self.sign_in("ben@example.com")
+        code = anna.call("POST", "/api/households", {})[1]["code"]
+        ben.call("POST", "/api/households/join", {"code": code})
+        anna.call("PUT", "/api/state", {"state": {"cp-family": "{\"children\": [\"Lea\"]}"}})
+        anna.call("POST", "/api/notes", {"fact": "Shoes are in the bag", "urgent": True})
+        return anna, ben, code
+
+    def count(self, table):
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute(f"select count(*) from {table}")
+            return cur.fetchone()[0]
+
+    def test_export_holds_account_plan_and_notes(self):
+        anna, _, code = self.plan_for_two()
+        status, data = anna.call("GET", "/api/account/export")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["account"]["email"], "anna@example.com")
+        self.assertEqual(data["plan"]["code"], code)
+        self.assertEqual(data["plan"]["content"]["cp-family"], {"children": ["Lea"]})
+        self.assertEqual([n["fact"] for n in data["plan"]["notes"]], ["Shoes are in the bag"])
+        self.assertEqual(Client(self.base).call("GET", "/api/account/export")[0], 401)
+
+    def test_delete_needs_the_email_typed(self):
+        anna, _, _ = self.sign_in("anna@example.com")
+        self.assertEqual(anna.call("POST", "/api/account/delete", {"confirm": "nope"})[0], 400)
+        self.assertEqual(anna.call("POST", "/api/account/delete", {})[0], 400)
+        self.assertEqual(anna.call("GET", "/api/me")[0], 200)
+        self.assertEqual(Client(self.base).call("POST", "/api/account/delete", {"confirm": "anna@example.com"})[0], 401)
+
+    def test_deleting_one_parent_leaves_the_plan_with_the_other(self):
+        anna, ben, code = self.plan_for_two()
+        old_cookie = anna.cookie
+        status, body = anna.call("POST", "/api/account/delete", {"confirm": "Anna@Example.com"})
+        self.assertEqual((status, body["plan"]), (200, "kept"))
+        self.assertIsNone(anna.cookie)
+        anna.cookie = old_cookie
+        self.assertEqual(anna.call("GET", "/api/me")[0], 401)
+        self.assertEqual(self.count("users"), 1)
+        self.assertEqual(self.count("login_tokens where email = 'anna@example.com'"), 0)
+        # Ben keeps everything, under a new code the old parent does not know.
+        status, state = ben.call("GET", "/api/state")
+        self.assertEqual(status, 200)
+        self.assertIn("cp-family", state["state"])
+        self.assertNotEqual(state["code"], code)
+        self.assertEqual(len(ben.call("GET", "/api/notes")[1]["notes"]), 1)
+        # Signing up again with the old code does not get back in.
+        again, _, _ = self.sign_in("anna@example.com")
+        self.assertEqual(again.call("POST", "/api/households/join", {"code": code})[0], 404)
+        # A new parent can take the free seat with the new code.
+        status, joined = again.call("POST", "/api/households/join", {"code": state["code"]})
+        self.assertEqual((status, joined["role"]), (200, "A"))
+        self.assertEqual(self.count("account_deletions"), 1)
+
+    def test_last_parent_deleting_removes_the_plan(self):
+        anna, ben, _ = self.plan_for_two()
+        self.assertEqual(ben.call("POST", "/api/account/delete", {"confirm": "ben@example.com"})[1]["plan"], "kept")
+        status, body = anna.call("POST", "/api/account/delete", {"confirm": "anna@example.com"})
+        self.assertEqual((status, body["plan"]), (200, "deleted"))
+        for table in ("users", "households", "members", "plans", "notes", "sessions"):
+            self.assertEqual(self.count(table), 0, table)
+        self.assertEqual(self.count("account_deletions where household_deleted"), 1)
+
+    def test_delete_without_a_plan(self):
+        cara, _, _ = self.sign_in("cara@example.com")
+        status, body = cara.call("POST", "/api/account/delete", {"confirm": "cara@example.com"})
+        self.assertEqual((status, body["plan"]), (200, None))
+        self.assertEqual(self.count("users"), 0)
+
+    def test_cross_site_delete_is_refused(self):
+        anna, _, _ = self.sign_in("anna@example.com")
+        status, _ = anna.call("POST", "/api/account/delete", {"confirm": "anna@example.com"}, {"Origin": "https://evil.example"})
+        self.assertEqual(status, 403)
+        self.assertEqual(self.count("users"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

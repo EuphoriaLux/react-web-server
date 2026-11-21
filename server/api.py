@@ -131,6 +131,15 @@ def deliver_at(urgent: bool, now: datetime | None = None):
     return morning.astimezone(timezone.utc)
 
 
+def _unpack(value):
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except ValueError:
+            return value
+    return value
+
+
 def member_from_token(cur, token: str):
     """Plans made before accounts: the bearer token is the member."""
     cur.execute(
@@ -264,6 +273,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/notes":
             self._get_notes()
             return
+        if path == "/api/account/export":
+            self._export()
+            return
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
@@ -291,6 +303,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path == "/api/notes":
             self._post_note()
+            return
+        if path == "/api/account/delete":
+            self._delete_account()
             return
         self._send(404, {"error": "not found"})
 
@@ -473,17 +488,19 @@ class Handler(BaseHTTPRequestHandler):
                     (household_id,),
                 )
                 roles = {item[0] for item in cur.fetchall()}
-                if "B" in roles:
+                if len(roles) >= 2:
                     self._send(409, {"error": "this plan already has two parents"})
                     return
+                # Usually B. When parent A deleted their account, the new parent takes A's seat.
+                role = "A" if "B" in roles else "B"
                 cur.execute(
-                    "insert into members (household_id, role, user_id) values (%s, 'B', %s)",
-                    (household_id, user[0]),
+                    "insert into members (household_id, role, user_id) values (%s, %s, %s)",
+                    (household_id, role, user[0]),
                 )
         except psycopg2.errors.UniqueViolation:
             self._send(409, {"error": "this plan already has two parents"})
             return
-        self._send(200, {"code": code, "role": "B"})
+        self._send(200, {"code": code, "role": role})
 
     def _claim(self):
         """Attach a plan made before accounts to the signed-in parent."""
@@ -563,6 +580,107 @@ class Handler(BaseHTTPRequestHandler):
                 (psycopg2.extras.Json(state), now, household_id),
             )
         self._send(200, {"code": code, "updated_at": now.isoformat()})
+
+    def _export(self):
+        """Everything stored for the signed-in parent, as one JSON file."""
+        with db() as conn, conn.cursor() as cur:
+            user = self._user(cur)
+            if user is None:
+                self._send(401, {"error": "not signed in"})
+                return
+            cur.execute("select created_at from users where id = %s", (user[0],))
+            created_at = cur.fetchone()[0]
+            payload = {
+                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "account": {"email": user[1], "created_at": created_at.astimezone(timezone.utc).isoformat()},
+                "plan": None,
+            }
+            member = member_from_user(cur, user[0])
+            if member is not None:
+                role, household_id, code = member
+                cur.execute("select state, updated_at from plans where household_id = %s", (household_id,))
+                state, updated_at = cur.fetchone()
+                cur.execute(
+                    """
+                    select id, author, channel, fact, ask, by_when, urgent, sent_at, deliver_at
+                    from notes
+                    where household_id = %s and (deliver_at <= now() or author = %s)
+                    order by sent_at
+                    """,
+                    (household_id, role),
+                )
+                notes = [self._note(row) for row in cur.fetchall()]
+                payload["plan"] = {
+                    "code": code,
+                    "your_role": role,
+                    "updated_at": updated_at.astimezone(timezone.utc).isoformat(),
+                    # The app stores each part as a JSON string. Unpack them so the file is readable.
+                    "content": {key: _unpack(value) for key, value in (state or {}).items()},
+                    "notes": notes,
+                }
+        body = json.dumps(payload, ensure_ascii=False, indent=2).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Disposition", 'attachment; filename="coparents-my-data.json"')
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _delete_account(self):
+        """Delete the signed-in parent's account.
+
+        The shared plan also holds the other parent's records, so it stays with them
+        when they are still in it, and gets a new invite code. A plan with no other
+        parent is deleted with everything in it. See docs/privacy.md.
+        """
+        try:
+            body = self._read_json()
+        except ValueError:
+            self._send(400, {"error": "bad request"})
+            return
+        confirm = str(body.get("confirm", "")).strip().lower()
+        with db() as conn, conn.cursor() as cur:
+            user = self._user(cur)
+            if user is None:
+                self._send(401, {"error": "not signed in"})
+                return
+            user_id, email = user
+            if confirm != email:
+                self._send(400, {"error": "type your email address to confirm"})
+                return
+            plan = None
+            household_id = None
+            household_deleted = False
+            member = member_from_user(cur, user_id)
+            if member is not None:
+                household_id = member[1]
+                # Lock the plan so two parents deleting at once cannot leave it with nobody.
+                cur.execute("select id from households where id = %s for update", (household_id,))
+                cur.execute(
+                    "select count(*) from members where household_id = %s and user_id is distinct from %s",
+                    (household_id, user_id),
+                )
+                if cur.fetchone()[0] == 0:
+                    cur.execute("delete from households where id = %s", (household_id,))
+                    household_deleted = True
+                    plan = "deleted"
+                else:
+                    cur.execute("delete from members where user_id = %s", (user_id,))
+                    # The old code is known to the parent who left. A new one keeps them out.
+                    cur.execute("update households set code = %s where id = %s", (new_code(cur), household_id))
+                    plan = "kept"
+            cur.execute("delete from login_tokens where email = %s", (email,))
+            cur.execute("delete from users where id = %s", (user_id,))
+            # Ids only, no email: lets a restored backup be cleaned again. Kept 30 days.
+            cur.execute(
+                "insert into account_deletions (user_id, household_id, household_deleted) values (%s, %s, %s)",
+                (user_id, household_id, household_deleted),
+            )
+            cur.execute("delete from account_deletions where deleted_at < now() - interval '30 days'")
+        # Ids only. The journal outlives a lost database, for re-deleting after a restore.
+        print(f"account deleted: user {user_id} household {household_id} plan {plan or 'none'}", flush=True)
+        self._send(200, {"ok": True, "plan": plan}, cookie=self._cookie("", 0))
 
     def _get_notes(self):
         channel = ""

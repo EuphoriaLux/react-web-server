@@ -33,12 +33,22 @@ alter table members add column if not exists user_id uuid references users(id) o
 alter table members alter column token_hash drop not null;
 create unique index if not exists members_user on members (user_id) where user_id is not null;
 
+-- Account deletions, ids only (no email). Nightly backups keep 14 days, so after a
+-- restore these rows say what to delete again. See docs/privacy.md. Pruned after 30 days.
+create table if not exists account_deletions (
+  user_id uuid not null,
+  household_id uuid,
+  household_deleted boolean not null default false,
+  deleted_at timestamptz not null default now()
+);
+
 do $$
 begin
   if exists (select from pg_roles where rolname = 'coparents') then
     alter table users owner to coparents;
     alter table login_tokens owner to coparents;
     alter table sessions owner to coparents;
+    alter table account_deletions owner to coparents;
   end if;
 end
 $$;
