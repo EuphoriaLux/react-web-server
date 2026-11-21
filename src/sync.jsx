@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { AccountPanel, PrivacyLink, usePrivacyCopy } from './privacy.jsx'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses',
@@ -10,6 +11,15 @@ const ROLE_KEY = 'cp-role'
 const EMAIL_KEY = 'cp-email'
 const STAMP_KEY = 'cp-sync-stamp'
 const BASE_KEY = 'cp-sync-base'
+// Plan data kept on the phone. Removed when the account leaves this phone.
+const PLAN_KEYS = [...KEYS, 'cp-writer', 'cp-notes', 'cp-family-later']
+
+function forgetPlanHere() {
+  for (const key of PLAN_KEYS) localStorage.removeItem(key)
+  for (const key of [TOKEN_KEY, CODE_KEY, ROLE_KEY, EMAIL_KEY]) localStorage.removeItem(key)
+  sessionStorage.removeItem(STAMP_KEY)
+  sessionStorage.removeItem(BASE_KEY)
+}
 
 export const SYNC_KEYS = KEYS
 
@@ -119,6 +129,8 @@ export function ShareBar({ onSync }) {
   const [join, setJoin] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
+  const [account, setAccount] = useState(false)
+  const pc = usePrivacyCopy().ui
 
   useEffect(() => {
     if (!code) return undefined
@@ -142,6 +154,11 @@ export function ShareBar({ onSync }) {
         if (remote.role) {
           localStorage.setItem(ROLE_KEY, remote.role)
           setRole(remote.role)
+        }
+        // The code changes when the other parent deletes their account.
+        if (remote.code && remote.code !== localStorage.getItem(CODE_KEY)) {
+          localStorage.setItem(CODE_KEY, remote.code)
+          setCode(remote.code)
         }
 
         // First sync after joining or opening a session with existing remote data
@@ -256,6 +273,13 @@ export function ShareBar({ onSync }) {
         if (error.fromLink) setStatus(error.message)
         // Offline or a server hiccup is not a sign-out: keep what this phone knows.
         if (error.status !== 401 && !error.fromLink) return
+        // This phone was signed in, and the session is gone: it ended, was signed out
+        // elsewhere, or the account was deleted. The plan lives in the account, so take
+        // it off this phone, as signing out does.
+        if (localStorage.getItem(EMAIL_KEY) && localStorage.getItem(CODE_KEY) && !localStorage.getItem(TOKEN_KEY)) {
+          forgetPlanHere()
+          if (onSync) onSync()
+        }
         localStorage.removeItem(EMAIL_KEY)
         setEmail(null)
         openPlan(null)
@@ -306,22 +330,35 @@ export function ShareBar({ onSync }) {
     } catch {
       // Signing out on this phone still happens below.
     }
+    leaveThisPhone('Signed out on this phone. Your plan is saved to your account.', false)
+  }
+
+  // A shared plan belongs to the account. Take it off this phone, so the next
+  // person to sign in here neither sees it nor uploads it as their own plan.
+  function leaveThisPhone(message, everything) {
     whoPromise = null
-    // A shared plan belongs to the account. Take it off this phone, so the next
-    // person to sign in here neither sees it nor uploads it as their own plan.
     const hadPlan = Boolean(localStorage.getItem(CODE_KEY))
-    if (hadPlan) for (const key of [...KEYS, 'cp-writer', 'cp-notes', 'cp-family-later']) localStorage.removeItem(key)
+    if (hadPlan || everything) forgetPlanHere()
     for (const key of [TOKEN_KEY, CODE_KEY, ROLE_KEY, EMAIL_KEY]) localStorage.removeItem(key)
     sessionStorage.removeItem(STAMP_KEY)
     sessionStorage.removeItem(BASE_KEY)
-    if (hadPlan && onSync) onSync()
+    if ((hadPlan || everything) && onSync) onSync()
     setCode('')
     setRole('')
     setEmail(null)
     setSent('')
+    setAccount(false)
     setBusy(false)
-    setStatus('Signed out on this phone. Your plan is saved to your account.')
+    setStatus(message)
   }
+
+  function accountDeleted(message) {
+    // Nothing of the account stays on this phone, not even a plan never shared.
+    leaveThisPhone(message, true)
+  }
+
+  const accountButton = <button className="btn ghost sm" type="button" onClick={() => setAccount(true)} disabled={busy}>{pc.account}</button>
+  const accountPanel = account && <AccountPanel email={email} onClose={() => setAccount(false)} onDeleted={accountDeleted} />
 
   async function create() {
     setBusy(true)
@@ -400,6 +437,7 @@ export function ShareBar({ onSync }) {
             <button className="btn primary sm" type="submit" disabled={busy || !address.trim()}>Email me a link</button>
           </form>
         )}
+        <p className="share-privacy">{pc.signInNote} <PrivacyLink /></p>
         {status && <p className="lock-hint">{status}</p>}
       </div>
     )
@@ -417,8 +455,10 @@ export function ShareBar({ onSync }) {
           <input value={join} onChange={(event) => setJoin(event.target.value)} placeholder="Enter code" maxLength={6} aria-label="Invite code" />
           <button className="btn ghost sm" type="submit" disabled={busy || join.trim().length < 6}>Join</button>
         </form>
+        {accountButton}
         <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>Sign out</button>
         {status && <p className="lock-hint">{status}</p>}
+        {accountPanel}
       </div>
     )
   }
@@ -430,8 +470,10 @@ export function ShareBar({ onSync }) {
         <p>You are {role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam')}, signed in as {email}. The other parent signs in and joins with this code.</p>
       </div>
       <button className="btn ghost sm" type="button" onClick={copy}>Copy code</button>
+      {accountButton}
       <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>Sign out</button>
       {status && <p className="lock-hint">{status}</p>}
+      {accountPanel}
     </div>
   )
 }

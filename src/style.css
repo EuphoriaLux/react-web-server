@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Manrope:wght@500;600;700;800&display=swap');
 
 :root {
   --ink: #0c1f38;
@@ -15,8 +14,8 @@
   --radius: 18px;
   --shadow: 0 22px 50px -22px rgba(12, 31, 56, 0.2);
   --shadow-soft: 0 12px 32px -16px rgba(12, 31, 56, 0.12);
-  --font: 'DM Sans', system-ui, sans-serif;
-  --display: 'Manrope', system-ui, sans-serif;
+  --font: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  --display: 'Manrope Variable', 'Manrope', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -978,3 +977,27 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .family-parents { font-weight: 700; color: var(--ink-soft); margin: 0 0 10px; }
 .family-health-text { white-space: pre-wrap; }
 .family-papers p { margin: 4px 0; }
+
+/* ─── Privacy notice and account ─── */
+.privacy-page { min-height: 100vh; background: var(--surface, #fff); padding: 24px 16px 64px; }
+.privacy-inner { max-width: 720px; margin: 0 auto; }
+.privacy-inner h1 { font-size: clamp(1.8rem, 5vw, 2.4rem); margin: 20px 0 6px; }
+.privacy-inner h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+.privacy-inner p, .privacy-inner li { color: var(--ink-soft); line-height: 1.6; }
+.privacy-inner ul { padding-left: 20px; margin: 0 0 8px; display: grid; gap: 6px; }
+.privacy-inner section + .btn, .privacy-inner section:last-of-type { margin-bottom: 28px; }
+.privacy-inner a { color: var(--teal-deep); overflow-wrap: anywhere; }
+.privacy-date { font-size: 0.85rem; color: var(--muted); }
+.privacy-lead { font-size: 1.05rem; }
+.footer-meta a { color: inherit; text-decoration: underline; }
+.share-bar .share-privacy { flex-basis: 100%; font-size: 12.5px; }
+.share-bar .share-privacy a { color: inherit; text-decoration: underline; }
+.account-panel .account-block { padding: 14px 0; border-top: 1px solid var(--line); display: grid; gap: 6px; justify-items: start; }
+.account-panel .account-hint { color: var(--ink-soft); font-size: 0.85rem; margin: 0; }
+.account-panel .account-danger h4 { color: #991b1b; margin: 0; }
+.account-panel .account-danger p, .account-panel .account-danger li { color: var(--ink-soft); font-size: 0.88rem; margin: 0; }
+.account-panel .account-danger ul { padding-left: 18px; margin: 0; display: grid; gap: 4px; }
+.account-panel .account-danger label { margin: 8px 0 0; }
+.account-panel .account-danger input { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+.btn.danger { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+.btn.danger:disabled { opacity: 0.45; cursor: not-allowed; }
