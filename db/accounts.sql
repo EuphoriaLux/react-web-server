@@ -15,6 +15,9 @@ create table if not exists login_tokens (
   used_at timestamptz
 );
 create index if not exists login_tokens_expires on login_tokens (expires_at);
+-- Set when the link was asked for from a phone holding a plan from before accounts.
+-- Signing in with the link then moves that plan to the account, on any site address.
+alter table login_tokens add column if not exists claim_token_hash text;
 
 create table if not exists sessions (
   token_hash text primary key,

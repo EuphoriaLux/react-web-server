@@ -316,13 +316,25 @@ class Handler(BaseHTTPRequestHandler):
         if not LIMITS.allow(f"mail:{email}", 3, 900) or not LIMITS.allow(f"mail-ip:{self._client_ip()}", 10, 3600):
             self._send(429, {"error": "too many sign-in emails. Try again in a few minutes."})
             return
+        # A phone that holds a plan from before accounts sends its device token along.
+        # The claim rides on the link, so it works even when the link opens on another
+        # site address, where the browser cannot see the old token.
+        legacy = str(body.get("legacy", "")).strip()
         token = secrets.token_urlsafe(32)
         with db() as conn, conn.cursor() as cur:
             cur.execute("delete from login_tokens where expires_at < now() - interval '1 day'")
             cur.execute("delete from sessions where expires_at < now()")
+            claim = None
+            if legacy:
+                cur.execute(
+                    "select 1 from members where token_hash = %s and user_id is null",
+                    (token_hash(legacy),),
+                )
+                if cur.fetchone() is not None:
+                    claim = token_hash(legacy)
             cur.execute(
-                "insert into login_tokens (token_hash, email, expires_at) values (%s, %s, %s)",
-                (token_hash(token), email, datetime.now(timezone.utc) + LOGIN_TTL),
+                "insert into login_tokens (token_hash, email, expires_at, claim_token_hash) values (%s, %s, %s, %s)",
+                (token_hash(token), email, datetime.now(timezone.utc) + LOGIN_TTL, claim),
             )
         try:
             send_login_email(email, f"{APP_URL}/?login={token}")
@@ -349,7 +361,7 @@ class Handler(BaseHTTPRequestHandler):
                 """
                 update login_tokens set used_at = now()
                 where token_hash = %s and used_at is null and expires_at > now()
-                returning email
+                returning email, claim_token_hash
                 """,
                 (token_hash(token),),
             )
@@ -357,7 +369,7 @@ class Handler(BaseHTTPRequestHandler):
             if row is None:
                 self._send(400, {"error": "this sign-in link has expired or was already used"})
                 return
-            email = row[0]
+            email, claim = row
             cur.execute(
                 """
                 insert into users (email) values (%s)
@@ -372,6 +384,12 @@ class Handler(BaseHTTPRequestHandler):
                 (token_hash(session), user_id, datetime.now(timezone.utc) + SESSION_TTL),
             )
             member = member_from_user(cur, user_id)
+            if member is None and claim:
+                cur.execute(
+                    "update members set user_id = %s, token_hash = null where token_hash = %s and user_id is null",
+                    (user_id, claim),
+                )
+                member = member_from_user(cur, user_id)
         self._send(200, self._me_payload(email, member), cookie=self._cookie(session, int(SESSION_TTL.total_seconds())))
 
     def _auth_logout(self):

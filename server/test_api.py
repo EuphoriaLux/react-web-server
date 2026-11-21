@@ -182,6 +182,33 @@ class ApiTest(unittest.TestCase):
         ben, _, _ = self.sign_in("ben@example.com")
         self.assertEqual(ben.call("POST", "/api/households/claim", {"token": legacy})[0], 404)
 
+    def test_plan_from_before_accounts_follows_the_link_to_another_site(self):
+        legacy = "old-site-device-token"
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("insert into households (code) values ('OLDTWO') returning id")
+            household_id = cur.fetchone()[0]
+            cur.execute(
+                "insert into members (household_id, role, token_hash) values (%s, 'B', %s)",
+                (household_id, api.token_hash(legacy)),
+            )
+            cur.execute("insert into plans (household_id) values (%s)", (household_id,))
+        old_site = Client(self.base)
+        status, _ = old_site.call("POST", "/api/auth/request", {"email": "ben@example.com", "legacy": legacy})
+        self.assertEqual(status, 200)
+        token = self.links["ben@example.com"].split("?login=", 1)[1]
+        # The link opens in a browser that has never seen the device token.
+        new_site = Client(self.base)
+        status, body = new_site.call("POST", "/api/auth/verify", {"token": token})
+        self.assertEqual((status, body["household"]), (200, {"role": "B", "code": "OLDTWO"}))
+        self.assertEqual(new_site.call("GET", "/api/state")[0], 200)
+        self.assertEqual(old_site.call("GET", "/api/state", headers={"Authorization": f"Bearer {legacy}"})[0], 401)
+
+    def test_unknown_device_token_claims_nothing(self):
+        client = Client(self.base)
+        client.call("POST", "/api/auth/request", {"email": "eve@example.com", "legacy": "made-up"})
+        token = self.links["eve@example.com"].split("?login=", 1)[1]
+        status, body = client.call("POST", "/api/auth/verify", {"token": token})
+        self.assertEqual((status, body["household"]), (200, None))
 
 if __name__ == "__main__":
     unittest.main()

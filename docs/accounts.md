@@ -11,7 +11,9 @@ Limits: 3 sign-in emails per address per 15 minutes, 10 per network address per 
 
 ## Plans made before accounts
 
-Phones that created or joined a plan before this change hold a device token. They keep syncing with it. When that parent signs in on the same phone, the plan moves to their account and the old token stops working.
+Phones that created or joined a plan before this change hold a device token. They keep syncing with it. When that parent asks for a sign-in link from that phone, the plan moves to their account as soon as they open the link, even if the link opens on a different site address. The old token then stops working.
+
+Signing out removes the shared plan from the phone. It stays in the account.
 
 ## Server setup
 

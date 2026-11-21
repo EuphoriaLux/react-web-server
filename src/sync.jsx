@@ -287,7 +287,10 @@ export function ShareBar({ onSync }) {
     setStatus('')
     try {
       const to = address.trim()
-      await api('/api/auth/request', { method: 'POST', body: JSON.stringify({ email: to }) })
+      // A plan made before accounts travels with the link, so it is still claimed
+      // when the link opens on another site address than this one.
+      const legacy = localStorage.getItem(TOKEN_KEY) || undefined
+      await api('/api/auth/request', { method: 'POST', body: JSON.stringify({ email: to, legacy }) })
       setSent(to)
     } catch (error) {
       setStatus(error.message)
@@ -304,15 +307,20 @@ export function ShareBar({ onSync }) {
       // Signing out on this phone still happens below.
     }
     whoPromise = null
+    // A shared plan belongs to the account. Take it off this phone, so the next
+    // person to sign in here neither sees it nor uploads it as their own plan.
+    const hadPlan = Boolean(localStorage.getItem(CODE_KEY))
+    if (hadPlan) for (const key of [...KEYS, 'cp-writer', 'cp-notes']) localStorage.removeItem(key)
     for (const key of [TOKEN_KEY, CODE_KEY, ROLE_KEY, EMAIL_KEY]) localStorage.removeItem(key)
     sessionStorage.removeItem(STAMP_KEY)
     sessionStorage.removeItem(BASE_KEY)
+    if (hadPlan && onSync) onSync()
     setCode('')
     setRole('')
     setEmail(null)
     setSent('')
     setBusy(false)
-    setStatus('Signed out on this phone. The plan is still on the server.')
+    setStatus('Signed out on this phone. Your plan is saved to your account.')
   }
 
   async function create() {
@@ -326,6 +334,7 @@ export function ShareBar({ onSync }) {
       const localState = snapshot()
       const saved = await api('/api/state', { method: 'PUT', body: JSON.stringify({ state: localState }) })
       writeBase(localState, saved.updated_at)
+      whoPromise = Promise.resolve({ email, household: { code: created.code, role: created.role } })
       setCode(created.code)
       setRole(created.role)
       setStatus('Plan created. Send the code to the other parent.')
@@ -350,6 +359,7 @@ export function ShareBar({ onSync }) {
       localStorage.setItem(CODE_KEY, joined.code)
       localStorage.setItem(ROLE_KEY, joined.role)
       localStorage.setItem('cp-writer', joined.role)
+      whoPromise = Promise.resolve({ email, household: { code: joined.code, role: joined.role } })
       setCode(joined.code)
       setRole(joined.role)
       setStatus('Joined. Loading the shared plan.')
