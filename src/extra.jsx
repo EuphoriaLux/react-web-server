@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLang } from './main.jsx'
+import { FamilyPrompt, TodayActivities, PapersFamilyCard, openFamilySetup, childrenAreWith, useFamilyCopy } from './family.jsx'
 
 function load(key, fallback) {
   try {
@@ -266,13 +267,13 @@ export function TodayBoard() {
   const [locked] = useState(() => load('cp-locked', {}))
   const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
   const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
-  const [profile, setProfile] = useState(() => load('cp-profile', DEFAULT_PROFILE))
-  const [editing, setEditing] = useState(false)
+  const [profile] = useState(() => load('cp-profile', DEFAULT_PROFILE))
+  const fc = useFamilyCopy()
+  const many = childrenAreWith()
   const n = { A: profile.nameA || 'Alex', B: profile.nameB || 'Sam', child: profile.child || 'Noa' }
   useEffect(() => { save('cp-custody', custody) }, [custody])
   useEffect(() => { save('cp-swaps', swaps) }, [swaps])
   useEffect(() => { save('cp-writer', writer) }, [writer])
-  useEffect(() => { save('cp-profile', profile) }, [profile])
   const today = useMemo(() => new Date(), [])
   const todayKey = isoDate(today)
   const who = custody[todayKey]
@@ -295,13 +296,15 @@ export function TodayBoard() {
   return (
     <div className="app-panel today-home">
       <p className="hand-kicker">{c.today}</p>
-      <h2>{who === 'A' || who === 'B' ? `${n.child} ${c.with} ${label(who)}` : c.open}</h2>
+      <h2>{who === 'A' || who === 'B' ? `${n.child} ${many ? fc.areWith : c.with} ${label(who)}` : c.open}</h2>
+      <FamilyPrompt />
       {typeof window !== 'undefined' && !window.matchMedia('(display-mode: standalone)').matches && <p className="install-hint">{c.install}</p>}
       <article className="today-card">
         <span>{c.next}</span>
         <strong>{change ? pretty(change.date, lang) : c.none}</strong>
         {change && <p>{label(change.from)} → {label(change.to)}</p>}
       </article>
+      <TodayActivities />
       <article className="today-card">
         <span>{c.openSwaps}</span>
         <strong>{open.length}</strong>
@@ -314,14 +317,7 @@ export function TodayBoard() {
         ))}
         {load('cp-activity', []).length === 0 && <p className="empty">{c.noActivity}</p>}
       </section>
-      <button type="button" className="btn ghost sm" onClick={() => setEditing((v) => !v)}>{editing ? c.done : c.names}</button>
-      {editing && (
-        <form className="biff" onSubmit={(event) => { event.preventDefault(); setEditing(false) }}>
-          <label>{c.parentA}<input value={profile.nameA} onChange={(event) => setProfile({ ...profile, nameA: event.target.value })} /></label>
-          <label>{c.parentB}<input value={profile.nameB} onChange={(event) => setProfile({ ...profile, nameB: event.target.value })} /></label>
-          <label>{c.child}<input value={profile.child} onChange={(event) => setProfile({ ...profile, child: event.target.value })} /></label>
-        </form>
-      )}
+      <button type="button" className="btn ghost sm" onClick={openFamilySetup}>{fc.family}</button>
       <AskDay custody={custody} setCustody={setCustody} locked={locked} swaps={swaps} setSwaps={setSwaps} writer={writer} setWriter={setWriter} />
     </div>
   )
@@ -857,6 +853,7 @@ export function Papers() {
     <div className="app-panel">
       <div className="panel-head"><h2>{c.papers}</h2></div>
       <p className="q-lead">{c.papersLead}</p>
+      <PapersFamilyCard />
       {docs.length === 0 && <p className="empty">{c.emptyPapers}</p>}
       {docs.map((item) => <article key={item.id} className="fiscal-card"><h3>{item.title}</h3><p>{item.note}</p></article>)}
       <form className="add-form" onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); const title = String(data.get('title') || '').trim(); if (!title) return; setDocs([{ id: String(Date.now()), title, note: String(data.get('note') || '') }, ...docs]); event.currentTarget.reset() }}>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses',
-  'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers', 'cp-rules', 'cp-profile', 'cp-activity',
+  'cp-swaps', 'cp-issues', 'cp-docs', 'cp-messages', 'cp-handovers', 'cp-rules', 'cp-profile', 'cp-activity', 'cp-family',
 ]
 const TOKEN_KEY = 'cp-token'
 const CODE_KEY = 'cp-code'
@@ -310,7 +310,7 @@ export function ShareBar({ onSync }) {
     // A shared plan belongs to the account. Take it off this phone, so the next
     // person to sign in here neither sees it nor uploads it as their own plan.
     const hadPlan = Boolean(localStorage.getItem(CODE_KEY))
-    if (hadPlan) for (const key of [...KEYS, 'cp-writer', 'cp-notes']) localStorage.removeItem(key)
+    if (hadPlan) for (const key of [...KEYS, 'cp-writer', 'cp-notes', 'cp-family-later']) localStorage.removeItem(key)
     for (const key of [TOKEN_KEY, CODE_KEY, ROLE_KEY, EMAIL_KEY]) localStorage.removeItem(key)
     sessionStorage.removeItem(STAMP_KEY)
     sessionStorage.removeItem(BASE_KEY)
@@ -338,6 +338,8 @@ export function ShareBar({ onSync }) {
       setCode(created.code)
       setRole(created.role)
       setStatus('Plan created. Send the code to the other parent.')
+      // Straight into the family setup, once, for the parent who made the plan.
+      if (!JSON.parse(localStorage.getItem('cp-family') || '{}').done) window.dispatchEvent(new Event('cp-open-family'))
     } catch (error) {
       setStatus(error.message)
     } finally {

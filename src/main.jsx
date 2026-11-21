@@ -8,6 +8,7 @@ import {
 import './style.css'
 import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
+import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -1157,6 +1158,14 @@ function AppShell({ onExit }) {
   const [tab, setTab] = useState('today')
   const [syncRev, setSyncRev] = useState(0)
   const handleSync = useCallback(() => setSyncRev((n) => n + 1), [])
+  const fc = useFamilyCopy()
+  const [setup, setSetup] = useState(false)
+  useEffect(() => {
+    const open = () => setSetup(true)
+    window.addEventListener('cp-open-family', open)
+    return () => window.removeEventListener('cp-open-family', open)
+  }, [])
+  const closeSetup = useCallback(() => { setSetup(false); setSyncRev((n) => n + 1) }, [])
   const primary = [
     { id: 'today', label: 'Today', Icon: Heart },
     { id: 'handover', label: 'Handover', Icon: Clock },
@@ -1165,6 +1174,7 @@ function AppShell({ onExit }) {
     { id: 'messages', label: tr.tabMsg, Icon: MessageSquare },
   ]
   const extra = [
+    { id: 'family', label: fc.family, Icon: Users },
     { id: 'resolve', label: 'Resolve', Icon: Check },
     { id: 'docs', label: tr.tabDoc, Icon: FileText },
   ]
@@ -1192,9 +1202,11 @@ function AppShell({ onExit }) {
           {tab === 'messages' && <Threads />}
           {tab === 'resolve' && <ResolveBoard />}
           {tab === 'docs' && <Papers />}
+          {tab === 'family' && <FamilyView />}
           {tab === 'deploy' && <DeployLog />}
         </div>
       </main>
+      {setup && <FamilySetup onClose={closeSetup} />}
       <nav className="dock" aria-label="App">
         {primary.map(({ id, label, Icon }) => {
           const on = tab === id

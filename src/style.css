@@ -940,3 +940,41 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
   .app-main { padding: 14px 12px 96px; }
 }
 
+
+/* ─── Family setup ─── */
+.family-steps { list-style: none; display: flex; gap: 6px; padding: 0; margin: 4px 0 14px; }
+.family-steps li { flex: 1; }
+.family-steps button {
+  width: 100%; padding: 8px 4px 6px; border: 0; border-top: 3px solid var(--line); background: none;
+  font: inherit; font-size: 0.78rem; font-weight: 700; color: var(--muted); text-align: left;
+}
+.family-steps li.done button { border-top-color: #99f6e4; color: var(--ink-soft); }
+.family-steps li.on button { border-top-color: var(--teal); color: var(--teal-deep); }
+.family-setup .biff label { margin: 0; }
+.family-setup select, .family-row select {
+  width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 14px; padding: 12px; font: inherit; color: var(--ink); background: #f8fafc;
+}
+.family-row { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 420px) { .family-row { grid-template-columns: 1fr 1fr; } .family-row .narrow { max-width: none; } }
+.family-kids { display: grid; gap: 12px; }
+.family-kid { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px 14px; margin: 0 0 12px; min-width: 0; }
+.family-kid legend { font-weight: 800; padding: 0 6px; }
+.family-chips { flex-direction: row; flex-wrap: wrap; }
+.family-chips button { padding: 9px 12px; }
+.family-remove { margin-top: 10px; }
+.family-health { margin-bottom: 8px; }
+.family-note { font-size: 0.85rem; color: var(--ink-soft); background: var(--teal-soft); border-radius: 12px; padding: 10px 12px; margin: 8px 0 0; }
+.q-card label.family-check { display: flex; gap: 10px; align-items: flex-start; font-weight: 600; margin-top: 12px; }
+.family-check input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.family-actions { display: flex; align-items: center; gap: 8px; position: sticky; bottom: -28px; background: white; padding: 12px 0 4px; }
+.family-spacer { flex: 1; }
+.family-banner {
+  display: grid; gap: 10px; background: var(--teal-soft); border-radius: 18px; padding: 14px 16px; margin-bottom: 12px;
+}
+.family-banner p { margin: 4px 0 0; color: var(--ink-soft); }
+.family-banner.confirm { background: #f8fafc; border: 1px solid #99f6e4; }
+.family-banner.confirm .today-card { background: white; }
+.family-banner-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.family-parents { font-weight: 700; color: var(--ink-soft); margin: 0 0 10px; }
+.family-health-text { white-space: pre-wrap; }
+.family-papers p { margin: 4px 0; }
