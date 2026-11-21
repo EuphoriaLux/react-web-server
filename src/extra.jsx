@@ -221,7 +221,7 @@ const COPY = {
     settled: 'Beglach', markSettled: 'Als beglach markéieren', install: 'Op den Home-Écran setzen, fir spéider Erënnerungen.',
   },
 }
-function useCopy() {
+export function useCopy() {
   const { lang } = useLang()
   return COPY[lang] || COPY.en
 }

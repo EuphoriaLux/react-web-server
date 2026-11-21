@@ -45,7 +45,7 @@ export const PRIVACY_COPY = {
         h: 'What we store',
         list: [
           'Your account: your email address, the date you signed up, and your sign-in session (a random code in a cookie, valid 60 days).',
-          'Your shared plan: what you and the other parent enter. That is the calendar and handovers, expenses, messages and notes, document titles and notes, and the family details from the setup questions (children\'s first names and year of birth, crèche, maison relais or school, activities, how care is shared).',
+          'Your shared plan: what you and the other parent enter. That is the calendar and handovers, expenses (with dates and categories), payments into a shared account or child support payments and their dates, an agreed budget, messages and notes, document titles and notes, and the family details from the setup questions (children\'s first names and year of birth, crèche, maison relais or school, activities, how care is shared).',
           'Health notes, only if you write one. This is health information about your child, which the law protects more strictly. Write only what the other parent and caregivers need to know day to day.',
           'Server logs: the network (IP) address, time and address of each request, to keep the service safe and fix faults.',
           'On your phone or computer: the app keeps a copy of your plan and your language in the browser, so it also works offline.',
@@ -149,7 +149,7 @@ export const PRIVACY_COPY = {
         h: 'Ce que nous enregistrons',
         list: [
           'Votre compte : votre adresse e-mail, la date d’inscription et votre session de connexion (un code aléatoire dans un cookie, valable 60 jours).',
-          'Votre planning partagé : ce que vous et l’autre parent saisissez. C’est-à-dire le calendrier et les passages de relais, les dépenses, les messages et notes, les titres et notes de documents, et les informations familiales des questions d’accueil (prénoms et année de naissance des enfants, crèche, maison relais ou école, activités, organisation de la garde).',
+          'Votre planning partagé : ce que vous et l’autre parent saisissez. C’est-à-dire le calendrier et les passages de relais, les dépenses (avec date et catégorie), les versements sur un compte commun ou de pension alimentaire et leurs dates, un budget convenu, les messages et notes, les titres et notes de documents, et les informations familiales des questions d’accueil (prénoms et année de naissance des enfants, crèche, maison relais ou école, activités, organisation de la garde).',
           'Les notes de santé, seulement si vous en écrivez une. Ce sont des données de santé sur votre enfant, que la loi protège plus strictement. N’écrivez que ce que l’autre parent et les personnes qui s’occupent de l’enfant doivent savoir au quotidien.',
           'Les journaux du serveur : l’adresse réseau (IP), l’heure et l’adresse de chaque requête, pour sécuriser le service et corriger les pannes.',
           'Sur votre téléphone ou ordinateur : l’application garde une copie de votre planning et votre langue dans le navigateur, pour fonctionner aussi hors ligne.',
@@ -253,7 +253,7 @@ export const PRIVACY_COPY = {
         h: 'Was wir speichern',
         list: [
           'Ihr Konto: Ihre E-Mail-Adresse, das Datum der Anmeldung und Ihre Sitzung (ein Zufallscode in einem Cookie, 60 Tage gültig).',
-          'Ihr gemeinsamer Plan: was Sie und der andere Elternteil eintragen. Das sind Kalender und Übergaben, Ausgaben, Nachrichten und Notizen, Titel und Notizen von Dokumenten sowie die Familienangaben aus den Einstiegsfragen (Vornamen und Geburtsjahr der Kinder, Crèche, Maison relais oder Schule, Aktivitäten, Aufteilung der Betreuung).',
+          'Ihr gemeinsamer Plan: was Sie und der andere Elternteil eintragen. Das sind Kalender und Übergaben, Ausgaben (mit Datum und Kategorie), Einzahlungen auf ein gemeinsames Konto oder Unterhaltszahlungen und ihre Daten, ein vereinbartes Budget, Nachrichten und Notizen, Titel und Notizen von Dokumenten sowie die Familienangaben aus den Einstiegsfragen (Vornamen und Geburtsjahr der Kinder, Crèche, Maison relais oder Schule, Aktivitäten, Aufteilung der Betreuung).',
           'Gesundheitsnotizen, nur wenn Sie eine schreiben. Das sind Gesundheitsdaten Ihres Kindes, die das Gesetz besonders schützt. Schreiben Sie nur, was der andere Elternteil und Betreuungspersonen im Alltag wissen müssen.',
           'Server-Protokolle: Netzwerkadresse (IP), Zeit und Adresse jeder Anfrage, um den Dienst zu schützen und Fehler zu beheben.',
           'Auf Ihrem Telefon oder Computer: Die App speichert eine Kopie Ihres Plans und Ihre Sprache im Browser, damit sie auch offline funktioniert.',
@@ -357,7 +357,7 @@ export const PRIVACY_COPY = {
         h: 'Wat mir späicheren',
         list: [
           'Äre Kont: Är E-Mail-Adress, den Datum vun der Umeldung an Är Sessioun (en Zoufallscode an engem Cookie, 60 Deeg gülteg).',
-          'Äre gemeinsame Plang: wat Dir an deen aneren Elterendeel aginn. Dat sinn de Kalenner an d’Iwwergaben, d’Ausgaben, d’Messagen an Notizen, Titelen an Notizen vun Dokumenter, an d’Familljeninformatiounen aus den Ufanksfroen (Virnimm a Gebuertsjoer vun de Kanner, Crèche, Maison relais oder Schoul, Aktivitéiten, wéi d’Betreiung opgedeelt ass).',
+          'Äre gemeinsame Plang: wat Dir an deen aneren Elterendeel aginn. Dat sinn de Kalenner an d’Iwwergaben, d’Ausgaben (mat Datum a Kategorie), d’Iwwerweisungen op e gemeinsame Kont oder vun der Pensioun alimentaire an hir Datumen, en ofgemaachte Budget, d’Messagen an Notizen, Titelen an Notizen vun Dokumenter, an d’Familljeninformatiounen aus den Ufanksfroen (Virnimm a Gebuertsjoer vun de Kanner, Crèche, Maison relais oder Schoul, Aktivitéiten, wéi d’Betreiung opgedeelt ass).',
           'Gesondheetsnotizen, just wann Dir eng schreift. Dat si Gesondheetsdaten iwwer Äert Kand, déi d’Gesetz besonnesch schützt. Schreift just dat, wat deen aneren Elterendeel an d’Betreiungspersounen am Alldag musse wëssen.',
           'Server-Protokoller: d’Netzwierkadress (IP), d’Zäit an d’Adress vun all Ufro, fir de Service ze schützen a Feeler ze flécken.',
           'Op Ärem Telefon oder Computer: d’App hält eng Kopie vun Ärem Plang an Är Sprooch am Browser, sou datt se och offline funktionéiert.',
