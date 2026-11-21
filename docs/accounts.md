@@ -38,7 +38,13 @@ COPARENTS_SMTP_USER=
 COPARENTS_SMTP_PASSWORD=
 ```
 
-Fill in the mail settings on the VM (`sudoedit /etc/coparents/app.env`), then `sudo systemctl restart coparents-api`. Any SMTP provider with STARTTLS on port 587 works. `COPARENTS_MAIL_FROM` is the sender, for example `CoParents <login@coparent.lu>`.
+Set the mail server from Cloud Shell:
+
+```bash
+bash scripts/set-mail.sh
+```
+
+It asks for the sender address, the SMTP login and the SMTP key (hidden as you paste), writes them to `/etc/coparents/app.env` on the VM, restarts the API and sends a test sign-in email. The defaults fit Brevo (`smtp-relay.brevo.com`, port 587). Any provider with STARTTLS works: `SMTP_HOST=… SMTP_PORT=… bash scripts/set-mail.sh`. The sender's domain must be verified with the provider, which means adding its DNS records.
 
 Until the mail settings are filled in, no email is sent. The link is written to the API log instead, which is enough to test:
 
