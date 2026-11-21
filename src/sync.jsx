@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { AccountPanel, PrivacyLink, usePrivacyCopy } from './privacy.jsx'
+import { useLang } from './main.jsx'
+import { SYNC_COPY, fill } from './sync-copy.js'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses',
@@ -134,6 +136,9 @@ export function ShareBar({ onSync }) {
   const [busy, setBusy] = useState(false)
   const [account, setAccount] = useState(false)
   const pc = usePrivacyCopy().ui
+  const { lang } = useLang()
+  const sc = SYNC_COPY[lang] || SYNC_COPY.en
+  const shown = status && (sc.said[status] || status)
 
   useEffect(() => {
     if (!code) return undefined
@@ -427,23 +432,23 @@ export function ShareBar({ onSync }) {
     return (
       <div className={`share-bar ${legacy ? 'on' : ''}`}>
         <div>
-          <strong>{legacy ? `Shared plan ${code}` : 'Sign in to share this plan'}</strong>
+          <strong>{legacy ? fill(sc.sharedPlan, { code }) : sc.signInTitle}</strong>
           <p>{sent
-            ? `We sent a sign-in link to ${sent}. Open it on this phone. It works for 15 minutes.`
+            ? fill(sc.sentLink, { email: sent })
             : legacy
-              ? 'Add your email to keep this plan safe and open it on any device.'
-              : 'We email you a link. No password to remember.'}</p>
+              ? sc.legacyLead
+              : sc.signInLead}</p>
         </div>
         {sent ? (
-          <button className="btn ghost sm" type="button" onClick={() => setSent('')}>Use another email</button>
+          <button className="btn ghost sm" type="button" onClick={() => setSent('')}>{sc.otherEmail}</button>
         ) : (
           <form onSubmit={requestLink}>
-            <input className="share-email" type="email" autoComplete="email" inputMode="email" required value={address} onChange={(event) => setAddress(event.target.value)} placeholder="you@example.com" aria-label="Email address" />
-            <button className="btn primary sm" type="submit" disabled={busy || !address.trim()}>Email me a link</button>
+            <input className="share-email" type="email" autoComplete="email" inputMode="email" required value={address} onChange={(event) => setAddress(event.target.value)} placeholder={sc.emailPlaceholder} aria-label={sc.emailLabel} />
+            <button className="btn primary sm" type="submit" disabled={busy || !address.trim()}>{sc.emailMe}</button>
           </form>
         )}
         <p className="share-privacy">{pc.signInNote} <PrivacyLink /></p>
-        {status && <p className="lock-hint">{status}</p>}
+        {shown && <p className="lock-hint">{shown}</p>}
       </div>
     )
   }
@@ -452,17 +457,17 @@ export function ShareBar({ onSync }) {
     return (
       <div className="share-bar">
         <div>
-          <strong>Share this plan</strong>
-          <p>Signed in as {email}. Create the plan, or join with the other parent's code.</p>
+          <strong>{sc.shareTitle}</strong>
+          <p>{fill(sc.signedInLead, { email })}</p>
         </div>
-        <button className="btn primary sm" type="button" onClick={create} disabled={busy}>Create shared plan</button>
+        <button className="btn primary sm" type="button" onClick={create} disabled={busy}>{sc.create}</button>
         <form onSubmit={joinPlan}>
-          <input value={join} onChange={(event) => setJoin(event.target.value)} placeholder="Enter code" maxLength={6} aria-label="Invite code" />
-          <button className="btn ghost sm" type="submit" disabled={busy || join.trim().length < 6}>Join</button>
+          <input value={join} onChange={(event) => setJoin(event.target.value)} placeholder={sc.codePlaceholder} maxLength={6} aria-label={sc.codeLabel} />
+          <button className="btn ghost sm" type="submit" disabled={busy || join.trim().length < 6}>{sc.join}</button>
         </form>
         {accountButton}
-        <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>Sign out</button>
-        {status && <p className="lock-hint">{status}</p>}
+        <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>{sc.signOut}</button>
+        {shown && <p className="lock-hint">{shown}</p>}
         {accountPanel}
       </div>
     )
@@ -471,13 +476,13 @@ export function ShareBar({ onSync }) {
   return (
     <div className="share-bar on">
       <div>
-        <strong>Shared plan {code}</strong>
-        <p>You are {role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam')}, signed in as {email}. The other parent signs in and joins with this code.</p>
+        <strong>{fill(sc.sharedPlan, { code })}</strong>
+        <p>{fill(sc.youAre, { name: role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam'), email })}</p>
       </div>
-      <button className="btn ghost sm" type="button" onClick={copy}>Copy code</button>
+      <button className="btn ghost sm" type="button" onClick={copy}>{sc.copy}</button>
       {accountButton}
-      <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>Sign out</button>
-      {status && <p className="lock-hint">{status}</p>}
+      <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>{sc.signOut}</button>
+      {shown && <p className="lock-hint">{shown}</p>}
       {accountPanel}
     </div>
   )

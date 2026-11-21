@@ -10,10 +10,11 @@ import '@fontsource-variable/dm-sans/opsz.css'
 import '@fontsource-variable/dm-sans/opsz-italic.css'
 import '@fontsource-variable/manrope/wght.css'
 import './style.css'
-import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity } from './extra.jsx'
+import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity, useCopy } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
+import { pickLang } from './lang.js'
 
 /* ─── i18n ─── */
 const LangCtx = createContext()
@@ -117,6 +118,8 @@ const t = {
     paidA: 'Paid by A', paidB: 'Paid by B',
     split50: '50/50', splitA: '100% A', splitB: '100% B',
     paidBy: 'Paid by', split: 'split',
+    markSettled: 'Mark settled', settled: 'Settled', notes: 'Notes',
+    scope: 'Apply to', thisMonth: 'This month', fullYear: 'Full year', school: 'School holidays',
     msgTitle: 'Messages', msgText: 'Structured threads coming next. For now, use the calendar and expenses.',
     docTitle: 'Documents', docText: 'Shared vault coming next. Store agreements and notes here later.',
   },
@@ -217,6 +220,9 @@ const t = {
     paidA: 'Payé par A', paidB: 'Payé par B',
     split50: '50/50', splitA: '100 % A', splitB: '100 % B',
     paidBy: 'Payé par', split: 'répartition',
+    markSettled: 'Marquer réglé', settled: 'Réglé', notes: 'Notes',
+    schoolNames: { 'All Saints': 'Toussaint', Christmas: 'Noël', Carnival: 'Carnaval', Easter: 'Pâques', Pentecost: 'Pentecôte', Summer: 'Été' },
+    scope: 'Appliquer à', thisMonth: 'Ce mois', fullYear: 'Toute l’année', school: 'Vacances scolaires',
     msgTitle: 'Messages', msgText: 'Les fils structurés arrivent bientôt. Pour l’instant, utilisez le calendrier et les dépenses.',
     docTitle: 'Documents', docText: 'Le coffre partagé arrive bientôt. Vous pourrez y stocker accords et notes.',
   },
@@ -317,6 +323,9 @@ const t = {
     paidA: 'Bezahlt von A', paidB: 'Bezahlt von B',
     split50: '50/50', splitA: '100 % A', splitB: '100 % B',
     paidBy: 'Bezahlt von', split: 'Aufteilung',
+    markSettled: 'Als beglichen markieren', settled: 'Beglichen', notes: 'Notizen',
+    schoolNames: { 'All Saints': 'Allerheiligen', Christmas: 'Weihnachten', Carnival: 'Fastnacht', Easter: 'Ostern', Pentecost: 'Pfingsten', Summer: 'Sommer' },
+    scope: 'Anwenden auf', thisMonth: 'Diesen Monat', fullYear: 'Ganzes Jahr', school: 'Schulferien',
     msgTitle: 'Nachrichten', msgText: 'Strukturierte Threads kommen als Nächstes. Bis dahin Kalender und Ausgaben nutzen.',
     docTitle: 'Dokumente', docText: 'Der gemeinsame Tresor kommt als Nächstes. Hier könnt ihr später Vereinbarungen und Notizen ablegen.',
   },
@@ -408,6 +417,9 @@ const t = {
     paidA: 'Bezuelt vun A', paidB: 'Bezuelt vun B',
     split50: '50/50', splitA: '100 % A', splitB: '100 % B',
     paidBy: 'Bezuelt vun', split: 'Opdeelung',
+    markSettled: 'Als bezuelt markéieren', settled: 'Bezuelt', notes: 'Notizen',
+    schoolNames: { 'All Saints': 'Allerhellegen', Christmas: 'Chrëschtdag', Carnival: 'Fuesend', Easter: 'Ouschteren', Pentecost: 'Péngschten', Summer: 'Summer' },
+    scope: 'Uwenden op', thisMonth: 'Dëse Mount', fullYear: 'Ganzt Joer', school: 'Schoulvakanz',
     msgTitle: 'Messagen', msgText: 'Strukturéiert Threads kommen als Nächstes. Bis dohin Kalenner an Ausgaben benotzen.',
     docTitle: 'Dokumenter', docText: 'De gemeinsame Tresor kënnt als Nächstes. Hei kënnt dir spéider Ofkommes a Notizen ofleeën.',
     holidays: 'Feierdeeg',
@@ -419,9 +431,21 @@ const t = {
 
 }
 
+function startLang() {
+  let saved = null, chosen = false
+  try { saved = localStorage.getItem('cp-lang'); chosen = localStorage.getItem('cp-lang-chosen') === '1' } catch { /* private mode */ }
+  const phone = navigator.languages?.length ? navigator.languages : [navigator.language]
+  return pickLang(saved, chosen, phone)
+}
+
 function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('cp-lang') || 'en')
-  useEffect(() => { localStorage.setItem('cp-lang', lang) }, [lang])
+  const [lang, setLangState] = useState(startLang)
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
+  // Only a tap on the switch is remembered, so everyone else follows their phone.
+  const setLang = (code) => {
+    setLangState(code)
+    try { localStorage.setItem('cp-lang', code); localStorage.setItem('cp-lang-chosen', '1') } catch { /* private mode */ }
+  }
   const value = { lang, setLang, tr: t[lang] || t.en }
   return <LangCtx.Provider value={value}>{children}</LangCtx.Provider>
 }
@@ -970,7 +994,7 @@ function CalendarView() {
           const who = custody[key]
           const dayEvents = events.filter((ev) => ev.date === key)
           const hol = hols[key]
-          const sch = school[key]
+          const sch = school[key] && ((tr.schoolNames || {})[school[key]] || school[key])
           return (
             <button
               key={i}
@@ -1103,11 +1127,11 @@ function ExpensesView() {
                 <span className="meta">{tr.paidBy} {n[it.paidBy]} · {tr.split} {it.split === '50' ? '50/50' : it.split === 'A' ? `100% ${n.A}` : `100% ${n.B}`}</span>
               </div>
               <div className="amt">{it.amount.toFixed(2)}</div>
-              {!it.settled && <button className="btn ghost sm" type="button" onClick={() => settle(it.id)}>Settled</button>}
-              {it.settled && <span className="meta">Settled</span>}
+              {!it.settled && <button className="btn ghost sm" type="button" onClick={() => settle(it.id)}>{tr.markSettled}</button>}
+              {it.settled && <span className="meta">{tr.settled}</span>}
               <button className="btn ghost" type="button" onClick={() => remove(it.id)}><Trash2 size={16} /></button>
             </div>
-            <NoteThread channel={`expense:${it.id}`} title="Notes" />
+            <NoteThread channel={`expense:${it.id}`} title={tr.notes} />
           </div>
         ))}
       </div>
@@ -1164,6 +1188,7 @@ function AppShell({ onExit }) {
   const [syncRev, setSyncRev] = useState(0)
   const handleSync = useCallback(() => setSyncRev((n) => n + 1), [])
   const fc = useFamilyCopy()
+  const xc = useCopy()
   const [setup, setSetup] = useState(false)
   useEffect(() => {
     const open = () => setSetup(true)
@@ -1172,15 +1197,15 @@ function AppShell({ onExit }) {
   }, [])
   const closeSetup = useCallback(() => { setSetup(false); setSyncRev((n) => n + 1) }, [])
   const primary = [
-    { id: 'today', label: 'Today', Icon: Heart },
-    { id: 'handover', label: 'Handover', Icon: Clock },
+    { id: 'today', label: xc.today, Icon: Heart },
+    { id: 'handover', label: xc.handTitle, Icon: Clock },
     { id: 'calendar', label: tr.tabCal, Icon: Calendar },
     { id: 'expenses', label: tr.tabExp, Icon: Wallet },
     { id: 'messages', label: tr.tabMsg, Icon: MessageSquare },
   ]
   const extra = [
     { id: 'family', label: fc.family, Icon: Users },
-    { id: 'resolve', label: 'Resolve', Icon: Check },
+    { id: 'resolve', label: xc.resolve, Icon: Check },
     { id: 'docs', label: tr.tabDoc, Icon: FileText },
   ]
   return (
