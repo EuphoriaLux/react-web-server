@@ -54,7 +54,8 @@ fi
 
 echo "==> Schema"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$ROOT/db/schema.sql"
-sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -c "ALTER TABLE households OWNER TO ${DB_USER}; ALTER TABLE members OWNER TO ${DB_USER}; ALTER TABLE plans OWNER TO ${DB_USER};"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -c "ALTER TABLE households OWNER TO ${DB_USER}; ALTER TABLE members OWNER TO ${DB_USER}; ALTER TABLE plans OWNER TO ${DB_USER}; ALTER TABLE notes OWNER TO ${DB_USER};"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$ROOT/db/accounts.sql"
 
 echo "==> API"
 id "$API_USER" >/dev/null 2>&1 || sudo useradd --system --create-home --shell /usr/sbin/nologin "$API_USER"
@@ -72,6 +73,7 @@ After=network.target postgresql.service
 User=coparents
 Group=coparents
 EnvironmentFile=/etc/coparents/database.env
+EnvironmentFile=-/etc/coparents/app.env
 Environment=COPARENTS_HOST=127.0.0.1
 Environment=COPARENTS_PORT=8787
 ExecStart=/usr/bin/python3 /opt/coparents/api.py
@@ -114,4 +116,4 @@ sleep 1
 curl -sf http://127.0.0.1:8787/api/health
 echo
 echo "Postgres is on localhost only. API is on 127.0.0.1:8787, public via /api/."
-echo "Create a plan from the site, or: curl -s -X POST http://127.0.0.1/api/households"
+echo "Next: run scripts/update-api.sh once to create /etc/coparents/app.env, then see docs/accounts.md."

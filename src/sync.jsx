@@ -7,6 +7,7 @@ const KEYS = [
 const TOKEN_KEY = 'cp-token'
 const CODE_KEY = 'cp-code'
 const ROLE_KEY = 'cp-role'
+const EMAIL_KEY = 'cp-email'
 const STAMP_KEY = 'cp-sync-stamp'
 const BASE_KEY = 'cp-sync-base'
 
@@ -77,20 +78,50 @@ async function api(path, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`
   const response = await fetch(path, { ...options, headers })
   const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`)
+  if (!response.ok) {
+    const error = new Error(body.error || `Request failed (${response.status})`)
+    error.status = response.status
+    throw error
+  }
   return body
+}
+
+// Asked once per page load, so a sign-in link is never spent twice.
+let whoPromise = null
+function whoAmI() {
+  if (!whoPromise) whoPromise = askWho()
+  return whoPromise
+}
+
+async function askWho() {
+  const params = new URLSearchParams(window.location.search)
+  const login = params.get('login')
+  if (!login) return api('/api/me')
+  params.delete('login')
+  const rest = params.toString()
+  window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : '') + window.location.hash)
+  try {
+    return await api('/api/auth/verify', { method: 'POST', body: JSON.stringify({ token: login }) })
+  } catch (error) {
+    // The link was used already, for example in another tab. Fall back to the session.
+    error.fromLink = true
+    return api('/api/me').catch(() => { throw error })
+  }
 }
 
 export function ShareBar({ onSync }) {
   const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) || '')
   const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || '')
+  // undefined while we ask the server, null when signed out
+  const [email, setEmail] = useState(() => localStorage.getItem(EMAIL_KEY) || undefined)
+  const [address, setAddress] = useState('')
+  const [sent, setSent] = useState('')
   const [join, setJoin] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY)
-    if (!token) return undefined
+    if (!code) return undefined
     let stopped = false
     let syncing = false
     let pushTimer = null
@@ -197,12 +228,98 @@ export function ShareBar({ onSync }) {
     }
   }, [code, onSync])
 
+  function openPlan(household) {
+    if (household) {
+      localStorage.setItem(CODE_KEY, household.code)
+      localStorage.setItem(ROLE_KEY, household.role)
+      localStorage.setItem('cp-writer', household.role)
+      setCode(household.code)
+      setRole(household.role)
+    } else if (!localStorage.getItem(TOKEN_KEY)) {
+      localStorage.removeItem(CODE_KEY)
+      localStorage.removeItem(ROLE_KEY)
+      setCode('')
+      setRole('')
+    }
+  }
+
+  // Who is signed in. Also finishes a sign-in link and moves a plan made
+  // before accounts onto the account.
+  useEffect(() => {
+    let stopped = false
+    async function start() {
+      let me
+      try {
+        me = await whoAmI()
+      } catch (error) {
+        if (stopped) return
+        if (error.fromLink) setStatus(error.message)
+        // Offline or a server hiccup is not a sign-out: keep what this phone knows.
+        if (error.status !== 401 && !error.fromLink) return
+        localStorage.removeItem(EMAIL_KEY)
+        setEmail(null)
+        openPlan(null)
+        return
+      }
+      const legacy = localStorage.getItem(TOKEN_KEY)
+      if (legacy) {
+        if (!me.household) {
+          try {
+            me.household = await api('/api/households/claim', { method: 'POST', body: JSON.stringify({ token: legacy }) })
+          } catch {
+            // Not claimable: the plan stays reachable with the old token until it is.
+          }
+        }
+        if (me.household) localStorage.removeItem(TOKEN_KEY)
+      }
+      if (stopped) return
+      localStorage.setItem(EMAIL_KEY, me.email)
+      setEmail(me.email)
+      openPlan(me.household)
+    }
+    start()
+    return () => { stopped = true }
+  }, [])
+
+  async function requestLink(event) {
+    event.preventDefault()
+    setBusy(true)
+    setStatus('')
+    try {
+      const to = address.trim()
+      await api('/api/auth/request', { method: 'POST', body: JSON.stringify({ email: to }) })
+      setSent(to)
+    } catch (error) {
+      setStatus(error.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function signOut() {
+    setBusy(true)
+    try {
+      await api('/api/auth/logout', { method: 'POST', body: '{}' })
+    } catch {
+      // Signing out on this phone still happens below.
+    }
+    whoPromise = null
+    for (const key of [TOKEN_KEY, CODE_KEY, ROLE_KEY, EMAIL_KEY]) localStorage.removeItem(key)
+    sessionStorage.removeItem(STAMP_KEY)
+    sessionStorage.removeItem(BASE_KEY)
+    setCode('')
+    setRole('')
+    setEmail(null)
+    setSent('')
+    setBusy(false)
+    setStatus('Signed out on this phone. The plan is still on the server.')
+  }
+
   async function create() {
     setBusy(true)
     setStatus('')
     try {
       const created = await api('/api/households', { method: 'POST', body: '{}' })
-      localStorage.setItem(TOKEN_KEY, created.token)
       localStorage.setItem(CODE_KEY, created.code)
       localStorage.setItem(ROLE_KEY, created.role)
       localStorage.setItem('cp-writer', created.role)
@@ -230,7 +347,6 @@ export function ShareBar({ onSync }) {
       })
       sessionStorage.removeItem(STAMP_KEY)
       sessionStorage.removeItem(BASE_KEY)
-      localStorage.setItem(TOKEN_KEY, joined.token)
       localStorage.setItem(CODE_KEY, joined.code)
       localStorage.setItem(ROLE_KEY, joined.role)
       localStorage.setItem('cp-writer', joined.role)
@@ -249,15 +365,32 @@ export function ShareBar({ onSync }) {
     setStatus('Code copied')
   }
 
-  function leave() {
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(CODE_KEY)
-    localStorage.removeItem(ROLE_KEY)
-    sessionStorage.removeItem(STAMP_KEY)
-    sessionStorage.removeItem(BASE_KEY)
-    setCode('')
-    setRole('')
-    setStatus('Left this shared plan on this phone. The plan is still on the server.')
+  if (email === undefined && !code) return null
+
+  if (!email) {
+    // A phone that joined before accounts keeps syncing, and is asked to sign in.
+    const legacy = Boolean(code)
+    return (
+      <div className={`share-bar ${legacy ? 'on' : ''}`}>
+        <div>
+          <strong>{legacy ? `Shared plan ${code}` : 'Sign in to share this plan'}</strong>
+          <p>{sent
+            ? `We sent a sign-in link to ${sent}. Open it on this phone. It works for 15 minutes.`
+            : legacy
+              ? 'Add your email to keep this plan safe and open it on any device.'
+              : 'We email you a link. No password to remember.'}</p>
+        </div>
+        {sent ? (
+          <button className="btn ghost sm" type="button" onClick={() => setSent('')}>Use another email</button>
+        ) : (
+          <form onSubmit={requestLink}>
+            <input className="share-email" type="email" autoComplete="email" inputMode="email" required value={address} onChange={(event) => setAddress(event.target.value)} placeholder="you@example.com" aria-label="Email address" />
+            <button className="btn primary sm" type="submit" disabled={busy || !address.trim()}>Email me a link</button>
+          </form>
+        )}
+        {status && <p className="lock-hint">{status}</p>}
+      </div>
+    )
   }
 
   if (!code) {
@@ -265,13 +398,14 @@ export function ShareBar({ onSync }) {
       <div className="share-bar">
         <div>
           <strong>Share this plan</strong>
-          <p>One code for both parents. No account.</p>
+          <p>Signed in as {email}. Create the plan, or join with the other parent's code.</p>
         </div>
         <button className="btn primary sm" type="button" onClick={create} disabled={busy}>Create shared plan</button>
         <form onSubmit={joinPlan}>
-          <input value={join} onChange={(event) => setJoin(event.target.value)} placeholder="Enter code" maxLength={6} />
+          <input value={join} onChange={(event) => setJoin(event.target.value)} placeholder="Enter code" maxLength={6} aria-label="Invite code" />
           <button className="btn ghost sm" type="submit" disabled={busy || join.trim().length < 6}>Join</button>
         </form>
+        <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>Sign out</button>
         {status && <p className="lock-hint">{status}</p>}
       </div>
     )
@@ -281,10 +415,10 @@ export function ShareBar({ onSync }) {
     <div className="share-bar on">
       <div>
         <strong>Shared plan {code}</strong>
-        <p>You are {role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam')}. The other parent joins with this code.</p>
+        <p>You are {role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam')}, signed in as {email}. The other parent signs in and joins with this code.</p>
       </div>
       <button className="btn ghost sm" type="button" onClick={copy}>Copy code</button>
-      <button className="btn ghost sm" type="button" onClick={leave}>Leave on this phone</button>
+      <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>Sign out</button>
       {status && <p className="lock-hint">{status}</p>}
     </div>
   )

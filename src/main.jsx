@@ -1390,7 +1390,12 @@ function Landing({ onEnter }) {
 }
 
 function App() {
-  const [mode, setMode] = useState(() => sessionStorage.getItem('cp-mode') || (localStorage.getItem('cp-token') ? 'app' : 'landing'))
+  const [mode, setMode] = useState(() => {
+    // A sign-in link from email always opens the app.
+    if (new URLSearchParams(window.location.search).has('login')) return 'app'
+    const known = localStorage.getItem('cp-email') || localStorage.getItem('cp-token')
+    return sessionStorage.getItem('cp-mode') || (known ? 'app' : 'landing')
+  })
   useEffect(() => {
     sessionStorage.setItem('cp-mode', mode)
   }, [mode])
