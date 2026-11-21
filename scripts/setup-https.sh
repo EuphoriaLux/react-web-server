@@ -59,9 +59,8 @@ server {
     location / { return 301 https://\$host\$request_uri; }
 }
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name $DOMAIN;
     ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
@@ -78,7 +77,12 @@ server {
 }
 NGINX
 sudo ln -sfn /etc/nginx/sites-available/coparents /etc/nginx/sites-enabled/coparents
-sudo nginx -t
+if ! sudo nginx -t; then
+  # Never leave a config behind that would stop Nginx from starting.
+  sudo rm -f /etc/nginx/sites-enabled/coparents
+  echo "The new Nginx config was rejected and has been switched off. The site is unchanged." >&2
+  exit 1
+fi
 sudo systemctl reload nginx
 
 echo "==> App address"
