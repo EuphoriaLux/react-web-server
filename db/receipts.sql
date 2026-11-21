@@ -12,6 +12,9 @@ create table if not exists receipts (
   created_at timestamptz not null default now()
 );
 create index if not exists receipts_household on receipts (household_id);
+-- Set when a saved plan no longer points at the photo (removed while offline, a failed
+-- delete, an upload whose expense was lost). Such photos are deleted after 7 days.
+alter table receipts add column if not exists unreferenced_since timestamptz;
 
 do $$
 begin

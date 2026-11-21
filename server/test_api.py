@@ -357,5 +357,30 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(self.count("receipts"), 0)
 
 
+    def test_photos_the_plan_forgot_are_deleted_after_a_week(self):
+        anna, ben, _ = self.plan_for_two()
+        kept = self.upload(anna)[1]["id"]
+        dropped = self.upload(anna)[1]["id"]
+        expenses = json.dumps([{"id": 1, "desc": "Shoes", "amount": 40, "receipts": [kept]}])
+        anna.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("select id::text, unreferenced_since is not null from receipts order by id")
+            marks = dict(cur.fetchall())
+        self.assertEqual(marks, {kept: False, dropped: True})
+        # A week later the forgotten photo goes, the attached one stays.
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("update receipts set unreferenced_since = now() - interval '8 days' where id = %s", (dropped,))
+        ben.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
+        self.assertEqual(ben.raw("GET", f"/api/receipts/{dropped}")[0], 404)
+        self.assertEqual(ben.raw("GET", f"/api/receipts/{kept}")[0], 200)
+        # Attached again in time: no longer marked. Unreadable expenses delete nothing.
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("update receipts set unreferenced_since = now() - interval '8 days'")
+        anna.call("PUT", "/api/state", {"state": {"cp-expenses": "not json"}})
+        self.assertEqual(self.count("receipts"), 1)
+        anna.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
+        self.assertEqual(self.count("receipts where unreferenced_since is null"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

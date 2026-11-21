@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Camera, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { useLang } from './main.jsx'
 import { NoteThread, names, logActivity } from './extra.jsx'
@@ -57,6 +57,8 @@ export function ExpensesView() {
     for (const photo of item?.receipts || []) removeReceipt(photo).catch(() => {})
   }
   const [busyPhoto, setBusyPhoto] = useState(null)
+  const mounted = useRef(true)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   const [photoError, setPhotoError] = useState({})
   const [viewing, setViewing] = useState(null)
   const addPhoto = async (id, file) => {
@@ -65,7 +67,12 @@ export function ExpensesView() {
     setPhotoError((e) => ({ ...e, [id]: '' }))
     try {
       const photo = await uploadReceipt(file)
-      setItems((p) => p.map((x) => (x.id === id ? { ...x, receipts: [...(x.receipts || []), photo] } : x)))
+      // Write to the saved plan directly: the screen may have closed or reloaded
+      // from a sync while the photo was uploading.
+      const next = load('cp-expenses', []).map(normalizeExpense)
+        .map((x) => (x.id === id ? { ...x, receipts: [...x.receipts, photo] } : x))
+      save('cp-expenses', next)
+      if (mounted.current) setItems(next)
     } catch (error) {
       const msg = error.status === 401 ? c.photoSignIn : (c.photoErrors[error.message] || c.photoFailed)
       setPhotoError((e) => ({ ...e, [id]: msg }))

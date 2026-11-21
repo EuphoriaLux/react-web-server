@@ -49,6 +49,8 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Receipt photos. The phone shrinks them to a few hundred KB; nginx refuses bodies over 1 MB.
 RECEIPT_MAX_BYTES = 900_000
 RECEIPT_PLAN_BYTES = 100_000_000
+# A photo no expense points at any more is kept this long, then deleted.
+RECEIPT_GRACE = timedelta(days=7)
 RECEIPT_PATH = re.compile(r"^/api/receipts/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$")
 
 
@@ -154,6 +156,24 @@ def image_type(data: bytes):
     if len(data) > 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "image/webp"
     return None
+
+
+def receipt_refs(state):
+    """Photo ids the saved plan's expenses point at, or None if the expenses can't be read."""
+    raw = state.get("cp-expenses")
+    if raw is None:
+        return []
+    try:
+        items = json.loads(raw) if isinstance(raw, str) else raw
+    except ValueError:
+        return None
+    if not isinstance(items, list):
+        return None
+    refs = []
+    for item in items:
+        if isinstance(item, dict) and isinstance(item.get("receipts"), list):
+            refs.extend(r for r in item["receipts"] if isinstance(r, str))
+    return refs
 
 
 def member_from_token(cur, token: str):
@@ -612,7 +632,34 @@ class Handler(BaseHTTPRequestHandler):
                 "update plans set state = %s, updated_at = %s where household_id = %s",
                 (psycopg2.extras.Json(state), now, household_id),
             )
+            self._tidy_receipts(cur, household_id, state, now)
         self._send(200, {"code": code, "updated_at": now.isoformat()})
+
+    @staticmethod
+    def _tidy_receipts(cur, household_id, state, now):
+        """Photos the plan no longer points at are deleted a week after that is first seen.
+
+        Covers a removal made offline or a delete that failed, and an upload whose
+        expense never made it into the plan. A plan we cannot read deletes nothing.
+        """
+        refs = receipt_refs(state)
+        if refs is None:
+            return
+        cur.execute(
+            "update receipts set unreferenced_since = null where household_id = %s and id::text = any(%s)",
+            (household_id, refs),
+        )
+        cur.execute(
+            """
+            update receipts set unreferenced_since = %s
+            where household_id = %s and unreferenced_since is null and not (id::text = any(%s))
+            """,
+            (now, household_id, refs),
+        )
+        cur.execute(
+            "delete from receipts where household_id = %s and unreferenced_since < %s",
+            (household_id, now - RECEIPT_GRACE),
+        )
 
     def _export(self):
         """Everything stored for the signed-in parent, as one JSON file."""
