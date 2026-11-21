@@ -3,7 +3,7 @@
 
 // Who runs CoParents. Shown in the notice. Change here only.
 export const PRIVACY_CONTACT = {
-  name: '[NAME TO CONFIRM]',
+  name: 'Tom',
   email: 'privacy@coparent.lu',
 }
 export const PRIVACY_UPDATED = '2026-11-21'
