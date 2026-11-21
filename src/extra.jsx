@@ -731,13 +731,17 @@ export function NoteThread({ channel, title, writer }) {
   const [urgent, setUrgent] = useState(false)
   const [hold, setHold] = useState(null)
   const [status, setStatus] = useState('')
-  const token = typeof localStorage !== 'undefined' && localStorage.getItem('cp-token')
+  // Shared when this parent is in a plan. The session cookie signs the request.
+  // cp-token only exists on devices that joined before accounts.
+  const shared = typeof localStorage !== 'undefined' && localStorage.getItem('cp-code')
+  const legacy = typeof localStorage !== 'undefined' && localStorage.getItem('cp-token')
+  const auth = legacy ? { Authorization: `Bearer ${legacy}` } : {}
 
   useEffect(() => { if (writer) setWho(writer) }, [writer])
 
   async function loadNotes() {
-    if (token) {
-      const response = await fetch(`/api/notes?channel=${encodeURIComponent(channel)}`, { headers: { Authorization: `Bearer ${token}` } })
+    if (shared) {
+      const response = await fetch(`/api/notes?channel=${encodeURIComponent(channel)}`, { headers: auth })
       const body = await response.json()
       if (!response.ok) throw new Error(body.error || 'Could not load notes')
       setNotes(body.notes || [])
@@ -746,7 +750,7 @@ export function NoteThread({ channel, title, writer }) {
     setNotes(load('cp-notes', []).filter((item) => item.channel === channel))
   }
 
-  useEffect(() => { loadNotes().catch((error) => setStatus(error.message)) }, [channel, token])
+  useEffect(() => { loadNotes().catch((error) => setStatus(error.message)) }, [channel, shared])
 
   function stamp(text, waiting) {
     return {
@@ -767,10 +771,10 @@ export function NoteThread({ channel, title, writer }) {
     const clean = { fact: text.fact.trim(), ask: text.ask.trim(), byWhen: text.byWhen.trim() }
     if (!clean.fact) return
     const waiting = quietNow() && !urgent
-    if (token) {
+    if (shared) {
       const response = await fetch('/api/notes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', ...auth },
         body: JSON.stringify({ channel, fact: clean.fact, ask: clean.ask, by_when: clean.byWhen, urgent }),
       })
       const body = await response.json()

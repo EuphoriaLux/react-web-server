@@ -14,14 +14,32 @@ SSH=(ssh -i "$ADMIN_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-n
 echo "Updating API on $PUBLIC_IP"
 "${SSH[@]}" "ubuntu@$PUBLIC_IP" 'mkdir -p /tmp/coparents-install/server /tmp/coparents-install/db'
 scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes "$ROOT/server/api.py" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/server/api.py"
-scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes "$ROOT/db/notes.sql" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/db/notes.sql"
+scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes "$ROOT/db/notes.sql" "$ROOT/db/accounts.sql" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/db/"
 "${SSH[@]}" "ubuntu@$PUBLIC_IP" 'bash -s' <<'REMOTE'
 set -Eeuo pipefail
 sudo install -m 644 -o coparents -g coparents /tmp/coparents-install/server/api.py /opt/coparents/api.py
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d coparents -f /tmp/coparents-install/db/notes.sql
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d coparents -f /tmp/coparents-install/db/accounts.sql
+# Site address and mail settings for sign-in links. See docs/accounts.md.
+if [[ ! -f /etc/coparents/app.env ]]; then
+  printf '%s\n' \
+    '# Where the app lives. Sign-in links point here.' \
+    'COPARENTS_APP_URL=https://coparents.powerup.lu' \
+    '# Mail server for sign-in links. While these are empty, links go to the API log only.' \
+    'COPARENTS_MAIL_FROM=' \
+    'COPARENTS_SMTP_HOST=' \
+    'COPARENTS_SMTP_PORT=587' \
+    'COPARENTS_SMTP_USER=' \
+    'COPARENTS_SMTP_PASSWORD=' | sudo tee /etc/coparents/app.env >/dev/null
+  sudo chown root:coparents /etc/coparents/app.env
+  sudo chmod 640 /etc/coparents/app.env
+fi
+sudo install -d /etc/systemd/system/coparents-api.service.d
+printf '[Service]\nEnvironmentFile=-/etc/coparents/app.env\n' | sudo tee /etc/systemd/system/coparents-api.service.d/app-env.conf >/dev/null
+sudo systemctl daemon-reload
 sudo systemctl restart coparents-api.service
 sleep 1
 curl -sf http://127.0.0.1:8787/api/health
 echo
-echo "Notes table and API updated."
+echo "Database tables and API updated."
 REMOTE

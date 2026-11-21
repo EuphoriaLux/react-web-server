@@ -39,8 +39,38 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 7
+  api-test:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: cptest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:test@127.0.0.1:5432/cptest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: python3 -m pip install --quiet psycopg2-binary
+      - name: Apply schema
+        run: |
+          for file in schema accounts; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "db/$file.sql"
+          done
+      - run: python3 -m unittest -v server/test_api.py
   deploy:
-    needs: build
+    needs: [build, api-test]
     if: >-
       github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
