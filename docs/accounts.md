@@ -25,12 +25,12 @@ bash scripts/update-api.sh
 bash scripts/setup-https.sh
 ```
 
-`setup-https.sh` gets a free Let's Encrypt certificate for `coparents.powerup.lu`, serves the site on https, redirects http on that name to https, and renews on its own. Pass another domain as the first argument when the app moves. The plain `http://<ip>/` site keeps working for PR previews. Sign-in needs https, because the session cookie is `Secure`.
+`setup-https.sh` gets a free Let's Encrypt certificate for `coparent.lu` and `www.coparent.lu`, serves the app on `https://coparent.lu`, sends `www` and plain http there, and renews on its own. The plain `http://<ip>/` site keeps working for PR previews. Sign-in needs https, because the session cookie is `Secure`.
 
 `update-api.sh` adds the account tables, restarts the API, and creates `/etc/coparents/app.env` on the VM if it is missing:
 
 ```
-COPARENTS_APP_URL=https://coparents.powerup.lu
+COPARENTS_APP_URL=https://coparent.lu
 COPARENTS_MAIL_FROM=
 COPARENTS_SMTP_HOST=
 COPARENTS_SMTP_PORT=587
@@ -38,7 +38,7 @@ COPARENTS_SMTP_USER=
 COPARENTS_SMTP_PASSWORD=
 ```
 
-Fill in the mail settings on the VM (`sudoedit /etc/coparents/app.env`), then `sudo systemctl restart coparents-api`. Any SMTP provider with STARTTLS on port 587 works. `COPARENTS_MAIL_FROM` is the sender, for example `CoParents <login@coparents.powerup.lu>`.
+Fill in the mail settings on the VM (`sudoedit /etc/coparents/app.env`), then `sudo systemctl restart coparents-api`. Any SMTP provider with STARTTLS on port 587 works. `COPARENTS_MAIL_FROM` is the sender, for example `CoParents <login@coparent.lu>`.
 
 Until the mail settings are filled in, no email is sent. The link is written to the API log instead, which is enough to test:
 
@@ -48,7 +48,17 @@ sudo journalctl -u coparents-api -n 20 | grep 'sign-in link'
 
 Run `update-api.sh` before the new web app goes live, because the new app needs the new API.
 
-Changing domain later means a new DNS record, `bash scripts/setup-https.sh new.domain` (which also updates `COPARENTS_APP_URL`), and a new sender address.
+## Moving to another domain
+
+Point the new name's DNS A record at the VM, then:
+
+```bash
+REDIRECT_FROM=coparents.powerup.lu bash scripts/setup-https.sh coparent.lu www.coparent.lu
+```
+
+The first name becomes the app's address and `COPARENTS_APP_URL`. The other names, and every name in `REDIRECT_FROM`, forward to it with their path, so old bookmarks and unopened sign-in links still work. Keep the old name's DNS record for as long as it should forward.
+
+Plans and accounts live on the server and are not affected. Browsers keep sign-in per address, so a parent who was signed in on the old address signs in once more on the new one. Update the sender address in `/etc/coparents/app.env` when mail is set up.
 
 ## Local development
 

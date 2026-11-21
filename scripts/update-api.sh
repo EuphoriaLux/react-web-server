@@ -24,7 +24,7 @@ sudo -u postgres psql -v ON_ERROR_STOP=1 -d coparents -f /tmp/coparents-install/
 if [[ ! -f /etc/coparents/app.env ]]; then
   printf '%s\n' \
     '# Where the app lives. Sign-in links point here.' \
-    'COPARENTS_APP_URL=https://coparents.powerup.lu' \
+    'COPARENTS_APP_URL=https://coparent.lu' \
     '# Mail server for sign-in links. While these are empty, links go to the API log only.' \
     'COPARENTS_MAIL_FROM=' \
     'COPARENTS_SMTP_HOST=' \
