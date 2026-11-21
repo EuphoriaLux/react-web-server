@@ -115,7 +115,10 @@ async function askWho() {
   } catch (error) {
     // The link was used already, for example in another tab. Fall back to the session.
     error.fromLink = true
-    return api('/api/me').catch(() => { throw error })
+    return api('/api/me').catch((sessionError) => {
+      error.sessionStatus = sessionError.status
+      throw error
+    })
   }
 }
 
@@ -276,7 +279,9 @@ export function ShareBar({ onSync }) {
         // This phone was signed in, and the session is gone: it ended, was signed out
         // elsewhere, or the account was deleted. The plan lives in the account, so take
         // it off this phone, as signing out does.
-        if (localStorage.getItem(EMAIL_KEY) && localStorage.getItem(CODE_KEY) && !localStorage.getItem(TOKEN_KEY)) {
+        // Only on a real 401 from the session check: offline or a server error keeps the plan.
+        const sessionGone = (error.fromLink ? error.sessionStatus : error.status) === 401
+        if (sessionGone && localStorage.getItem(EMAIL_KEY) && localStorage.getItem(CODE_KEY) && !localStorage.getItem(TOKEN_KEY)) {
           forgetPlanHere()
           if (onSync) onSync()
         }

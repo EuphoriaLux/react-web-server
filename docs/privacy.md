@@ -46,11 +46,11 @@ If the database is gone, rebuild the list from the log instead:
 sudo journalctl -u coparents-api --since "15 days ago" | grep 'account deleted'
 ```
 
-After restoring, load the list and delete again:
+After restoring, load the list and delete again. Sign-in links hold the email and are not tied to the user row, so they go first:
 
 ```bash
 sudo -u postgres psql -d coparents -c "\copy account_deletions from '/tmp/deletions.csv' csv"
-sudo -u postgres psql -d coparents -c "delete from households where id in (select household_id from account_deletions where household_deleted); delete from members where user_id in (select user_id from account_deletions); delete from users where id in (select user_id from account_deletions);"
+sudo -u postgres psql -d coparents -c "delete from households where id in (select household_id from account_deletions where household_deleted); delete from login_tokens where email in (select email from users where id in (select user_id from account_deletions)); delete from members where user_id in (select user_id from account_deletions); delete from users where id in (select user_id from account_deletions);"
 ```
 
 A restored plan that was kept by the other parent gets back its old invite code. Change it if that matters:
