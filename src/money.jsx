@@ -198,7 +198,9 @@ export function ExpensesView() {
 function Payments({ c, n, kind, mode, payers, agreed, settings, setSettings, payments, setPayments, money, day, monthName }) {
   const [form, setForm] = useState({ who: payers[0], amount: '', date: isoDay() })
   useEffect(() => { if (!payers.includes(form.who)) setForm((f) => ({ ...f, who: payers[0] })) }, [payers.join()])
-  const history = paymentHistory(payments, kind, payers, agreed, recentMonths(isoDay(), 4))
+  // The newest month shown; the arrows move back and forward, so older or future-dated payments stay reachable.
+  const [last, setLast] = useState(() => monthOf(isoDay()))
+  const history = paymentHistory(payments, kind, payers, agreed, recentMonths(last, 4))
   const record = (e) => {
     e.preventDefault()
     const amount = toAmount(form.amount || agreed[form.who])
@@ -206,13 +208,21 @@ function Payments({ c, n, kind, mode, payers, agreed, settings, setSettings, pay
     setPayments((p) => [...p, { id: Date.now(), kind, who: form.who, amount, date: form.date || isoDay() }])
     logActivity(`${n[form.who]}: ${money(amount)} · ${day(form.date || isoDay())}`)
     setForm((f) => ({ ...f, amount: '' }))
+    const m = monthOf(form.date || isoDay())
+    if (!recentMonths(last, 4).includes(m)) setLast(m)
   }
   const removePayment = (id) => setPayments((p) => p.filter((x) => x.id !== id))
   const mine = (who, month) => payments.filter((p) => p.kind === kind && p.who === who && monthOf(p.date) === month)
 
   return (
     <section className="money-section">
-      <h3>{mode === 'shared' ? c.depositsTitle : c.supportTitle}</h3>
+      <div className="money-section-head">
+        <h3>{mode === 'shared' ? c.depositsTitle : c.supportTitle}</h3>
+        <div className="month-nav">
+          <button className="btn ghost sm" type="button" onClick={() => setLast((m) => shiftMonth(m, -4))} aria-label="previous"><ChevronLeft size={16} /></button>
+          <button className="btn ghost sm" type="button" onClick={() => setLast((m) => shiftMonth(m, 4))} aria-label="next"><ChevronRight size={16} /></button>
+        </div>
+      </div>
       <div className="money-agreed">
         {mode === 'support' && (
           <label>{c.payer}
