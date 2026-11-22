@@ -1,0 +1,98 @@
+// Words for the calmer layout: Today's shortcuts, the install tip, invites
+// and the small sign-in line shown above every tab but Today.
+// Messages between the two parents use "tu"/"du", as parents write to each other.
+
+export const LAYOUT_COPY = {
+  en: {
+    seeRequests: 'See requests',
+    installTitle: 'Keep CoParents on your home screen',
+    installAndroid: 'Android: open the browser menu ⋮ and tap “Add to Home screen”.',
+    installIos: 'iPhone: tap Share, then “Add to Home Screen”.',
+    hide: 'Hide',
+    notSet: 'Not agreed yet',
+    placePlaceholder: 'For example: school, home, station',
+    declineWhy: 'Reason (optional)',
+    declined: 'Declined',
+    tryOut: 'You are trying it out on this phone. Nothing is shared until you sign in.',
+    tryLine: 'Trying it out on this phone. Nothing is shared yet.',
+    signIn: 'Sign in',
+    sharedLine: 'Shared plan {code}',
+    invite: 'Invite the other parent',
+    inviteLead: 'Send a ready-made message with the link and your code.',
+    whatsapp: 'WhatsApp',
+    email: 'Email',
+    inviteSubject: 'Our shared plan on CoParents',
+    inviteText: 'Hi, I set up our shared plan for {child} on CoParents. Open this link, sign in with your email (no password) and the code {code} is filled in for you: {link}',
+  },
+  fr: {
+    seeRequests: 'Voir les demandes',
+    installTitle: 'Gardez CoParents sur votre écran d’accueil',
+    installAndroid: 'Android : ouvrez le menu ⋮ du navigateur et touchez « Ajouter à l’écran d’accueil ».',
+    installIos: 'iPhone : touchez Partager, puis « Sur l’écran d’accueil ».',
+    hide: 'Masquer',
+    notSet: 'Pas encore convenu',
+    placePlaceholder: 'Par exemple : école, maison, gare',
+    declineWhy: 'Raison (facultatif)',
+    declined: 'Refusée',
+    tryOut: 'Vous essayez l’application sur ce téléphone. Rien n’est partagé avant votre connexion.',
+    tryLine: 'Essai sur ce téléphone. Rien n’est encore partagé.',
+    signIn: 'Se connecter',
+    sharedLine: 'Planning partagé {code}',
+    invite: 'Inviter l’autre parent',
+    inviteLead: 'Envoyez un message tout prêt avec le lien et votre code.',
+    whatsapp: 'WhatsApp',
+    email: 'E-mail',
+    inviteSubject: 'Notre planning partagé sur CoParents',
+    inviteText: 'Bonjour, j’ai créé notre planning partagé pour {child} sur CoParents. Ouvre ce lien, connecte-toi avec ton e-mail (sans mot de passe) et le code {code} sera déjà rempli : {link}',
+  },
+  de: {
+    seeRequests: 'Anfragen ansehen',
+    installTitle: 'CoParents auf den Home-Bildschirm legen',
+    installAndroid: 'Android: Browsermenü ⋮ öffnen und „Zum Startbildschirm hinzufügen“ tippen.',
+    installIos: 'iPhone: Teilen tippen, dann „Zum Home-Bildschirm“.',
+    hide: 'Ausblenden',
+    notSet: 'Noch nicht vereinbart',
+    placePlaceholder: 'Zum Beispiel: Schule, Zuhause, Bahnhof',
+    declineWhy: 'Grund (optional)',
+    declined: 'Abgelehnt',
+    tryOut: 'Ihr probiert die App auf diesem Telefon aus. Nichts wird geteilt, bevor ihr euch anmeldet.',
+    tryLine: 'Test auf diesem Telefon. Noch nichts geteilt.',
+    signIn: 'Anmelden',
+    sharedLine: 'Gemeinsamer Plan {code}',
+    invite: 'Anderen Elternteil einladen',
+    inviteLead: 'Eine fertige Nachricht mit Link und Code senden.',
+    whatsapp: 'WhatsApp',
+    email: 'E-Mail',
+    inviteSubject: 'Unser gemeinsamer Plan auf CoParents',
+    inviteText: 'Hallo, ich habe unseren gemeinsamen Plan für {child} auf CoParents angelegt. Öffne diesen Link, melde dich mit deiner E-Mail an (ohne Passwort), der Code {code} ist schon eingetragen: {link}',
+  },
+  lb: {
+    seeRequests: 'Ufroen ukucken',
+    installTitle: 'CoParents op den Home-Écran leeën',
+    installAndroid: 'Android: de Browsermenü ⋮ opmaachen an „Zum Startbildschirm hinzufügen“ drécken.',
+    installIos: 'iPhone: Deelen drécken, dann „Zum Home-Bildschirm“.',
+    hide: 'Verstoppen',
+    notSet: 'Nach net ofgemaach',
+    placePlaceholder: 'Zum Beispill: Schoul, Doheem, Gare',
+    declineWhy: 'Grond (fakultativ)',
+    declined: 'Ofgeleent',
+    tryOut: 'Dir probéiert d’App op dësem Telefon aus. Näischt gëtt gedeelt, ier Dir Iech umellt.',
+    tryLine: 'Test op dësem Telefon. Nach näischt gedeelt.',
+    signIn: 'Umellen',
+    sharedLine: 'Gedeelte Plang {code}',
+    invite: 'Deen aneren Elterendeel invitéieren',
+    inviteLead: 'E fäerdege Message mam Link an Ärem Code schécken.',
+    whatsapp: 'WhatsApp',
+    email: 'E-Mail',
+    inviteSubject: 'Eise gedeelte Plang op CoParents',
+    inviteText: 'Moien, ech hunn eise gedeelte Plang fir {child} op CoParents ugeluecht. Maach dëse Link op, mell dech mat denger E-Mail un (ouni Passwuert), de Code {code} ass schonn ausgefëllt: {link}',
+  },
+}
+
+export function layoutCopy(lang) {
+  return LAYOUT_COPY[lang] || LAYOUT_COPY.en
+}
+
+export function goToTab(tab) {
+  window.dispatchEvent(new CustomEvent('cp-go-tab', { detail: tab }))
+}

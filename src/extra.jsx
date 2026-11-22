@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useLang } from './main.jsx'
 import { FamilyPrompt, TodayActivities, PapersFamilyCard, openFamilySetup, childrenAreWith, useFamilyCopy } from './family.jsx'
 import { names, sharedRole, shortName, weekdayLetters } from './people.js'
+import { layoutCopy, goToTab } from './layout-copy.js'
 
 export { names }
 
@@ -91,7 +92,7 @@ const COPY = {
     write: 'Write a short note', send: 'Send', emptyMsg: 'Nothing in this thread yet.',
     fact: 'Fact', askField: 'Ask', byWhen: 'By when', urgent: 'Urgent',
     quiet: 'After 21:00 this note waits until 07:00, unless you mark it urgent.',
-    waits: 'Waits until 07:00', stuck: 'Sent. Cannot be edited or deleted.',
+    waits: 'Waits until 07:00', stuck: 'Once sent, a message cannot be edited or deleted.',
     thread: 'Notes on this',
     heatTitle: 'This note sounds hot', heatLead: 'A calmer version is below. Edit it, or send the original if you still mean it.',
     calmer: 'Calmer version', sendCalm: 'Send the calmer note', sendAnyway: 'Send as written',
@@ -138,7 +139,7 @@ const COPY = {
     write: 'Écrire une note courte', send: 'Envoyer', emptyMsg: 'Rien dans ce fil.',
     fact: 'Fait', askField: 'Demande', byWhen: 'Pour quand', urgent: 'Urgent',
     quiet: 'Après 21 h cette note attend 7 h, sauf si vous la marquez urgente.',
-    waits: 'Attend 7 h', stuck: 'Envoyée. Ni modifiable ni supprimable.',
+    waits: 'Attend 7 h', stuck: 'Une fois envoyé, un message ne peut être ni modifié ni supprimé.',
     thread: 'Notes ici',
     heatTitle: 'Ce message sonne dur', heatLead: 'Une version plus calme est ci-dessous.',
     calmer: 'Version plus calme', sendCalm: 'Envoyer la version calme', sendAnyway: 'Envoyer tel quel',
@@ -185,7 +186,7 @@ const COPY = {
     write: 'Kurze Notiz', send: 'Senden', emptyMsg: 'Noch nichts in diesem Faden.',
     fact: 'Fakt', askField: 'Bitte', byWhen: 'Bis wann', urgent: 'Dringend',
     quiet: 'Nach 21 Uhr wartet diese Notiz bis 7 Uhr, außer sie ist dringend.',
-    waits: 'Wartet bis 7 Uhr', stuck: 'Gesendet. Kann nicht geändert oder gelöscht werden.',
+    waits: 'Wartet bis 7 Uhr', stuck: 'Gesendete Nachrichten können nicht geändert oder gelöscht werden.',
     thread: 'Notizen dazu',
     heatTitle: 'Diese Notiz klingt scharf', heatLead: 'Unten steht eine ruhigere Fassung.',
     calmer: 'Ruhigere Fassung', sendCalm: 'Die ruhige Notiz senden', sendAnyway: 'So senden',
@@ -232,7 +233,7 @@ const COPY = {
     write: 'Eng kuerz Notiz', send: 'Schécken', emptyMsg: 'Nach näischt an dësem Fuedem.',
     fact: 'Fakt', askField: 'Ufro', byWhen: 'Bis wéini', urgent: 'Dringend',
     quiet: 'No 21 Auer waart dës Notiz bis 7 Auer, ausser se ass dringend.',
-    waits: 'Waart bis 7 Auer', stuck: 'Geschéckt. Kann net geännert oder geläscht ginn.',
+    waits: 'Waart bis 7 Auer', stuck: 'Geschéckte Messagen kënnen net geännert oder geläscht ginn.',
     thread: 'Notizen dozou',
     heatTitle: 'Dës Notiz kléngt schaarf', heatLead: 'Ënnen steet eng méi roueg Fassong.',
     calmer: 'Roueg Fassong', sendCalm: 'Déi roueg Notiz schécken', sendAnyway: 'Esou schécken',
@@ -284,59 +285,87 @@ function soften(text) {
 export function TodayBoard() {
   const { lang } = useLang()
   const c = useCopy()
-  const [custody, setCustody] = useState(() => load('cp-custody', {}))
-  const [locked] = useState(() => load('cp-locked', {}))
-  const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
-  const [writer, setWriter, fixed] = useWriter()
+  const lc = layoutCopy(lang)
+  const [custody] = useState(() => load('cp-custody', {}))
+  const [swaps] = useState(() => load('cp-swaps', []))
   const fc = useFamilyCopy()
   const many = childrenAreWith()
   const n = names(lang)
-  useEffect(() => { save('cp-custody', custody) }, [custody])
-  useEffect(() => { save('cp-swaps', swaps) }, [swaps])
   const today = useMemo(() => new Date(), [])
   const todayKey = isoDate(today)
   const who = custody[todayKey]
   const label = (id) => n[id]
-  let change = null
-  let prev = who
-  for (let i = 1; i <= 42; i += 1) {
-    const date = new Date(today)
-    date.setDate(today.getDate() + i)
-    const key = isoDate(date)
-    const owner = custody[key]
-    if (owner !== 'A' && owner !== 'B') continue
-    if ((prev === 'A' || prev === 'B') && owner !== prev) {
-      change = { date: key, from: prev, to: owner }
-      break
-    }
-    prev = owner
-  }
+  const change = upcomingHandovers(custody, today)[0] || null
   const open = swaps.filter((row) => row.status === 'open')
+  const activity = load('cp-activity', [])
   return (
     <div className="app-panel today-home">
-      <p className="hand-kicker">{c.today}</p>
+      <p className="hand-kicker">{today.toLocaleDateString(lang, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
       <h2>{who === 'A' || who === 'B' ? `${n.child} ${many ? fc.areWith : c.with} ${label(who)}` : c.open}</h2>
       <FamilyPrompt />
-      {typeof window !== 'undefined' && !window.matchMedia('(display-mode: standalone)').matches && <p className="install-hint">{c.install}</p>}
-      <article className="today-card">
+      <article className="today-card next">
         <span>{c.next}</span>
         <strong>{change ? pretty(change.date, lang) : c.none}</strong>
         {change && <p>{label(change.from)} → {label(change.to)}</p>}
+        {change && <button type="button" className="btn text sm" onClick={() => goToTab('handover')}>{c.handTitle} →</button>}
       </article>
       <TodayActivities />
       <article className="today-card">
         <span>{c.openSwaps}</span>
-        <strong>{open.length}</strong>
-        <p>{open.length ? open.map((row) => pretty(row.want, lang)).join(' · ') : c.noSwaps}</p>
+        <strong>{open.length ? open.map((row) => `${label(row.by)} · ${pretty(row.want, lang)}`).join(' · ') : c.noSwaps}</strong>
+        <div className="today-actions">
+          <button type="button" className="btn primary sm" onClick={() => goToTab('calendar')}>{c.ask}</button>
+          {open.length > 0 && <button type="button" className="btn ghost sm" onClick={() => goToTab('calendar')}>{lc.seeRequests}</button>}
+        </div>
       </article>
       <section className="today-activity">
         <h3>{c.activity}</h3>
-        {load('cp-activity', []).slice(0, 6).map((item) => (
+        {activity.slice(0, 6).map((item) => (
           <p key={item.id}><time>{new Date(item.at).toLocaleString(lang === 'fr' ? 'fr' : lang === 'de' ? 'de' : 'en', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time> {item.text}</p>
         ))}
-        {load('cp-activity', []).length === 0 && <p className="empty">{c.noActivity}</p>}
+        {activity.length === 0 && <p className="empty">{c.noActivity}</p>}
       </section>
-      <button type="button" className="btn ghost sm" onClick={openFamilySetup}>{fc.family}</button>
+      <InstallTip lc={lc} />
+    </div>
+  )
+}
+
+// Shown until the parent hides it, and never once the app runs from the home screen.
+function InstallTip({ lc }) {
+  const standalone = typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone)
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('cp-install-hidden') === '1' } catch { return false } })
+  if (standalone || hidden) return null
+  const ios = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)
+  return (
+    <aside className="install-hint">
+      <div>
+        <strong>{lc.installTitle}</strong>
+        <p>{ios ? lc.installIos : lc.installAndroid}</p>
+      </div>
+      <button type="button" className="btn text sm" onClick={() => { try { localStorage.setItem('cp-install-hidden', '1') } catch {} setHidden(true) }}>{lc.hide}</button>
+    </aside>
+  )
+}
+
+// "Ask for a day" lives under the calendar, where the days are.
+export function AskDayPanel() {
+  const [custody, setCustodyState] = useState(() => load('cp-custody', {}))
+  const [locked] = useState(() => load('cp-locked', {}))
+  const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
+  const [writer, setWriter, fixed] = useWriter()
+  useEffect(() => { save('cp-swaps', swaps) }, [swaps])
+  useEffect(() => {
+    const reload = () => setCustodyState(load('cp-custody', {}))
+    window.addEventListener('cp-local-change', reload)
+    return () => window.removeEventListener('cp-local-change', reload)
+  }, [])
+  function setCustody(next) {
+    setCustodyState(next)
+    save('cp-custody', next)
+    window.dispatchEvent(new Event('cp-custody-changed'))
+  }
+  return (
+    <div className="app-panel ask-panel" id="ask-day">
       <AskDay custody={custody} setCustody={setCustody} locked={locked} swaps={swaps} setSwaps={setSwaps} writer={writer} setWriter={setWriter} fixed={fixed} />
     </div>
   )
@@ -375,7 +404,7 @@ export function HandoverView() {
   const current = changes.find((item) => item.date === picked) || changes[0]
   const n = names()
   const label = (id) => n[id]
-  const entry = current ? (book[current.date] || { time: '18:00', place: c.schoolGate, items: defaultItems(c), yesA: false, yesB: false }) : null
+  const entry = current ? (book[current.date] || { time: '', place: '', items: defaultItems(c), yesA: false, yesB: false }) : null
 
   function patch(next) {
     if (!current) return
@@ -425,11 +454,12 @@ export function HandoverView() {
       </div>
 
       <div className="hand-facts">
+        {!entry.time && !entry.place && <p className="hand-unset" id="hand-time-unset">{layoutCopy(lang).notSet}</p>}
         <label>{c.time}
-          <input type="time" value={entry.time} onChange={(event) => patch({ time: event.target.value, yesA: false, yesB: false })} />
+          <input type="time" value={entry.time} aria-describedby={entry.time ? undefined : 'hand-time-unset'} onChange={(event) => patch({ time: event.target.value, yesA: false, yesB: false })} />
         </label>
         <label>{c.place}
-          <input value={entry.place} onChange={(event) => patch({ place: event.target.value, yesA: false, yesB: false })} />
+          <input value={entry.place} placeholder={layoutCopy(lang).placePlaceholder} onChange={(event) => patch({ place: event.target.value, yesA: false, yesB: false })} />
         </label>
       </div>
 
@@ -484,6 +514,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
   const [give, setGive] = useState('')
   const [note, setNote] = useState('')
   const [warn, setWarn] = useState('')
+  const [why, setWhy] = useState({})
   const year = cursor.getFullYear()
   const month = cursor.getMonth()
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
@@ -494,8 +525,6 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
     const key = `${monthKey}-${String(i + 1).padStart(2, '0')}`
     return { key, day: i + 1, owner: custody[key] }
   })
-  const canOffer = days.filter((day) => day.owner === writer)
-  const canAsk = days.filter((day) => day.owner === other)
   const n = names()
   const label = (id) => n[id]
   function choose(key, owner) {
@@ -538,21 +567,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
           )
         })}
       </div>
-      <h3>{c.offerDays}</h3>
-      <div className="ask-days">
-        {canOffer.length === 0 && <span className="empty">{c.noneMonth}</span>}
-        {canOffer.map((day) => (
-          <button key={day.key} type="button" className={`btn sm ${give === day.key ? 'primary' : 'ghost'}`} onClick={() => { if (!locked[monthKey] && day.key !== want) { setGive(day.key); setPick('offer'); setWarn('') } }}>{pretty(day.key, lang)}</button>
-        ))}
-      </div>
-      <h3>{c.askDays}</h3>
-      <div className="ask-days">
-        {canAsk.length === 0 && <span className="empty">{c.noneMonth}</span>}
-        {canAsk.map((day) => (
-          <button key={day.key} type="button" className={`btn sm ${want === day.key ? 'primary' : 'ghost'}`} onClick={() => { if (!locked[monthKey]) { setWant(day.key); setPick('offer'); setWarn('') } }}>{pretty(day.key, lang)}</button>
-        ))}
-      </div>
-      <p>{c.needShort}: {want ? pretty(want, lang) : '–'} · {c.offerShort}: {give ? pretty(give, lang) : '–'}</p>
+      <p className="ask-summary">{c.needShort}: {want ? pretty(want, lang) : '–'} · {c.offerShort}: {give ? pretty(give, lang) : '–'}</p>
       <form className="add-form" onSubmit={(event) => {
         event.preventDefault()
         if (!want) return
@@ -568,6 +583,11 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
       </form>
       <h3>{c.openSwaps}</h3>
       {open.length === 0 && <p className="empty">{c.noSwaps}</p>}
+      {swaps.filter((row) => row.status === 'no' && row.by === writer).slice(0, 3).map((item) => (
+        <div key={item.id} className="expense-row declined">
+          <div><strong>{pretty(item.want, lang)} · {layoutCopy(lang).declined}</strong>{item.reason && <span className="meta">{item.reason}</span>}</div>
+        </div>
+      ))}
       {open.map((item) => (
         <div key={item.id} className="expense-row">
           <div><strong>{label(item.by)} · {pretty(item.want, lang)}{item.give ? ` → ${pretty(item.give, lang)}` : ''}</strong>{item.note && <span className="meta">{item.note}</span>}</div>
@@ -580,7 +600,12 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
             setSwaps(swaps.map((row) => row.id === item.id ? { ...row, status: 'yes' } : row))
             logActivity(`${names()[writer]} accepted the swap for ${pretty(item.want, lang)}`)
           }}>{c.accept}</button>
-          <button className="btn ghost sm" type="button" onClick={() => setSwaps(swaps.map((row) => row.id === item.id ? { ...row, status: 'no' } : row))}>{c.decline}</button>
+          <input className="decline-why" value={why[item.id] || ''} onChange={(event) => setWhy({ ...why, [item.id]: event.target.value })} placeholder={layoutCopy(lang).declineWhy} aria-label={layoutCopy(lang).declineWhy} />
+          <button className="btn ghost sm" type="button" onClick={() => {
+            const reason = (why[item.id] || '').trim()
+            setSwaps(swaps.map((row) => row.id === item.id ? { ...row, status: 'no', reason } : row))
+            logActivity(`${names()[writer]} declined the request for ${pretty(item.want, lang)}${reason ? `: ${reason}` : ''}`)
+          }}>{c.decline}</button>
           </>}
         </div>
       ))}
@@ -804,7 +829,6 @@ export function NoteThread({ channel, title, writer }) {
   return (
     <div className="note-thread">
       {title && <h3>{title}</h3>}
-      <p className="meta">{c.stuck}</p>
       {notes.length === 0 && <p className="empty">{c.emptyMsg}</p>}
       {notes.map((item) => {
         const isWaiting = Boolean(item.waiting && (!item.deliver_at || new Date(item.deliver_at).getTime() > nowMs))
@@ -828,6 +852,7 @@ export function NoteThread({ channel, title, writer }) {
         <label>{c.byWhen}<input value={byWhen} onChange={(event) => setByWhen(event.target.value)} placeholder="Friday 18:00" /></label>
         <label className="biff-urgent"><input type="checkbox" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} /> {c.urgent}</label>
         <button className="btn primary" type="submit">{c.send}</button>
+        <p className="meta biff-note">{c.stuck}</p>
       </form>
       {status && <p className="lock-hint">{status}</p>}
       {hold && (
