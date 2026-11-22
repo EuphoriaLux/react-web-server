@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# API updater, installed on the VM as /usr/local/bin/coparents-api-update by
+# scripts/setup-api-deploy.sh. GitHub Actions reaches it only through a forced SSH
+# command (account coparents-api-deploy, sudo for this one file, no arguments).
+#
+# Reads a gzip tar on stdin with server/api.py and db/*.sql, then:
+#   1. checks the archive (names, file types, size) and that api.py parses,
+#   2. applies the SQL files (each idempotent, each in one transaction),
+#   3. if api.py changed, installs it, restarts the API and checks /api/health
+#      (unchanged: no restart, health check only),
+#   4. if the new API does not come up (restart or health fails), puts the previous api.py back and fails.
+# Output goes to a public Actions log, so it prints no server logs or data.
+set -Eeuo pipefail
+umask 022
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+API_FILE=${COPARENTS_API_FILE:-/opt/coparents/api.py}
+DB=${COPARENTS_DB:-coparents}
+SERVICE=${COPARENTS_SERVICE:-coparents-api.service}
+HEALTH=${COPARENTS_HEALTH_URL:-http://127.0.0.1:8787/api/health}
+LOCK=${COPARENTS_LOCK:-/run/lock/coparents-api-update.lock}
+MAX_BYTES=$((20 * 1024 * 1024))
+# Known order first (later files depend on earlier tables). schema.sql is the
+# first-install file and is never re-run here. Any other db/*.sql runs after these.
+ORDER=(notes accounts receipts)
+
+fail() { echo "API update failed: $*" >&2; exit 1; }
+
+exec 9>"$LOCK"
+flock -w 300 9 || fail "another API update is still running"
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+head -c $((MAX_BYTES + 1)) > "$WORK/in.tgz"
+size=$(stat -c %s "$WORK/in.tgz")
+(( size > 0 )) || fail "no archive received"
+(( size <= MAX_BYTES )) || fail "archive is larger than $MAX_BYTES bytes"
+
+# Only plain files with expected names. No folders, links or paths outside.
+tar -tvzf "$WORK/in.tgz" > "$WORK/listing" || fail "archive is not a gzip tar"
+tar -tzf "$WORK/in.tgz" > "$WORK/names"
+while read -r mode _; do
+  [[ "$mode" == -* ]] || fail "archive holds something that is not a plain file"
+done < "$WORK/listing"
+while read -r name; do
+  [[ "$name" == server/api.py || "$name" =~ ^db/[a-z0-9_-]+\.sql$ ]] || fail "unexpected file in archive: $name"
+done < "$WORK/names"
+grep -qx 'server/api.py' "$WORK/names" || fail "archive has no server/api.py"
+
+mkdir "$WORK/x"
+tar -xzf "$WORK/in.tgz" -C "$WORK/x" --no-same-owner --no-same-permissions
+[[ -z "$(find "$WORK/x" ! -type f ! -type d -print -quit)" ]] || fail "archive holds a link or special file"
+NEW_API="$WORK/x/server/api.py"
+python3 -c 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1])' "$NEW_API" \
+  || fail "server/api.py does not parse"
+
+# SQL first, as update-api.sh does: the new API may need the new tables.
+sql_files=()
+for name in "${ORDER[@]}"; do
+  [[ -f "$WORK/x/db/$name.sql" ]] && sql_files+=("$name.sql")
+done
+if [[ -d "$WORK/x/db" ]]; then
+  while read -r file; do
+    base=${file%.sql}
+    [[ "$base" == schema || " ${ORDER[*]} " == *" $base "* ]] && continue
+    sql_files+=("$file")
+  done < <(find "$WORK/x/db" -maxdepth 1 -type f -name '*.sql' -printf '%f\n' | sort)
+fi
+for file in "${sql_files[@]}"; do
+  echo "Applying db/$file"
+  runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 -1 -d "$DB" -f - < "$WORK/x/db/$file" \
+    || fail "db/$file did not apply (its transaction was rolled back)"
+done
+
+healthy() {
+  for _ in $(seq 1 20); do
+    if curl -sf --max-time 3 "$HEALTH" > "$WORK/health"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+if cmp -s "$NEW_API" "$API_FILE"; then
+  # Runs on every merge to main, so this is the usual case: no restart needed.
+  echo "api.py unchanged, no restart"
+  if ! healthy; then
+    systemctl restart "$SERVICE" || true
+    healthy || fail "the API does not answer $HEALTH. See sudo journalctl -u $SERVICE on the VM."
+  fi
+else
+  [[ -f "$API_FILE" ]] && cp -p "$API_FILE" "$API_FILE.prev"
+  owner=$(stat -c %U:%G "$API_FILE" 2>/dev/null || echo coparents:coparents)
+  install -m 644 -o "${owner%%:*}" -g "${owner##*:}" "$NEW_API" "$API_FILE.new"
+  mv -f "$API_FILE.new" "$API_FILE"
+  echo "Installed new api.py, restarting the API"
+  if ! systemctl restart "$SERVICE" || ! healthy; then
+    echo "The new API did not start or answer $HEALTH. Putting the previous api.py back." >&2
+    if [[ -f "$API_FILE.prev" ]]; then
+      cp -p "$API_FILE.prev" "$API_FILE"
+      if systemctl restart "$SERVICE" && healthy; then
+        echo "Previous API is running again." >&2
+      else
+        echo "The previous API does not answer either. Check: sudo journalctl -u $SERVICE -n 50" >&2
+      fi
+    fi
+    fail "new API did not start. The SQL changes stay (they only add). See sudo journalctl -u $SERVICE on the VM."
+  fi
+fi
+echo "Health: $(cat "$WORK/health")"
+echo "Database tables and API updated."

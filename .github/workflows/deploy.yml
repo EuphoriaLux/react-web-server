@@ -69,12 +69,58 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "db/$file.sql"
           done
       - run: python3 -m unittest -v server/test_api.py
-  deploy:
+  # Brings the API on the VM in line with main on every push to main, before the
+  # website deploy (a new web app may need the new API). Every run reconciles, so a
+  # failed earlier update is retried by the next push. SQL is idempotent, and the
+  # server restarts the API only when api.py changed.
+  # Its key lives in the api-production environment, which only main can use.
+  api-deploy:
     needs: [build, api-test]
     if: >-
-      github.event_name != 'pull_request' ||
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: api-production
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Update the API on the server
+        env:
+          SSH_KEY: ${{ secrets.API_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.API_DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          : "${SSH_KEY:?Set up API deploys once: bash scripts/setup-api-deploy.sh in Cloud Shell (docs/github-actions.md)}"
+          : "${KNOWN_HOSTS:?Set up API deploys once: bash scripts/setup-api-deploy.sh in Cloud Shell}"
+          : "${DEPLOY_HOST:?Set DEPLOY_HOST in GitHub Actions variables}"
+          [[ "$DEPLOY_HOST" =~ ^[a-zA-Z0-9.-]+$ ]]
+          install -d -m 700 ~/.ssh
+          trap 'rm -f ~/.ssh/api_key' EXIT
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/api_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/api_key ~/.ssh/known_hosts
+          tar -czf api.tgz server/api.py db/*.sql
+          # The server's forced command applies the SQL, restarts the API if api.py changed, checks
+          # its health and exits non-zero (failing this job) if anything goes wrong.
+          ssh -i ~/.ssh/api_key -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "coparents-api-deploy@$DEPLOY_HOST" < api.tgz | tee api-update.log
+          grep -qx 'Database tables and API updated.' api-update.log
+          curl --fail --silent --show-error --retry 3 --max-time 20 https://coparent.lu/api/health
+          printf '### API updated\n\nCommit %s is live at https://coparent.lu/api/health\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+  deploy:
+    needs: [build, api-test, api-deploy]
+    # Runs after api-deploy succeeds, or when it is skipped (PRs, other branches).
+    if: >-
+      !cancelled() &&
+      needs.build.result == 'success' && needs.api-test.result == 'success' &&
+      (needs.api-deploy.result == 'success' || needs.api-deploy.result == 'skipped') &&
+      (github.event_name != 'pull_request' ||
       (github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.draft == false)
+      github.event.pull_request.draft == false))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
