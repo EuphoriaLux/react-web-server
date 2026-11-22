@@ -6,11 +6,9 @@ import {
   ChevronLeft, ChevronRight, Home, Trash2, Globe,
 } from 'lucide-react'
 // Fonts are bundled with the app, so no visitor data goes to Google.
-import '@fontsource-variable/dm-sans/opsz.css'
-import '@fontsource-variable/dm-sans/opsz-italic.css'
-import '@fontsource-variable/manrope/wght.css'
+import '@fontsource-variable/figtree/wght.css'
 import './style.css'
-import { HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity, useCopy } from './extra.jsx'
+import { AskDayPanel, HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity, useCopy } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
@@ -129,8 +127,6 @@ const t = {
     paidBy: 'Paid by', split: 'split',
     markSettled: 'Mark settled', settled: 'Settled', notes: 'Notes',
     scope: 'Apply to', thisMonth: 'This month', fullYear: 'Full year', school: 'School holidays',
-    msgTitle: 'Messages', msgText: 'Structured threads coming next. For now, use the calendar and expenses.',
-    docTitle: 'Documents', docText: 'Shared vault coming next. Store agreements and notes here later.',
   },
   fr: {
     lang: 'FR',
@@ -237,8 +233,6 @@ const t = {
     markSettled: 'Marquer réglé', settled: 'Réglé', notes: 'Notes',
     schoolNames: { 'All Saints': 'Toussaint', Christmas: 'Noël', Carnival: 'Carnaval', Easter: 'Pâques', Pentecost: 'Pentecôte', Summer: 'Été' },
     scope: 'Appliquer à', thisMonth: 'Ce mois', fullYear: 'Toute l’année', school: 'Vacances scolaires',
-    msgTitle: 'Messages', msgText: 'Les fils structurés arrivent bientôt. Pour l’instant, utilisez le calendrier et les dépenses.',
-    docTitle: 'Documents', docText: 'Le coffre partagé arrive bientôt. Vous pourrez y stocker accords et notes.',
   },
   de: {
     lang: 'DE',
@@ -345,8 +339,6 @@ const t = {
     markSettled: 'Als beglichen markieren', settled: 'Beglichen', notes: 'Notizen',
     schoolNames: { 'All Saints': 'Allerheiligen', Christmas: 'Weihnachten', Carnival: 'Fastnacht', Easter: 'Ostern', Pentecost: 'Pfingsten', Summer: 'Sommer' },
     scope: 'Anwenden auf', thisMonth: 'Diesen Monat', fullYear: 'Ganzes Jahr', school: 'Schulferien',
-    msgTitle: 'Nachrichten', msgText: 'Strukturierte Threads kommen als Nächstes. Bis dahin Kalender und Ausgaben nutzen.',
-    docTitle: 'Dokumente', docText: 'Der gemeinsame Tresor kommt als Nächstes. Hier könnt ihr später Vereinbarungen und Notizen ablegen.',
   },
   lb: {
     lang: 'LB',
@@ -444,8 +436,6 @@ const t = {
     markSettled: 'Als bezuelt markéieren', settled: 'Bezuelt', notes: 'Notizen',
     schoolNames: { 'All Saints': 'Allerhellegen', Christmas: 'Chrëschtdag', Carnival: 'Fuesend', Easter: 'Ouschteren', Pentecost: 'Péngschten', Summer: 'Summer' },
     scope: 'Uwenden op', thisMonth: 'Dëse Mount', fullYear: 'Ganzt Joer', school: 'Schoulvakanz',
-    msgTitle: 'Messagen', msgText: 'Strukturéiert Threads kommen als Nächstes. Bis dohin Kalenner an Ausgaben benotzen.',
-    docTitle: 'Dokumenter', docText: 'De gemeinsame Tresor kënnt als Nächstes. Hei kënnt dir spéider Ofkommes a Notizen ofleeën.',
     holidays: 'Feierdeeg',
     h_newyear: 'Neijoerschdag', h_eastermon: 'Ouschterméindeg', h_labour: 'Dag vun der Aarbecht',
     h_europe: 'Europadag', h_ascension: 'Christi Himmelfahrt', h_whitmon: 'Päischtméindeg',
@@ -528,77 +518,88 @@ function LangSwitch() {
 }
 
 /* ─── SVGs (unchanged) ─── */
+// Two homes side by side, with the child between them. Same drawing as the favicon.
+function BrandMark({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2.5 11.6 7.4 7.2l4.9 4.4V19H2.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M11.7 11.6l4.9-4.4 4.9 4.4V19h-9.2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="15.4" r="2" fill="var(--accent)" />
+    </svg>
+  )
+}
+
 function HeroArt() {
   return (
     <svg className="hero-art" viewBox="0 0 520 440" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <linearGradient id="gHouseA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#f0f5fb" /></linearGradient>
-        <linearGradient id="gHouseB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="#edf8f5" /></linearGradient>
-        <linearGradient id="gBridge" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#0d9488" stopOpacity="0.15" /><stop offset="50%" stopColor="#0d9488" stopOpacity="0.35" /><stop offset="100%" stopColor="#0d9488" stopOpacity="0.15" /></linearGradient>
-        <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="#0c1f38" floodOpacity="0.1" /></filter>
+        <linearGradient id="gHouseA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="var(--surface-2)" /></linearGradient>
+        <linearGradient id="gHouseB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="100%" stopColor="var(--surface-2)" /></linearGradient>
+        <linearGradient id="gBridge" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="var(--primary)" stopOpacity="0.15" /><stop offset="50%" stopColor="var(--primary)" stopOpacity="0.35" /><stop offset="100%" stopColor="var(--primary)" stopOpacity="0.15" /></linearGradient>
+        <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="14" floodColor="var(--ink)" floodOpacity="0.1" /></filter>
       </defs>
-      <ellipse className="ha-ground" cx="260" cy="400" rx="200" ry="18" fill="#dfe8f2" opacity="0.55" />
+      <ellipse className="ha-ground" cx="260" cy="400" rx="200" ry="18" fill="var(--surface-3)" opacity="0.55" />
       <g className="ha-house ha-house-l" filter="url(#soft)">
-        <path d="M48 210 L110 152 L172 210 Z" fill="#0d9488" opacity="0.9" />
-        <rect x="58" y="210" width="104" height="96" rx="10" fill="url(#gHouseA)" stroke="#d5e0ec" />
-        <rect x="78" y="232" width="28" height="28" rx="5" fill="#cce8e3" />
-        <rect x="114" y="232" width="28" height="28" rx="5" fill="#cce8e3" />
-        <rect x="96" y="268" width="28" height="38" rx="5" fill="#0f2744" opacity="0.85" />
+        <path d="M48 210 L110 152 L172 210 Z" fill="var(--primary)" opacity="0.9" />
+        <rect x="58" y="210" width="104" height="96" rx="10" fill="url(#gHouseA)" stroke="var(--line-strong)" />
+        <rect x="78" y="232" width="28" height="28" rx="5" fill="var(--a-soft)" />
+        <rect x="114" y="232" width="28" height="28" rx="5" fill="var(--a-soft)" />
+        <rect x="96" y="268" width="28" height="38" rx="5" fill="var(--ink)" opacity="0.85" />
       </g>
       <g className="ha-house ha-house-r" filter="url(#soft)">
-        <path d="M348 210 L410 152 L472 210 Z" fill="#0f766e" opacity="0.85" />
-        <rect x="358" y="210" width="104" height="96" rx="10" fill="url(#gHouseB)" stroke="#d5e0ec" />
-        <rect x="378" y="232" width="28" height="28" rx="5" fill="#d5f0ea" />
-        <rect x="414" y="232" width="28" height="28" rx="5" fill="#d5f0ea" />
-        <rect x="396" y="268" width="28" height="38" rx="5" fill="#0f2744" opacity="0.85" />
+        <path d="M348 210 L410 152 L472 210 Z" fill="var(--primary-deep)" opacity="0.85" />
+        <rect x="358" y="210" width="104" height="96" rx="10" fill="url(#gHouseB)" stroke="var(--line-strong)" />
+        <rect x="378" y="232" width="28" height="28" rx="5" fill="var(--b-soft)" />
+        <rect x="414" y="232" width="28" height="28" rx="5" fill="var(--b-soft)" />
+        <rect x="396" y="268" width="28" height="38" rx="5" fill="var(--ink)" opacity="0.85" />
       </g>
       <path d="M162 258 C210 220, 310 220, 358 258" stroke="url(#gBridge)" strokeWidth="18" strokeLinecap="round" fill="none" />
-      <path className="ha-bridge" d="M162 258 C210 220, 310 220, 358 258" pathLength="1" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="0.08 0.12" fill="none" opacity="0.65" />
+      <path className="ha-bridge" d="M162 258 C210 220, 310 220, 358 258" pathLength="1" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="0.08 0.12" fill="none" opacity="0.65" />
       <g className="ha-cal" filter="url(#soft)">
-        <rect x="218" y="188" width="84" height="92" rx="16" fill="white" stroke="#d5e0ec" />
-        <rect x="218" y="188" width="84" height="26" rx="16" fill="#0d9488" />
-        <rect x="218" y="204" width="84" height="10" fill="#0d9488" />
+        <rect x="218" y="188" width="84" height="92" rx="16" fill="white" stroke="var(--line-strong)" />
+        <rect x="218" y="188" width="84" height="26" rx="16" fill="var(--primary)" />
+        <rect x="218" y="204" width="84" height="10" fill="var(--primary)" />
         <circle cx="236" cy="201" r="3.5" fill="white" opacity="0.9" />
         <circle cx="284" cy="201" r="3.5" fill="white" opacity="0.9" />
-        <circle className="ha-dot" cx="236" cy="240" r="4" fill="#0d9488" />
-        <circle cx="260" cy="240" r="4" fill="#94a3b8" opacity="0.45" />
-        <circle className="ha-dot ha-dot-delay" cx="284" cy="240" r="4" fill="#2563eb" />
-        <circle cx="236" cy="262" r="4" fill="#94a3b8" opacity="0.45" />
-        <circle className="ha-dot ha-dot-delay2" cx="260" cy="262" r="4" fill="#d97706" />
-        <circle cx="284" cy="262" r="4" fill="#94a3b8" opacity="0.45" />
+        <circle className="ha-dot" cx="236" cy="240" r="4" fill="var(--primary)" />
+        <circle cx="260" cy="240" r="4" fill="var(--muted-2)" opacity="0.45" />
+        <circle className="ha-dot ha-dot-delay" cx="284" cy="240" r="4" fill="var(--b)" />
+        <circle cx="236" cy="262" r="4" fill="var(--muted-2)" opacity="0.45" />
+        <circle className="ha-dot ha-dot-delay2" cx="260" cy="262" r="4" fill="var(--accent)" />
+        <circle cx="284" cy="262" r="4" fill="var(--muted-2)" opacity="0.45" />
       </g>
-      <g className="ha-heart" transform="translate(248 156)">
-        <circle cx="12" cy="12" r="16" fill="#ccfbf1" stroke="#99f6e4" />
-        <path d="M12 20.5 C12 20.5 5 15.2 5 10.8 C5 8.4 6.8 6.8 9 6.8 C10.4 6.8 11.5 7.5 12 8.5 C12.5 7.5 13.6 6.8 15 6.8 C17.2 6.8 19 8.4 19 10.8 C19 15.2 12 20.5 12 20.5 Z" fill="#0d9488" />
-      </g>
+      <g transform="translate(248 156)"><g className="ha-heart">
+        <circle cx="12" cy="12" r="16" fill="var(--accent-soft)" stroke="var(--accent-line)" />
+        <path d="M12 20.5 C12 20.5 5 15.2 5 10.8 C5 8.4 6.8 6.8 9 6.8 C10.4 6.8 11.5 7.5 12 8.5 C12.5 7.5 13.6 6.8 15 6.8 C17.2 6.8 19 8.4 19 10.8 C19 15.2 12 20.5 12 20.5 Z" fill="var(--accent)" />
+      </g></g>
       <g className="ha-chip ha-chip-l" filter="url(#soft)">
-        <rect x="86" y="118" width="108" height="36" rx="18" fill="white" stroke="#e2eaf3" />
-        <circle cx="106" cy="136" r="8" fill="#ccfbf1" />
-        <rect x="120" y="130" width="54" height="6" rx="3" fill="#d5e0ec" />
-        <rect x="120" y="140" width="36" height="5" rx="2.5" fill="#e8eef5" />
+        <rect x="86" y="118" width="108" height="36" rx="18" fill="white" stroke="var(--line)" />
+        <circle cx="106" cy="136" r="8" fill="var(--primary-soft)" />
+        <rect x="120" y="130" width="54" height="6" rx="3" fill="var(--line-strong)" />
+        <rect x="120" y="140" width="36" height="5" rx="2.5" fill="var(--surface-3)" />
       </g>
       <g className="ha-chip ha-chip-r" filter="url(#soft)">
-        <rect x="330" y="118" width="108" height="36" rx="18" fill="white" stroke="#e2eaf3" />
-        <circle cx="350" cy="136" r="8" fill="#dbeafe" />
-        <rect x="364" y="130" width="54" height="6" rx="3" fill="#d5e0ec" />
-        <rect x="364" y="140" width="36" height="5" rx="2.5" fill="#e8eef5" />
+        <rect x="330" y="118" width="108" height="36" rx="18" fill="white" stroke="var(--line)" />
+        <circle cx="350" cy="136" r="8" fill="var(--a-soft)" />
+        <rect x="364" y="130" width="54" height="6" rx="3" fill="var(--line-strong)" />
+        <rect x="364" y="140" width="36" height="5" rx="2.5" fill="var(--surface-3)" />
       </g>
-      <g className="ha-child" transform="translate(248 300)">
-        <circle cx="12" cy="10" r="9" fill="#fde68a" />
-        <rect x="4" y="20" width="16" height="14" rx="6" fill="#fbbf24" opacity="0.85" />
-      </g>
+      <g transform="translate(248 300)"><g className="ha-child">
+        <circle cx="12" cy="10" r="9" fill="var(--accent-soft)" />
+        <rect x="4" y="20" width="16" height="14" rx="6" fill="var(--accent)" opacity="0.85" />
+      </g></g>
     </svg>
   )
 }
-function IconCalendar() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="10" width="36" height="32" rx="8" fill="#ccfbf1" /><rect x="6" y="10" width="36" height="10" rx="8" fill="#0d9488" /><rect x="6" y="16" width="36" height="4" fill="#0d9488" /><circle cx="16" cy="15" r="2" fill="white" /><circle cx="32" cy="15" r="2" fill="white" /><circle cx="16" cy="30" r="2.5" fill="#0d9488" /><circle cx="24" cy="30" r="2.5" fill="#94a3b8" opacity="0.5" /><circle cx="32" cy="30" r="2.5" fill="#2563eb" /><circle cx="16" cy="36" r="2.5" fill="#94a3b8" opacity="0.5" /><circle cx="24" cy="36" r="2.5" fill="#d97706" /></svg>) }
-function IconWallet() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="14" width="36" height="24" rx="7" fill="#ccfbf1" /><rect x="6" y="14" width="36" height="8" rx="4" fill="#0d9488" opacity="0.9" /><rect x="28" y="24" width="14" height="10" rx="3" fill="#0f766e" /><circle cx="35" cy="29" r="2" fill="#99f6e4" /><path d="M12 12h18a4 4 0 0 1 4 4" stroke="#0d9488" strokeWidth="2.5" strokeLinecap="round" /></svg>) }
-function IconMessages() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="10" width="28" height="20" rx="8" fill="#ccfbf1" /><path d="M12 30 L12 36 L18 30" fill="#ccfbf1" /><rect x="16" y="18" width="26" height="18" rx="8" fill="#0d9488" /><path d="M36 36 L36 42 L30 36" fill="#0d9488" /><circle cx="24" cy="27" r="1.8" fill="white" /><circle cx="30" cy="27" r="1.8" fill="white" /><circle cx="36" cy="27" r="1.8" fill="white" /></svg>) }
-function IconDocs() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="12" y="6" width="24" height="32" rx="5" fill="#ccfbf1" /><rect x="10" y="10" width="24" height="32" rx="5" fill="white" stroke="#d5e0ec" /><path d="M28 10h6v6h-6a2 2 0 0 1-2-2v-4z" fill="#0d9488" opacity="0.85" /><rect x="16" y="22" width="14" height="2.5" rx="1.2" fill="#94a3b8" opacity="0.55" /><rect x="16" y="28" width="12" height="2.5" rx="1.2" fill="#94a3b8" opacity="0.4" /><rect x="16" y="34" width="10" height="2.5" rx="1.2" fill="#94a3b8" opacity="0.3" /><circle cx="34" cy="34" r="8" fill="#0d9488" /><path d="M31 34.5 L33 36.5 L37.5 31.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>) }
-function IconHandover() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="12" cy="14" r="5" fill="#fecaca" /><circle cx="28" cy="14" r="5" fill="#bfdbfe" /><path d="M8 28c0-4 2.5-6 4-6s4 2 4 6" stroke="#f87171" strokeWidth="2.2" strokeLinecap="round" /><path d="M24 28c0-4 2.5-6 4-6s4 2 4 6" stroke="#60a5fa" strokeWidth="2.2" strokeLinecap="round" /><path d="M15 20h10" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 3" /></svg>) }
-function IconExpense() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="8" y="10" width="24" height="22" rx="4" fill="#fecaca" /><path d="M14 16h12M14 21h12M14 26h8" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.7" /><circle cx="28" cy="12" r="7" fill="#fff" stroke="#fecaca" /><path d="M28 9v6M25.5 12h5" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" /></svg>) }
-function IconEscalate() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M8 12h16a6 6 0 0 1 6 6v2a6 6 0 0 1-6 6H14l-6 5v-5a6 6 0 0 1-0-14z" fill="#fecaca" /><path d="M18 18h6M18 22h4" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" opacity="0.75" /><path d="M30 8l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z" fill="#f87171" /></svg>) }
-function IconScatter() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="6" y="8" width="14" height="18" rx="2.5" fill="#fecaca" transform="rotate(-8 13 17)" /><rect x="16" y="10" width="14" height="18" rx="2.5" fill="#fda4af" transform="rotate(6 23 19)" /><rect x="12" y="14" width="14" height="18" rx="2.5" fill="white" stroke="#fecaca" /><path d="M16 20h6M16 24h5" stroke="#f87171" strokeWidth="1.6" strokeLinecap="round" opacity="0.7" /></svg>) }
-function ValuesArt() { return (<svg className="values-art" viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#ccfbf1" /><stop offset="100%" stopColor="#e0f2fe" /></linearGradient></defs><rect x="20" y="30" width="280" height="160" rx="24" fill="url(#vg)" opacity="0.55" /><g transform="translate(70 55)"><circle cx="40" cy="36" r="16" fill="#0d9488" opacity="0.9" /><rect x="24" y="54" width="32" height="40" rx="12" fill="#0d9488" opacity="0.75" /><circle cx="140" cy="36" r="16" fill="#0f766e" opacity="0.9" /><rect x="124" y="54" width="32" height="40" rx="12" fill="#0f766e" opacity="0.75" /><circle cx="90" cy="52" r="12" fill="#fbbf24" /><rect x="78" y="66" width="24" height="28" rx="10" fill="#f59e0b" opacity="0.9" /><path className="va-arc" d="M56 40 C70 20, 110 20, 124 40" pathLength="1" stroke="#0d9488" strokeWidth="2.5" strokeDasharray="0.12 0.1" strokeLinecap="round" opacity="0.55" fill="none" /></g><circle className="va-orb" cx="52" cy="48" r="6" fill="#99f6e4" /><circle className="va-orb va-orb-2" cx="268" cy="170" r="8" fill="#bae6fd" /><circle className="va-orb va-orb-3" cx="250" cy="50" r="5" fill="#99f6e4" opacity="0.8" /></svg>) }
+function IconCalendar() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="10" width="36" height="32" rx="8" fill="var(--primary-soft)" /><rect x="6" y="10" width="36" height="10" rx="8" fill="var(--primary)" /><rect x="6" y="16" width="36" height="4" fill="var(--primary)" /><circle cx="16" cy="15" r="2" fill="white" /><circle cx="32" cy="15" r="2" fill="white" /><circle cx="16" cy="30" r="2.5" fill="var(--primary)" /><circle cx="24" cy="30" r="2.5" fill="var(--muted-2)" opacity="0.5" /><circle cx="32" cy="30" r="2.5" fill="var(--b)" /><circle cx="16" cy="36" r="2.5" fill="var(--muted-2)" opacity="0.5" /><circle cx="24" cy="36" r="2.5" fill="var(--accent)" /></svg>) }
+function IconWallet() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="14" width="36" height="24" rx="7" fill="var(--primary-soft)" /><rect x="6" y="14" width="36" height="8" rx="4" fill="var(--primary)" opacity="0.9" /><rect x="28" y="24" width="14" height="10" rx="3" fill="var(--primary-deep)" /><circle cx="35" cy="29" r="2" fill="var(--primary-line)" /><path d="M12 12h18a4 4 0 0 1 4 4" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" /></svg>) }
+function IconMessages() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="6" y="10" width="28" height="20" rx="8" fill="var(--primary-soft)" /><path d="M12 30 L12 36 L18 30" fill="var(--primary-soft)" /><rect x="16" y="18" width="26" height="18" rx="8" fill="var(--primary)" /><path d="M36 36 L36 42 L30 36" fill="var(--primary)" /><circle cx="24" cy="27" r="1.8" fill="white" /><circle cx="30" cy="27" r="1.8" fill="white" /><circle cx="36" cy="27" r="1.8" fill="white" /></svg>) }
+function IconDocs() { return (<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><rect x="12" y="6" width="24" height="32" rx="5" fill="var(--primary-soft)" /><rect x="10" y="10" width="24" height="32" rx="5" fill="white" stroke="var(--line-strong)" /><path d="M28 10h6v6h-6a2 2 0 0 1-2-2v-4z" fill="var(--primary)" opacity="0.85" /><rect x="16" y="22" width="14" height="2.5" rx="1.2" fill="var(--muted-2)" opacity="0.55" /><rect x="16" y="28" width="12" height="2.5" rx="1.2" fill="var(--muted-2)" opacity="0.4" /><rect x="16" y="34" width="10" height="2.5" rx="1.2" fill="var(--muted-2)" opacity="0.3" /><circle cx="34" cy="34" r="8" fill="var(--primary)" /><path d="M31 34.5 L33 36.5 L37.5 31.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>) }
+function IconHandover() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><circle cx="12" cy="14" r="5" fill="var(--accent-soft)" /><circle cx="28" cy="14" r="5" fill="var(--a-soft)" /><path d="M8 28c0-4 2.5-6 4-6s4 2 4 6" stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" /><path d="M24 28c0-4 2.5-6 4-6s4 2 4 6" stroke="var(--a)" strokeWidth="2.2" strokeLinecap="round" /><path d="M15 20h10" stroke="var(--muted-2)" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 3" /></svg>) }
+function IconExpense() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="8" y="10" width="24" height="22" rx="4" fill="var(--accent-soft)" /><path d="M14 16h12M14 21h12M14 26h8" stroke="var(--accent-ink)" strokeWidth="2" strokeLinecap="round" opacity="0.7" /><circle cx="28" cy="12" r="7" fill="#fff" stroke="var(--accent-soft)" /><path d="M28 9v6M25.5 12h5" stroke="var(--accent-ink)" strokeWidth="1.8" strokeLinecap="round" /></svg>) }
+function IconEscalate() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M8 12h16a6 6 0 0 1 6 6v2a6 6 0 0 1-6 6H14l-6 5v-5a6 6 0 0 1-0-14z" fill="var(--accent-soft)" /><path d="M18 18h6M18 22h4" stroke="var(--accent-ink)" strokeWidth="2" strokeLinecap="round" opacity="0.75" /><path d="M30 8l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z" fill="var(--accent)" /></svg>) }
+function IconScatter() { return (<svg viewBox="0 0 40 40" fill="none" aria-hidden="true"><rect x="6" y="8" width="14" height="18" rx="2.5" fill="var(--accent-soft)" transform="rotate(-8 13 17)" /><rect x="16" y="10" width="14" height="18" rx="2.5" fill="var(--accent-line)" transform="rotate(6 23 19)" /><rect x="12" y="14" width="14" height="18" rx="2.5" fill="white" stroke="var(--accent-soft)" /><path d="M16 20h6M16 24h5" stroke="var(--accent)" strokeWidth="1.6" strokeLinecap="round" opacity="0.7" /></svg>) }
+function ValuesArt() { return (<svg className="values-art" viewBox="0 0 320 220" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs><linearGradient id="vg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="var(--primary-soft)" /><stop offset="100%" stopColor="var(--a-soft)" /></linearGradient></defs><rect x="20" y="30" width="280" height="160" rx="24" fill="url(#vg)" opacity="0.55" /><g transform="translate(70 55)"><circle cx="40" cy="36" r="16" fill="var(--primary)" opacity="0.9" /><rect x="24" y="54" width="32" height="40" rx="12" fill="var(--primary)" opacity="0.75" /><circle cx="140" cy="36" r="16" fill="var(--primary-deep)" opacity="0.9" /><rect x="124" y="54" width="32" height="40" rx="12" fill="var(--primary-deep)" opacity="0.75" /><circle cx="90" cy="52" r="12" fill="var(--accent)" /><rect x="78" y="66" width="24" height="28" rx="10" fill="var(--accent)" opacity="0.9" /><path className="va-arc" d="M56 40 C70 20, 110 20, 124 40" pathLength="1" stroke="var(--primary)" strokeWidth="2.5" strokeDasharray="0.12 0.1" strokeLinecap="round" opacity="0.55" fill="none" /></g><circle className="va-orb" cx="52" cy="48" r="6" fill="var(--primary-line)" /><circle className="va-orb va-orb-2" cx="268" cy="170" r="8" fill="var(--a-soft)" /><circle className="va-orb va-orb-3" cx="250" cy="50" r="5" fill="var(--primary-line)" opacity="0.8" /></svg>) }
 
 function load(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback } catch { return fallback } }
 function save(key, value) {
@@ -864,6 +865,12 @@ function CalendarView() {
   const withNames = (label) => String(label).replace(/\bA\b/g, n.A).replace(/\bB\b/g, n.B)
 
   useEffect(() => { save('cp-custody', custody) }, [custody])
+  // An accepted day swap below the calendar changes the plan from outside.
+  useEffect(() => {
+    const reload = () => setCustody(load('cp-custody', {}))
+    window.addEventListener('cp-custody-changed', reload)
+    return () => window.removeEventListener('cp-custody-changed', reload)
+  }, [])
   useEffect(() => { save('cp-locked', locked) }, [locked])
   useEffect(() => { save('cp-lockdays', lockDays) }, [lockDays])
   useEffect(() => { save('cp-events', events) }, [events])
@@ -1055,6 +1062,9 @@ function CalendarView() {
           const dayEvents = events.filter((ev) => ev.date === key)
           const hol = hols[key]
           const sch = school[key] && ((tr.schoolNames || {})[school[key]] || school[key])
+          // Name a school holiday on its first day only, not in every cell of the week.
+          const prevKey = iso(d - 1)
+          const schStart = sch && (d === 1 || school[prevKey] !== school[key])
           return (
             <button
               key={i}
@@ -1068,7 +1078,7 @@ function CalendarView() {
               <span className="cal-day">{d}</span>
               {who && <span className="who">{who === 'both' ? (tr.both || 'AB') : shortName(who)}</span>}
               {hol && <span className="hol-name">{hol}</span>}
-              {!hol && sch && <span className="sch-name">{sch}</span>}
+              {!hol && schStart && <span className="sch-name">{sch}</span>}
               {dayEvents.length > 0 && <span className="dot" />}
             </button>
           )
@@ -1145,34 +1155,7 @@ function CalendarView() {
     </div>
   )
 }
-function Placeholder({ title, text }) { return (<div className="app-panel"><h2>{title}</h2><p className="empty">{text}</p></div>) }
 
-
-function DeployLog() {
-  const { tr } = useLang()
-  const [logs, setLogs] = useState(() => load('cp-deploy-logs', []))
-  const add = (msg) => setLogs((p) => [{ id: Date.now(), ts: new Date().toISOString(), msg }, ...p].slice(0, 50))
-  useEffect(() => { save('cp-deploy-logs', logs) }, [logs])
-  return (
-    <div className="app-panel">
-      <div className="panel-head"><h2>{tr.tabDeploy || 'Deploy'}</h2></div>
-      <p className="q-lead">{tr.deployLead || 'Local notes about deployments and checks. The real pipeline logs live in GitHub Actions.'}</p>
-      <form className="add-form" onSubmit={(e) => { e.preventDefault(); const v = e.target.note.value.trim(); if (v) { add(v); e.target.reset() } }}>
-        <input name="note" placeholder={tr.deployNote || 'Add a deploy note'} />
-        <button className="btn primary" type="submit"><Plus size={16} /> {tr.add}</button>
-      </form>
-      <div className="deploy-list">
-        {logs.length === 0 && <p className="empty">{tr.noLogs || 'No local deploy notes yet.'}</p>}
-        {logs.map((l) => (
-          <div key={l.id} className="deploy-item">
-            <span className="deploy-ts">{l.ts.slice(0, 19).replace('T', ' ')}</span>
-            <span>{l.msg}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 function AppShell({ onExit }) {
   const { tr } = useLang()
@@ -1185,8 +1168,13 @@ function AppShell({ onExit }) {
   const [menu, setMenu] = useState(false)
   useEffect(() => {
     const open = () => setSetup(true)
+    const go = (event) => { if (event.detail) { setTab(event.detail); window.scrollTo(0, 0) } }
     window.addEventListener('cp-open-family', open)
-    return () => window.removeEventListener('cp-open-family', open)
+    window.addEventListener('cp-go-tab', go)
+    return () => {
+      window.removeEventListener('cp-open-family', open)
+      window.removeEventListener('cp-go-tab', go)
+    }
   }, [])
   const closeSetup = useCallback(() => { setSetup(false); setSyncRev((n) => n + 1) }, [])
   const primary = [
@@ -1204,7 +1192,7 @@ function AppShell({ onExit }) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-brand"><span className="logo-mark small"><Heart size={14} /></span> {tr.appTitle} <span className="beta-badge">{tr.beta}</span></div>
+        <div className="app-brand"><span className="logo-mark small"><BrandMark size={16} /></span> {tr.appTitle} <span className="beta-badge">{tr.beta}</span></div>
         <div className="app-tools">
           <button className={`btn ghost sm ${menu || extra.some((item) => item.id === tab) ? 'on' : ''}`} type="button" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
             {menu ? <X size={16} /> : <Menu size={16} />} {tr.more}
@@ -1229,17 +1217,16 @@ function AppShell({ onExit }) {
         )}
       </header>
       <main className="app-main">
-        <ShareBar onSync={handleSync} />
+        <ShareBar onSync={handleSync} compact={tab !== 'today'} />
         <div key={syncRev}>
           {tab === 'today' && <TodayBoard />}
           {tab === 'handover' && <HandoverView />}
-          {tab === 'calendar' && <CalendarView />}
+          {tab === 'calendar' && <><CalendarView /><AskDayPanel /></>}
           {tab === 'expenses' && <ExpensesView />}
           {tab === 'messages' && <Threads />}
           {tab === 'resolve' && <ResolveBoard />}
           {tab === 'docs' && <Papers />}
           {tab === 'family' && <FamilyView />}
-          {tab === 'deploy' && <DeployLog />}
         </div>
       </main>
       {setup && <FamilySetup onClose={closeSetup} />}
@@ -1300,7 +1287,7 @@ function Landing({ onEnter }) {
     <div className="site">
       <header className={`nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="nav-inner">
-          <a className="logo" href="#top" onClick={closeMenu}><span className="logo-mark"><Heart size={16} strokeWidth={2.4} /></span>CoParents</a>
+          <a className="logo" href="#top" onClick={closeMenu}><span className="logo-mark"><BrandMark size={20} /></span>CoParents</a>
           <nav className="nav-links" aria-label="Primary">
             <a href="#problem">{tr.problem}</a>
             <a href="#solution">{tr.how}</a>
@@ -1430,7 +1417,7 @@ function Landing({ onEnter }) {
       </main>
       <footer className="footer">
         <div className="container footer-inner">
-          <div className="footer-brand"><span className="logo-mark small"><Heart size={13} strokeWidth={2.4} /></span>CoParents</div>
+          <div className="footer-brand"><span className="logo-mark small"><BrandMark size={16} /></span>CoParents</div>
           <p>{tr.footerTag}</p>
           <span className="footer-meta">© {new Date().getFullYear()} {tr.footerMeta} · <PrivacyLink /></span>
         </div>
@@ -1442,7 +1429,8 @@ function Landing({ onEnter }) {
 function App() {
   const [mode, setMode] = useState(() => {
     // A sign-in link from email always opens the app.
-    if (new URLSearchParams(window.location.search).has('login')) return 'app'
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('login') || params.has('join')) return 'app'
     const known = localStorage.getItem('cp-email') || localStorage.getItem('cp-token')
     return sessionStorage.getItem('cp-mode') || (known ? 'app' : 'landing')
   })

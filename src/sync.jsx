@@ -3,6 +3,7 @@ import { AccountPanel, PrivacyLink, usePrivacyCopy } from './privacy.jsx'
 import { useLang } from './main.jsx'
 import { SYNC_COPY, fill } from './sync-copy.js'
 import { names } from './people.js'
+import { layoutCopy, goToTab } from './layout-copy.js'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses', 'cp-payments', 'cp-money',
@@ -16,6 +17,40 @@ const STAMP_KEY = 'cp-sync-stamp'
 const BASE_KEY = 'cp-sync-base'
 // Plan data kept on the phone. Removed when the account leaves this phone.
 const PLAN_KEYS = [...KEYS, 'cp-writer', 'cp-notes', 'cp-family-later']
+
+// An invite link (/?join=CODE) is remembered until the parent has signed in,
+// because the sign-in link from the email opens without it.
+const JOIN_KEY = 'cp-join-code'
+function inviteCode() {
+  const params = new URLSearchParams(window.location.search)
+  const fromLink = (params.get('join') || '').trim().toUpperCase().slice(0, 6)
+  if (fromLink) {
+    try { localStorage.setItem(JOIN_KEY, fromLink) } catch {}
+    params.delete('join')
+    const rest = params.toString()
+    window.history.replaceState(null, '', window.location.pathname + (rest ? `?${rest}` : '') + window.location.hash)
+    return fromLink
+  }
+  try { return localStorage.getItem(JOIN_KEY) || '' } catch { return '' }
+}
+
+function InviteOther({ code, lang }) {
+  const lc = layoutCopy(lang)
+  const link = `${window.location.origin}/?join=${code}`
+  const text = fill(lc.inviteText, { child: names(lang).child, code, link })
+  return (
+    <div className="invite">
+      <div>
+        <strong>{lc.invite}</strong>
+        <p>{lc.inviteLead}</p>
+      </div>
+      <div className="invite-actions">
+        <a className="btn primary sm" href={`https://wa.me/?text=${encodeURIComponent(text)}`} target="_blank" rel="noopener noreferrer">{lc.whatsapp}</a>
+        <a className="btn ghost sm" href={`mailto:?subject=${encodeURIComponent(lc.inviteSubject)}&body=${encodeURIComponent(text)}`}>{lc.email}</a>
+      </div>
+    </div>
+  )
+}
 
 function forgetPlanHere() {
   for (const key of PLAN_KEYS) localStorage.removeItem(key)
@@ -125,14 +160,14 @@ async function askWho() {
   }
 }
 
-export function ShareBar({ onSync }) {
+export function ShareBar({ onSync, compact = false }) {
   const [code, setCode] = useState(() => localStorage.getItem(CODE_KEY) || '')
   const [role, setRole] = useState(() => localStorage.getItem(ROLE_KEY) || '')
   // undefined while we ask the server, null when signed out
   const [email, setEmail] = useState(() => localStorage.getItem(EMAIL_KEY) || undefined)
   const [address, setAddress] = useState('')
   const [sent, setSent] = useState('')
-  const [join, setJoin] = useState('')
+  const [join, setJoin] = useState(inviteCode)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [account, setAccount] = useState(false)
@@ -412,6 +447,7 @@ export function ShareBar({ onSync }) {
       whoPromise = Promise.resolve({ email, household: { code: joined.code, role: joined.role } })
       setCode(joined.code)
       setRole(joined.role)
+      try { localStorage.removeItem(JOIN_KEY) } catch {}
       setStatus('Joined. Loading the shared plan.')
     } catch (error) {
       setStatus(error.message)
@@ -426,6 +462,26 @@ export function ShareBar({ onSync }) {
   }
 
   if (email === undefined && !code) return null
+  const lc = layoutCopy(lang)
+
+  // Above every tab but Today, the bar shrinks to one quiet line.
+  if (compact) {
+    if (email && code) {
+      return (
+        <div className="share-line on">
+          <span className="share-dot" aria-hidden="true" />
+          <span>{fill(lc.sharedLine, { code })}{shown ? ` · ${shown}` : ''}</span>
+        </div>
+      )
+    }
+    return (
+      <div className="share-line">
+        <span className="share-dot" aria-hidden="true" />
+        <span>{email ? sc.shareTitle : lc.tryLine}</span>
+        <button type="button" className="btn text sm" onClick={() => goToTab('today')}>{email ? sc.create : lc.signIn}</button>
+      </div>
+    )
+  }
 
   if (!email) {
     // A phone that joined before accounts keeps syncing, and is asked to sign in.
@@ -448,6 +504,7 @@ export function ShareBar({ onSync }) {
             <button className="btn primary sm" type="submit" disabled={busy || !address.trim()}>{sc.emailMe}</button>
           </form>
         )}
+        {!legacy && <p className="share-try">{lc.tryOut}</p>}
         <p className="share-privacy">{pc.signInNote} <PrivacyLink /></p>
         {shown && <p className="lock-hint">{shown}</p>}
       </div>
@@ -484,6 +541,7 @@ export function ShareBar({ onSync }) {
       {accountButton}
       <button className="btn ghost sm" type="button" onClick={signOut} disabled={busy}>{sc.signOut}</button>
       {shown && <p className="lock-hint">{shown}</p>}
+      <InviteOther code={code} lang={lang} />
       {accountPanel}
     </div>
   )
