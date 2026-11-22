@@ -98,7 +98,7 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: var(--display-track); 
   box-shadow: 0 10px 22px -10px rgba(var(--primary-rgb), 0.65);
 }
 .logo-mark.small { width: 26px; height: 26px; border-radius: 8px; }
-.nav-links { display: flex; gap: 22px; margin-left: 8px; flex-wrap: wrap; }
+.nav-links { display: flex; gap: 22px; margin-left: 8px; flex-wrap: nowrap; }
 .nav-links a { font-size: 0.9rem; color: var(--ink-soft); font-weight: 500; transition: color 0.15s; }
 .nav-links a:hover { color: var(--ink); }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
@@ -142,11 +142,11 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: var(--display-track); 
 .orb { position: absolute; border-radius: 50%; filter: blur(40px); }
 .orb-a {
   width: 520px; height: 520px; top: -120px; right: -80px;
-  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.22), transparent 68%);
+  background: radial-gradient(circle, rgba(var(--primary-rgb), 0.09), transparent 68%);
 }
 .orb-b {
   width: 380px; height: 380px; bottom: -60px; left: -60px;
-  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.12), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.16), transparent 70%);
 }
 .grid-fade {
   position: absolute; inset: 0;
@@ -1134,7 +1134,7 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: var(--display-track); 
 
 /* ─── 2026-11 refresh: calmer layout and the new palette ─── */
 .nav-links a, .nav-actions .btn { white-space: nowrap; }
-@media (max-width: 1080px) {
+@media (max-width: 1180px) {
   .nav-links, .nav-actions { display: none; }
   .menu-btn { display: grid; }
   .mobile-menu { display: flex; }

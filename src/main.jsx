@@ -518,6 +518,17 @@ function LangSwitch() {
 }
 
 /* ─── SVGs (unchanged) ─── */
+// Two homes side by side, with the child between them. Same drawing as the favicon.
+function BrandMark({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M2.5 11.6 7.4 7.2l4.9 4.4V19H2.5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M11.7 11.6l4.9-4.4 4.9 4.4V19h-9.2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="12" cy="15.4" r="2" fill="var(--accent)" />
+    </svg>
+  )
+}
+
 function HeroArt() {
   return (
     <svg className="hero-art" viewBox="0 0 520 440" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -557,10 +568,10 @@ function HeroArt() {
         <circle className="ha-dot ha-dot-delay2" cx="260" cy="262" r="4" fill="var(--accent)" />
         <circle cx="284" cy="262" r="4" fill="var(--muted-2)" opacity="0.45" />
       </g>
-      <g className="ha-heart" transform="translate(248 156)">
-        <circle cx="12" cy="12" r="16" fill="var(--primary-soft)" stroke="var(--primary-line)" />
-        <path d="M12 20.5 C12 20.5 5 15.2 5 10.8 C5 8.4 6.8 6.8 9 6.8 C10.4 6.8 11.5 7.5 12 8.5 C12.5 7.5 13.6 6.8 15 6.8 C17.2 6.8 19 8.4 19 10.8 C19 15.2 12 20.5 12 20.5 Z" fill="var(--primary)" />
-      </g>
+      <g transform="translate(248 156)"><g className="ha-heart">
+        <circle cx="12" cy="12" r="16" fill="var(--accent-soft)" stroke="var(--accent-line)" />
+        <path d="M12 20.5 C12 20.5 5 15.2 5 10.8 C5 8.4 6.8 6.8 9 6.8 C10.4 6.8 11.5 7.5 12 8.5 C12.5 7.5 13.6 6.8 15 6.8 C17.2 6.8 19 8.4 19 10.8 C19 15.2 12 20.5 12 20.5 Z" fill="var(--accent)" />
+      </g></g>
       <g className="ha-chip ha-chip-l" filter="url(#soft)">
         <rect x="86" y="118" width="108" height="36" rx="18" fill="white" stroke="var(--line)" />
         <circle cx="106" cy="136" r="8" fill="var(--primary-soft)" />
@@ -573,10 +584,10 @@ function HeroArt() {
         <rect x="364" y="130" width="54" height="6" rx="3" fill="var(--line-strong)" />
         <rect x="364" y="140" width="36" height="5" rx="2.5" fill="var(--surface-3)" />
       </g>
-      <g className="ha-child" transform="translate(248 300)">
+      <g transform="translate(248 300)"><g className="ha-child">
         <circle cx="12" cy="10" r="9" fill="var(--accent-soft)" />
         <rect x="4" y="20" width="16" height="14" rx="6" fill="var(--accent)" opacity="0.85" />
-      </g>
+      </g></g>
     </svg>
   )
 }
@@ -1181,7 +1192,7 @@ function AppShell({ onExit }) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-brand"><span className="logo-mark small"><Heart size={14} /></span> {tr.appTitle} <span className="beta-badge">{tr.beta}</span></div>
+        <div className="app-brand"><span className="logo-mark small"><BrandMark size={16} /></span> {tr.appTitle} <span className="beta-badge">{tr.beta}</span></div>
         <div className="app-tools">
           <button className={`btn ghost sm ${menu || extra.some((item) => item.id === tab) ? 'on' : ''}`} type="button" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
             {menu ? <X size={16} /> : <Menu size={16} />} {tr.more}
@@ -1276,7 +1287,7 @@ function Landing({ onEnter }) {
     <div className="site">
       <header className={`nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="nav-inner">
-          <a className="logo" href="#top" onClick={closeMenu}><span className="logo-mark"><Heart size={16} strokeWidth={2.4} /></span>CoParents</a>
+          <a className="logo" href="#top" onClick={closeMenu}><span className="logo-mark"><BrandMark size={20} /></span>CoParents</a>
           <nav className="nav-links" aria-label="Primary">
             <a href="#problem">{tr.problem}</a>
             <a href="#solution">{tr.how}</a>
@@ -1406,7 +1417,7 @@ function Landing({ onEnter }) {
       </main>
       <footer className="footer">
         <div className="container footer-inner">
-          <div className="footer-brand"><span className="logo-mark small"><Heart size={13} strokeWidth={2.4} /></span>CoParents</div>
+          <div className="footer-brand"><span className="logo-mark small"><BrandMark size={16} /></span>CoParents</div>
           <p>{tr.footerTag}</p>
           <span className="footer-meta">© {new Date().getFullYear()} {tr.footerMeta} · <PrivacyLink /></span>
         </div>
