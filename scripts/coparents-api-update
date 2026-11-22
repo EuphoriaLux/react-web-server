@@ -6,8 +6,9 @@
 # Reads a gzip tar on stdin with server/api.py and db/*.sql, then:
 #   1. checks the archive (names, file types, size) and that api.py parses,
 #   2. applies the SQL files (each idempotent, each in one transaction),
-#   3. installs api.py, restarts the API and checks /api/health,
-#   4. if the new API does not come up, puts the previous api.py back and fails.
+#   3. if api.py changed, installs it, restarts the API and checks /api/health
+#      (unchanged: no restart, health check only),
+#   4. if the new API does not come up (restart or health fails), puts the previous api.py back and fails.
 # Output goes to a public Actions log, so it prints no server logs or data.
 set -Eeuo pipefail
 umask 022
@@ -82,25 +83,30 @@ healthy() {
 }
 
 if cmp -s "$NEW_API" "$API_FILE"; then
-  echo "api.py unchanged, restarting anyway so the API sees the current tables"
-fi
-[[ -f "$API_FILE" ]] && cp -p "$API_FILE" "$API_FILE.prev"
-owner=$(stat -c %U:%G "$API_FILE" 2>/dev/null || echo coparents:coparents)
-install -m 644 -o "${owner%%:*}" -g "${owner##*:}" "$NEW_API" "$API_FILE.new"
-mv -f "$API_FILE.new" "$API_FILE"
-systemctl restart "$SERVICE"
-if ! healthy; then
-  echo "The new API did not answer $HEALTH. Putting the previous api.py back." >&2
-  if [[ -f "$API_FILE.prev" ]]; then
-    cp -p "$API_FILE.prev" "$API_FILE"
-    systemctl restart "$SERVICE"
-    if healthy; then
-      echo "Previous API is running again." >&2
-    else
-      echo "The previous API does not answer either. Check: sudo journalctl -u $SERVICE -n 50" >&2
-    fi
+  # Runs on every merge to main, so this is the usual case: no restart needed.
+  echo "api.py unchanged, no restart"
+  if ! healthy; then
+    systemctl restart "$SERVICE" || true
+    healthy || fail "the API does not answer $HEALTH. See sudo journalctl -u $SERVICE on the VM."
   fi
-  fail "new API did not start. The SQL changes stay (they only add). See sudo journalctl -u $SERVICE on the VM."
+else
+  [[ -f "$API_FILE" ]] && cp -p "$API_FILE" "$API_FILE.prev"
+  owner=$(stat -c %U:%G "$API_FILE" 2>/dev/null || echo coparents:coparents)
+  install -m 644 -o "${owner%%:*}" -g "${owner##*:}" "$NEW_API" "$API_FILE.new"
+  mv -f "$API_FILE.new" "$API_FILE"
+  echo "Installed new api.py, restarting the API"
+  if ! systemctl restart "$SERVICE" || ! healthy; then
+    echo "The new API did not start or answer $HEALTH. Putting the previous api.py back." >&2
+    if [[ -f "$API_FILE.prev" ]]; then
+      cp -p "$API_FILE.prev" "$API_FILE"
+      if systemctl restart "$SERVICE" && healthy; then
+        echo "Previous API is running again." >&2
+      else
+        echo "The previous API does not answer either. Check: sudo journalctl -u $SERVICE -n 50" >&2
+      fi
+    fi
+    fail "new API did not start. The SQL changes stay (they only add). See sudo journalctl -u $SERVICE on the VM."
+  fi
 fi
 echo "Health: $(cat "$WORK/health")"
 echo "Database tables and API updated."

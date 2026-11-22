@@ -69,8 +69,10 @@ jobs:
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "db/$file.sql"
           done
       - run: python3 -m unittest -v server/test_api.py
-  # Updates the API on the VM when a push to main changes server/api.py or db/.
-  # Runs before the website deploy, because a new web app may need the new API.
+  # Brings the API on the VM in line with main on every push to main, before the
+  # website deploy (a new web app may need the new API). Every run reconciles, so a
+  # failed earlier update is retried by the next push. SQL is idempotent, and the
+  # server restarts the API only when api.py changed.
   # Its key lives in the api-production environment, which only main can use.
   api-deploy:
     needs: [build, api-test]
@@ -84,31 +86,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          fetch-depth: 0
-      - name: Check for API or database changes
-        id: changes
-        env:
-          EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT" = workflow_dispatch ]; then
-            echo "Manual run: updating the API."
-            echo "api=true" >> "$GITHUB_OUTPUT"
-          elif [ -z "$BEFORE" ] || [ "$BEFORE" = 0000000000000000000000000000000000000000 ] || \
-               ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            echo "No previous commit to compare with: updating the API."
-            echo "api=true" >> "$GITHUB_OUTPUT"
-          elif git diff --name-only "$BEFORE" "$GITHUB_SHA" -- server/api.py db/ | grep -q .; then
-            git diff --name-only "$BEFORE" "$GITHUB_SHA" -- server/api.py db/
-            echo "api=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "No API or database changes in this push."
-            echo "api=false" >> "$GITHUB_OUTPUT"
-            printf '### API unchanged\n\nNo changes in server/api.py or db/.\n' >> "$GITHUB_STEP_SUMMARY"
-          fi
       - name: Update the API on the server
-        if: steps.changes.outputs.api == 'true'
         env:
           SSH_KEY: ${{ secrets.API_DEPLOY_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.API_DEPLOY_KNOWN_HOSTS }}
@@ -125,7 +103,7 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/api_key ~/.ssh/known_hosts
           tar -czf api.tgz server/api.py db/*.sql
-          # The server's forced command applies the SQL, restarts the API, checks
+          # The server's forced command applies the SQL, restarts the API if api.py changed, checks
           # its health and exits non-zero (failing this job) if anything goes wrong.
           ssh -i ~/.ssh/api_key -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \

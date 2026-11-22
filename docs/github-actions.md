@@ -5,7 +5,7 @@
 - Every opened/updated non-draft PR from this repository: test, build, and deploy a preview at `http://YOUR_HOST/previews/pr-N/`.
 - Draft and fork PRs: tests/build only; no deployment credentials or server access.
 - Closing or merging a same-repository PR: delete that PR's preview.
-- Push/merge to `main`: deploy the production root website. If the push changes `server/api.py` or anything in `db/`, the API is updated first (see below).
+- Push/merge to `main`: update the API if needed, then deploy the production root website (see below).
 - Manual **Run workflow**: deploy the selected branch as production. Choose `main` for normal releases.
 
 The preview URL is shown in the Actions job summary. There is no PR comment bot. A failed build blocks deployment. Builds and SSH deployment run in separate jobs; the deploy job does not check out or execute application source. Official GitHub actions are pinned to commit SHAs. No `pull_request_target` or self-hosted runner is used.
@@ -61,14 +61,14 @@ The workflow reports missing configuration explicitly. The first push that adds 
 
 ## API updates on merge
 
-When a push to `main` changes `server/api.py` or `db/`, the `api-deploy` job updates the API on the VM before the website goes live. A manual **Run workflow** on `main` always updates it. Pushes that change neither skip the update.
+On every push to `main` (and a manual **Run workflow** on `main`), the `api-deploy` job brings the API on the VM in line with `main` before the website goes live. Because every run reconciles, a failed update is retried by the next push instead of being skipped. The SQL is idempotent and the API is restarted only when `api.py` changed, so pushes that change neither cause no restart.
 
 The job sends `server/api.py` and `db/*.sql` over SSH to a dedicated `coparents-api-deploy` account. Its key can only run `/usr/local/bin/coparents-api-update` (source: `scripts/coparents-api-update`), the one command that account may run with sudo. That updater:
 
 1. checks the archive (only `server/api.py` and `db/*.sql`, plain files, at most 20 MB) and that `api.py` parses,
 2. applies `notes.sql`, `accounts.sql`, `receipts.sql`, then any other `db/*.sql` in name order, each in one transaction (`schema.sql` is for first install and is skipped). Every SQL file must stay idempotent (`create … if not exists`, `add column if not exists`),
-3. installs `api.py`, restarts `coparents-api` and waits for `/api/health`,
-4. if the new API does not answer, puts the previous `api.py` back, restarts it, and fails.
+3. if `api.py` changed, installs it, restarts `coparents-api` and waits for `/api/health` (otherwise only checks health),
+4. if the restart fails or the new API does not answer, puts the previous `api.py` back, restarts it, and fails.
 
 Any failure fails the job, and the website deploy does not run. The log is public, so the updater prints no server logs; look on the VM with `sudo journalctl -u coparents-api -n 50`.
 
@@ -81,6 +81,8 @@ After the website setup above:
 ```bash
 cd ~/react-web-server && git pull --ff-only && bash scripts/setup-api-deploy.sh
 ```
+
+Until this has run, `api-deploy` fails on `main` with a message naming this script, and the website deploy waits.
 
 It creates the key and account, installs the updater, runs one real API update with the new key to prove it works (ends with `Database tables and API updated.`), and saves the key in GitHub. Rerun it after changing `scripts/coparents-api-update`, since the job cannot change the updater itself.
 
