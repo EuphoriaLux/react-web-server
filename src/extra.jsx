@@ -350,12 +350,16 @@ function InstallTip({ lc }) {
 // "Ask for a day" lives under the calendar, where the days are.
 export function AskDayPanel() {
   const [custody, setCustodyState] = useState(() => load('cp-custody', {}))
-  const [locked] = useState(() => load('cp-locked', {}))
+  const [locked, setLocked] = useState(() => load('cp-locked', {}))
   const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
   const [writer, setWriter, fixed] = useWriter()
   useEffect(() => { save('cp-swaps', swaps) }, [swaps])
+  // The calendar above changes days and month locks; follow both.
   useEffect(() => {
-    const reload = () => setCustodyState(load('cp-custody', {}))
+    const reload = () => {
+      setCustodyState(load('cp-custody', {}))
+      setLocked(load('cp-locked', {}))
+    }
     window.addEventListener('cp-local-change', reload)
     return () => window.removeEventListener('cp-local-change', reload)
   }, [])
