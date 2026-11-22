@@ -6,7 +6,7 @@ export const PRIVACY_CONTACT = {
   name: 'Tom',
   email: 'privacy@coparent.lu',
 }
-export const PRIVACY_UPDATED = '2026-11-21'
+export const PRIVACY_UPDATED = '2026-11-22'
 
 export const PRIVACY_COPY = {
   en: {
@@ -432,4 +432,34 @@ export const PRIVACY_COPY = {
       },
     ],
   },
+}
+
+// The beta waitlist, added to "What we store", "Why we use it" and "How long we keep it".
+const BETA_LINES = {
+  en: [
+    'Beta waitlist, only if you fill in the form: your email address, first name if given, language, number of children, how care is shared today, whether the other parent would join, and when you agreed to be contacted.',
+    'Beta waitlist: your consent, given with the tick box, to be contacted about the beta (article 6(1)(a)). You can withdraw it at any time by writing to {email}.',
+    'Beta waitlist: until the beta ends or you ask us to remove you. Deleting your account removes it too.',
+  ],
+  fr: [
+    'Liste d’attente de la bêta, seulement si vous remplissez le formulaire : votre adresse e-mail, votre prénom si vous le donnez, la langue, le nombre d’enfants, comment la garde est partagée aujourd’hui, si l’autre parent participerait, et la date de votre accord pour être contacté.',
+    'Liste d’attente de la bêta : votre consentement, donné en cochant la case, pour être contacté au sujet de la bêta (article 6(1)(a)). Vous pouvez le retirer à tout moment en écrivant à {email}.',
+    'Liste d’attente de la bêta : jusqu’à la fin de la bêta ou jusqu’à ce que vous demandiez à en être retiré. La suppression de votre compte l’efface aussi.',
+  ],
+  de: [
+    'Beta-Warteliste, nur wenn Sie das Formular ausfüllen: Ihre E-Mail-Adresse, Ihr Vorname falls angegeben, die Sprache, die Zahl der Kinder, wie die Betreuung heute geteilt ist, ob der andere Elternteil mitmachen würde, und wann Sie einer Kontaktaufnahme zugestimmt haben.',
+    'Beta-Warteliste: Ihre Einwilligung, gegeben mit dem Häkchen, zur Kontaktaufnahme wegen der Beta (Artikel 6(1)(a)). Sie können sie jederzeit widerrufen, mit einer E-Mail an {email}.',
+    'Beta-Warteliste: bis die Beta endet oder Sie uns bitten, Sie zu entfernen. Wenn Sie Ihr Konto löschen, wird sie ebenfalls gelöscht.',
+  ],
+  lb: [
+    'Beta-Waardelëscht, nëmme wann Dir de Formulaire ausfëllt: Är E-Mail-Adress, Äre Virnumm wann Dir en uginn hutt, d’Sprooch, d’Zuel vun de Kanner, wéi d’Betreiung haut gedeelt ass, ob deen aneren Elterendeel matmaache géif, a wéini Dir Iech averstanen erkläert hutt, kontaktéiert ze ginn.',
+    'Beta-Waardelëscht: Är Awëllegung, mam Hokite ginn, fir wéinst der Beta kontaktéiert ze ginn (Artikel 6(1)(a)). Dir kënnt se all Moment zréckzéien, mat enger E-Mail un {email}.',
+    'Beta-Waardelëscht: bis d’Beta eriwwer ass oder Dir eis frot, Iech ewechzehuelen. Wann Dir Äre Kont läscht, gëtt se och geläscht.',
+  ],
+}
+for (const [code, [store, why, keep]] of Object.entries(BETA_LINES)) {
+  const sections = PRIVACY_COPY[code].sections
+  sections[1].list.push(store)
+  sections[2].list.splice(sections[2].list.length - 1, 0, why)
+  sections[5].list.push(keep)
 }

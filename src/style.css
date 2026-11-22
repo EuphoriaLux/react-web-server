@@ -1047,3 +1047,55 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .receipt-view { background: white; border-radius: 16px; padding: 12px; max-width: min(720px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; margin: auto; }
 .receipt-view img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 10px; }
 .receipt-view-actions { display: flex; justify-content: space-between; gap: 8px; }
+
+/* ─── App header: one "More" menu, so it fits on a phone ─── */
+.app-header { position: sticky; flex-wrap: nowrap; }
+.beta-badge {
+  font-family: var(--body, inherit); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--teal-deep); background: var(--teal-soft);
+  padding: 3px 8px; border-radius: 999px;
+}
+.more-backdrop { position: fixed; inset: 0; z-index: 41; }
+.more-menu {
+  position: absolute; right: 14px; top: calc(100% + 6px); z-index: 42;
+  display: flex; flex-direction: column; gap: 2px; min-width: 240px; max-width: calc(100vw - 28px);
+  padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 18px 40px -18px rgba(12, 31, 56, 0.35);
+}
+.more-menu > button, .more-menu > a {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
+  border-radius: 10px; background: transparent; color: var(--ink); font-weight: 600;
+  text-align: left; text-decoration: none; font-size: 0.95rem;
+}
+.more-menu > button:hover, .more-menu > a:hover { background: #f1f5f9; }
+.more-menu > button.on { color: var(--teal-deep); background: var(--teal-soft); }
+.more-lang { display: flex; align-items: center; gap: 10px; padding: 8px 12px; color: var(--ink-soft); }
+.more-menu .lang-switch { margin-left: 0; }
+.edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0; }
+.edit-bar .q-lead { margin: 0; font-size: 0.88rem; }
+
+/* ─── Beta waitlist on the landing page ─── */
+.section { scroll-margin-top: 72px; }
+.beta-box .section-label { position: relative; color: #5eead4; }
+.beta-form {
+  position: relative; display: grid; gap: 14px; max-width: 30rem; margin: 0 auto;
+  text-align: left; color: white;
+}
+.beta-form label { display: grid; gap: 6px; font-size: 0.9rem; font-weight: 600; color: rgba(255, 255, 255, 0.86); }
+.beta-form input:not([type="checkbox"]), .beta-form select {
+  width: 100%; padding: 11px 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.96); color: var(--ink); font: inherit; font-weight: 500;
+}
+.beta-row { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+.beta-form .beta-consent { display: flex; align-items: flex-start; gap: 10px; font-weight: 500; line-height: 1.45; }
+.beta-consent input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.beta-consent a { color: #99f6e4; }
+.beta-form .btn.primary { justify-self: center; margin-top: 6px; }
+.beta-form .btn.text { justify-self: center; color: rgba(255, 255, 255, 0.72); }
+.beta-error { margin: 0 !important; color: #fecaca !important; font-size: 0.92rem !important; }
+.beta-done { position: relative; display: flex; gap: 12px; align-items: flex-start; max-width: 30rem; margin: 0 auto; text-align: left; }
+.beta-done p { margin: 0 !important; color: white !important; }
+@media (max-width: 560px) {
+  .cta-box.beta-box { padding: 48px 20px; }
+  .beta-row { grid-template-columns: 1fr; }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""API tests. Need a throwaway Postgres with db/schema.sql, db/accounts.sql and db/receipts.sql applied:
+"""API tests. Need a throwaway Postgres with db/schema.sql, db/accounts.sql, db/receipts.sql and db/beta.sql applied:
 
     DATABASE_URL=postgresql://user@127.0.0.1:5432/cptest python3 -m unittest server/test_api.py
 
@@ -79,9 +79,13 @@ class ApiTest(unittest.TestCase):
 
     def setUp(self):
         api.LIMITS = api.RateLimiter()
+        # Most tests are about plans, not the beta gate, which has its own tests.
+        api.BETA_GATE = False
         self.links.clear()
+        self.notices = []
+        api.send_beta_notice = self.notices.append
         with api.db() as conn, conn.cursor() as cur:
-            cur.execute("truncate households, users, login_tokens, account_deletions cascade")
+            cur.execute("truncate households, users, login_tokens, account_deletions, beta_signups cascade")
 
     def sign_in(self, email):
         client = Client(self.base)
@@ -380,6 +384,64 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(self.count("receipts"), 1)
         anna.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
         self.assertEqual(self.count("receipts where unreferenced_since is null"), 1)
+
+
+    # ─── Private beta ───
+
+    def signup(self, client, **extra):
+        body = {"email": "cara@example.com", "first_name": "Cara", "lang": "fr", "children": 2,
+                "care": "alternating", "other_parent": "yes", "consent": True}
+        body.update(extra)
+        return client.call("POST", "/api/beta", body)
+
+    def test_beta_signup_is_stored_once_and_announced(self):
+        client = Client(self.base)
+        self.assertEqual(self.signup(client), (200, {"ok": True}))
+        self.assertEqual(self.signup(client, first_name="Cara B"), (200, {"ok": True}))
+        self.assertEqual(len(self.notices), 1)
+        self.assertEqual(self.notices[0]["email"], "cara@example.com")
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("select first_name, lang, children, approved_at from beta_signups")
+            self.assertEqual(cur.fetchall(), [("Cara B", "fr", 2, None)])
+
+    def test_beta_signup_needs_consent_and_a_real_email(self):
+        client = Client(self.base)
+        self.assertEqual(self.signup(client, consent=False)[0], 400)
+        self.assertEqual(self.signup(client, email="nope")[0], 400)
+        self.assertEqual(self.signup(client, care="<script>")[0], 400)
+        self.assertEqual(self.notices, [])
+
+    def test_beta_signup_rate_limit(self):
+        client = Client(self.base)
+        for i in range(5):
+            self.assertEqual(self.signup(client, email=f"p{i}@example.com")[0], 200)
+        self.assertEqual(self.signup(client, email="p9@example.com")[0], 429)
+
+    def test_only_approved_addresses_create_plans_but_anyone_joins(self):
+        api.BETA_GATE = True
+        anna, _, _ = self.sign_in("anna@example.com")
+        ben, _, _ = self.sign_in("ben@example.com")
+        status, body = anna.call("POST", "/api/households", {})
+        self.assertEqual((status, body["error"]), (403, "new plans are invite-only during the beta"))
+        invites = []
+        api.send_beta_invite = lambda email, lang, name: invites.append((email, lang))
+        self.assertEqual(api.beta_command(["approve", "Anna@example.com", "de"]), 0)
+        self.assertEqual(invites, [("anna@example.com", "de")])
+        status, created = anna.call("POST", "/api/households", {})
+        self.assertEqual(status, 201)
+        # Ben was never approved, and still joins with Anna's code.
+        self.assertEqual(ben.call("POST", "/api/households/join", {"code": created["code"]})[0], 200)
+
+    def test_deleting_the_account_removes_the_beta_signup(self):
+        client = Client(self.base)
+        self.signup(client, email="anna@example.com")
+        anna, _, _ = self.sign_in("anna@example.com")
+        status, export = anna.call("GET", "/api/account/export")
+        self.assertEqual((status, export["beta"]["language"]), (200, "fr"))
+        self.assertEqual(anna.call("POST", "/api/account/delete", {"confirm": "anna@example.com"})[0], 200)
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("select count(*) from beta_signups")
+            self.assertEqual(cur.fetchone()[0], 0)
 
 
 if __name__ == "__main__":

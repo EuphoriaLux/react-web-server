@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { useLang } from './main.jsx'
 import { FAMILY_COPY, fill } from './family-copy.js'
+import { names } from './people.js'
 import {
   CARE_TYPES, RHYTHMS, RULINGS, emptyChild, emptyActivity, familyFromProfile, normalizeFamily,
   profileFromFamily, canFinish, cleanFamily, fillCustody, activitiesOn, describeChanges, namedChildren,
@@ -47,8 +48,7 @@ export function openFamilySetup() {
 }
 
 function parentName(family, role) {
-  const fallback = load('cp-profile', {})[role === 'B' ? 'nameB' : 'nameA'] || (role === 'B' ? 'Sam' : 'Alex')
-  return family?.parents?.[role]?.name || fallback
+  return family?.parents?.[role]?.name || names()[role === 'B' ? 'B' : 'A']
 }
 
 function storeFamily(family) {

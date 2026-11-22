@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLang } from './main.jsx'
 import { FamilyPrompt, TodayActivities, PapersFamilyCard, openFamilySetup, childrenAreWith, useFamilyCopy } from './family.jsx'
+import { names, sharedRole, shortName, weekdayLetters } from './people.js'
+
+export { names }
 
 function load(key, fallback) {
   try {
@@ -16,10 +19,28 @@ function save(key, value) {
   localStorage.setItem(key, next)
   if (typeof window !== 'undefined') window.dispatchEvent(new Event('cp-local-change'))
 }
-const DEFAULT_PROFILE = { nameA: 'Alex', nameB: 'Sam', child: 'Noa' }
-export function names() {
-  const profile = load('cp-profile', DEFAULT_PROFILE)
-  return { A: profile.nameA || 'Alex', B: profile.nameB || 'Sam', child: profile.child || 'Noa' }
+// Which parent this screen writes as. In a shared plan that is always the
+// signed-in parent's own side. Only while the app is tried out on one phone,
+// before sign-in, can the parent switch sides to see how both views work.
+function useWriter() {
+  const role = sharedRole()
+  const [picked, setPicked] = useState(() => load('cp-writer', 'A'))
+  useEffect(() => { if (!role) save('cp-writer', picked) }, [picked, role])
+  if (role) return [role, () => {}, true]
+  return [picked === 'B' ? 'B' : 'A', setPicked, false]
+}
+
+function SideSwitch({ writer, setWriter, fixed, label, onPick }) {
+  if (fixed) return null
+  const n = names()
+  return (
+    <div className="ask-switch">
+      {label && <span>{label}</span>}
+      {['A', 'B'].map((id) => (
+        <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => { setWriter(id); if (onPick) onPick(id) }}>{n[id]}</button>
+      ))}
+    </div>
+  )
 }
 export function logActivity(text) {
   const all = load('cp-activity', [])
@@ -266,14 +287,12 @@ export function TodayBoard() {
   const [custody, setCustody] = useState(() => load('cp-custody', {}))
   const [locked] = useState(() => load('cp-locked', {}))
   const [swaps, setSwaps] = useState(() => load('cp-swaps', []))
-  const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
-  const [profile] = useState(() => load('cp-profile', DEFAULT_PROFILE))
+  const [writer, setWriter, fixed] = useWriter()
   const fc = useFamilyCopy()
   const many = childrenAreWith()
-  const n = { A: profile.nameA || 'Alex', B: profile.nameB || 'Sam', child: profile.child || 'Noa' }
+  const n = names(lang)
   useEffect(() => { save('cp-custody', custody) }, [custody])
   useEffect(() => { save('cp-swaps', swaps) }, [swaps])
-  useEffect(() => { save('cp-writer', writer) }, [writer])
   const today = useMemo(() => new Date(), [])
   const todayKey = isoDate(today)
   const who = custody[todayKey]
@@ -318,7 +337,7 @@ export function TodayBoard() {
         {load('cp-activity', []).length === 0 && <p className="empty">{c.noActivity}</p>}
       </section>
       <button type="button" className="btn ghost sm" onClick={openFamilySetup}>{fc.family}</button>
-      <AskDay custody={custody} setCustody={setCustody} locked={locked} swaps={swaps} setSwaps={setSwaps} writer={writer} setWriter={setWriter} />
+      <AskDay custody={custody} setCustody={setCustody} locked={locked} swaps={swaps} setSwaps={setSwaps} writer={writer} setWriter={setWriter} fixed={fixed} />
     </div>
   )
 }
@@ -346,11 +365,10 @@ export function HandoverView() {
   const { lang } = useLang()
   const c = useCopy()
   const [custody] = useState(() => load('cp-custody', {}))
-  const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
+  const [writer, setWriter, fixed] = useWriter()
   const [book, setBook] = useState(() => load('cp-handovers', {}))
   const [picked, setPicked] = useState('')
   const [draft, setDraft] = useState('')
-  useEffect(() => { save('cp-writer', writer) }, [writer])
   useEffect(() => { save('cp-handovers', book) }, [book])
   const today = useMemo(() => new Date(), [])
   const changes = useMemo(() => upcomingHandovers(custody, today), [custody, today])
@@ -391,12 +409,7 @@ export function HandoverView() {
           <p className="hand-kicker">{c.handKicker}</p>
           <h2>{pretty(current.date, lang)}</h2>
         </div>
-        <div className="ask-switch">
-          <span>{c.youAre}</span>
-          {['A', 'B'].map((id) => (
-            <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{label(id)}</button>
-          ))}
-        </div>
+        <SideSwitch writer={writer} setWriter={setWriter} fixed={fixed} label={c.youAre} />
       </div>
 
       <div className="hand-pass">
@@ -457,12 +470,12 @@ export function HandoverView() {
           ))}
         </div>
       )}
-      <NoteThread channel={`handover:${current.date}`} title={c.thread} />
+      <NoteThread channel={`handover:${current.date}`} title={c.thread} writer={writer} />
     </section>
   )
 }
 
-function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWriter }) {
+function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWriter, fixed }) {
   const { lang } = useLang()
   const c = useCopy()
   const [cursor, setCursor] = useState(() => new Date())
@@ -498,12 +511,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
   return (
     <div>
       <div className="panel-head"><h2>{c.ask}</h2>
-        <div className="ask-switch">
-          <span>{c.as}</span>
-          {['A', 'B'].map((id) => (
-            <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => { setWriter(id); setWant(''); setGive(''); setPick('need') }}>{label(id)}</button>
-          ))}
-        </div>
+        <SideSwitch writer={writer} setWriter={setWriter} fixed={fixed} label={c.as} onPick={() => { setWant(''); setGive(''); setPick('need') }} />
       </div>
       <div className="ask-switch">
         <button type="button" className={`btn sm ${pick === 'need' ? 'primary' : 'ghost'}`} onClick={() => setPick('need')}>{c.need}</button>
@@ -512,12 +520,12 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
       <p className="q-lead">{pick === 'need' ? c.needHint : c.offerHint}</p>
       <div className="month-nav">
         <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month - 1, 1))}>‹</button>
-        <strong>{cursor.toLocaleDateString(lang === 'fr' ? 'fr' : lang === 'de' ? 'de' : 'en', { month: 'long', year: 'numeric' })}</strong>
+        <strong>{cursor.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</strong>
         <button className="btn ghost" type="button" onClick={() => setCursor(new Date(year, month + 1, 1))}>›</button>
       </div>
       {warn && <p className="lock-hint">{warn}</p>}
       <div className="cal-grid kid">
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((dow, i) => <div key={`${dow}-${i}`} className="cal-dow">{dow}</div>)}
+        {weekdayLetters(lang).map((dow, i) => <div key={`${dow}-${i}`} className="cal-dow">{dow}</div>)}
         {Array.from({ length: lead }, (_, i) => <div key={`p-${i}`} className="cal-cell empty" />)}
         {days.map((cell) => {
           const eligible = pick === 'need' ? cell.owner === other : cell.owner === writer
@@ -525,7 +533,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
           return (
             <button key={cell.key} type="button" className={`cal-cell day ${cell.owner || ''} ${eligible || marked ? '' : 'dim'} ${marked ? 'ask-picked' : ''}`} onClick={() => choose(cell.key, cell.owner)}>
               <span className="cal-day">{cell.day}</span>
-              <span className="who">{cell.key === want ? c.needShort : cell.key === give ? c.offerShort : cell.owner === 'A' || cell.owner === 'B' ? label(cell.owner).slice(0, 4) : ''}</span>
+              <span className="who">{cell.key === want ? c.needShort : cell.key === give ? c.offerShort : cell.owner === 'A' || cell.owner === 'B' ? shortName(cell.owner) : ''}</span>
             </button>
           )
         })}
@@ -563,6 +571,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
       {open.map((item) => (
         <div key={item.id} className="expense-row">
           <div><strong>{label(item.by)} · {pretty(item.want, lang)}{item.give ? ` → ${pretty(item.give, lang)}` : ''}</strong>{item.note && <span className="meta">{item.note}</span>}</div>
+          {item.by === writer ? <span className="meta">{c.waitingFor} {label(item.by === 'A' ? 'B' : 'A')}</span> : <>
           <button className="btn primary sm" type="button" onClick={() => {
             if (locked[item.want.slice(0, 7)] || (item.give && locked[item.give.slice(0, 7)])) { setWarn(c.locked); return }
             const next = { ...custody, [item.want]: item.by }
@@ -572,6 +581,7 @@ function AskDay({ custody, setCustody, locked, swaps, setSwaps, writer, setWrite
             logActivity(`${names()[writer]} accepted the swap for ${pretty(item.want, lang)}`)
           }}>{c.accept}</button>
           <button className="btn ghost sm" type="button" onClick={() => setSwaps(swaps.map((row) => row.id === item.id ? { ...row, status: 'no' } : row))}>{c.decline}</button>
+          </>}
         </div>
       ))}
     </div>
@@ -592,16 +602,11 @@ function concrete(text) {
 
 export function ResolveBoard() {
   const c = useCopy()
-  const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
+  const [writer, setWriter, fixed] = useWriter()
   const [rules, setRules] = useState(() => load('cp-rules', SEED_RULES.map((rule) => ({ ...rule, yesA: false, yesB: false }))))
-  const [issues, setIssues] = useState(() => load('cp-issues', [{
-    id: 'i1', topic: 'Friday pickup time', about: 'handover',
-    viewA: '18:00 works after work.', viewB: '17:30 so Noa is not last at the gate.',
-    proposal: '18:00 on school days. 17:30 only if Alex writes before noon.',
-    cooling: false, yesA: true, yesB: false, saved: false,
-  }]))
+  // Older versions started with a made-up example topic. It is not shown.
+  const [issues, setIssues] = useState(() => load('cp-issues', []).filter((item) => !(item.id === 'i1' && item.topic === 'Friday pickup time')))
   const [docs, setDocs] = useState(() => load('cp-docs', []))
-  useEffect(() => { save('cp-writer', writer) }, [writer])
   useEffect(() => { save('cp-rules', rules) }, [rules])
   useEffect(() => { save('cp-issues', issues) }, [issues])
   useEffect(() => { save('cp-docs', docs) }, [docs])
@@ -616,7 +621,7 @@ export function ResolveBoard() {
     <div className="app-panel">
       <div className="panel-head">
         <h2>{c.resolve}</h2>
-        <div className="ask-switch">{['A', 'B'].map((id) => <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{label(id)}</button>)}</div>
+        <SideSwitch writer={writer} setWriter={setWriter} fixed={fixed} />
       </div>
 
       <section className="rules-card">
@@ -672,8 +677,8 @@ export function ResolveBoard() {
               <button type="button" className="btn ghost sm" onClick={() => patch(item.id, { cooling: !item.cooling })}>{item.cooling ? c.resume : c.pause}</button>
             </div>
             {item.cooling && <p className="lock-hint">{c.cooling}</p>}
-            <label>{label('A')}<textarea value={item.viewA} onChange={(event) => patch(item.id, { viewA: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
-            <label>{label('B')}<textarea value={item.viewB} onChange={(event) => patch(item.id, { viewB: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
+            <label>{label('A')}<textarea value={item.viewA} readOnly={fixed && writer !== 'A'} onChange={(event) => patch(item.id, { viewA: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
+            <label>{label('B')}<textarea value={item.viewB} readOnly={fixed && writer !== 'B'} onChange={(event) => patch(item.id, { viewB: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
             <label>{c.proposal}<textarea value={item.proposal} onChange={(event) => patch(item.id, { proposal: event.target.value, yesA: false, yesB: false, saved: false })} /></label>
             <button type="button" className={`btn sm ${mine ? 'primary' : 'ghost'}`} disabled={Boolean(blocked)} onClick={() => patch(item.id, writer === 'A' ? { yesA: !item.yesA } : { yesB: !item.yesB })}>{c.live}</button>
             {blocked && <span className="meta">{blocked}</span>}
@@ -690,13 +695,12 @@ export function ResolveBoard() {
 export function Threads() {
   const c = useCopy()
   const [channel, setChannel] = useState('handover')
-  const [writer, setWriter] = useState(() => load('cp-writer', 'A'))
-  useEffect(() => { save('cp-writer', writer) }, [writer])
+  const [writer, setWriter, fixed] = useWriter()
   return (
     <div className="app-panel">
       <div className="panel-head">
         <h2>{c.write}</h2>
-        <div className="ask-switch">{['A', 'B'].map((id) => <button key={id} type="button" className={`btn ghost sm ${writer === id ? 'primary' : ''}`} onClick={() => setWriter(id)}>{names()[id]}</button>)}</div>
+        <SideSwitch writer={writer} setWriter={setWriter} fixed={fixed} />
       </div>
       <div className="ask-switch">{['handover', 'school', 'money', 'health'].map((id) => <button key={id} type="button" className={`btn sm ${channel === id ? 'primary' : 'ghost'}`} onClick={() => setChannel(id)}>{c[id]}</button>)}</div>
       <NoteThread channel={channel} writer={writer} />
@@ -719,7 +723,7 @@ function nextMorning(now = new Date()) {
 export function NoteThread({ channel, title, writer }) {
   const { lang } = useLang()
   const c = useCopy()
-  const [who, setWho] = useState(() => writer || load('cp-writer', 'A'))
+  const [who, setWho] = useState(() => writer || sharedRole() || load('cp-writer', 'A'))
   const [notes, setNotes] = useState([])
   const [fact, setFact] = useState('')
   const [ask, setAsk] = useState('')
