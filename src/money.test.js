@@ -48,3 +48,9 @@ test('months and settings', () => {
   assert.equal(normalizeMoney({ mode: 'x' }).mode, null)
   assert.deepEqual(normalizeMoney({ budget: { food: '200', bad: 5 } }).budget, { food: 200 })
 })
+
+test('only well-formed receipt photo ids are kept', () => {
+  const ok = '0b7e5d4c-1a2b-4c3d-8e9f-001122334455'
+  assert.deepEqual(normalizeExpense({ id: 1, amount: 5, receipts: [ok, '../account/export', 3] }).receipts, [ok])
+  assert.deepEqual(normalizeExpense({ id: 1, amount: 5 }).receipts, [])
+})

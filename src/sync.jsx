@@ -84,7 +84,7 @@ function applyState(state) {
   }
 }
 
-async function api(path, options = {}) {
+export async function api(path, options = {}) {
   const token = localStorage.getItem(TOKEN_KEY)
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) }
   if (token) headers.Authorization = `Bearer ${token}`

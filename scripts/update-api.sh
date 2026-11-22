@@ -14,12 +14,13 @@ SSH=(ssh -i "$ADMIN_KEY" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-n
 echo "Updating API on $PUBLIC_IP"
 "${SSH[@]}" "ubuntu@$PUBLIC_IP" 'mkdir -p /tmp/coparents-install/server /tmp/coparents-install/db'
 scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes "$ROOT/server/api.py" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/server/api.py"
-scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes "$ROOT/db/notes.sql" "$ROOT/db/accounts.sql" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/db/"
+scp -i "$ADMIN_KEY" -o IdentitiesOnly=yes "$ROOT/db/notes.sql" "$ROOT/db/accounts.sql" "$ROOT/db/receipts.sql" "ubuntu@$PUBLIC_IP:/tmp/coparents-install/db/"
 "${SSH[@]}" "ubuntu@$PUBLIC_IP" 'bash -s' <<'REMOTE'
 set -Eeuo pipefail
 sudo install -m 644 -o coparents -g coparents /tmp/coparents-install/server/api.py /opt/coparents/api.py
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d coparents -f /tmp/coparents-install/db/notes.sql
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d coparents -f /tmp/coparents-install/db/accounts.sql
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d coparents -f /tmp/coparents-install/db/receipts.sql
 # Site address and mail settings for sign-in links. See docs/accounts.md.
 if [[ ! -f /etc/coparents/app.env ]]; then
   printf '%s\n' \

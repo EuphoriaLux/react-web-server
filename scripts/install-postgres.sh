@@ -56,6 +56,7 @@ echo "==> Schema"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$ROOT/db/schema.sql"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -c "ALTER TABLE households OWNER TO ${DB_USER}; ALTER TABLE members OWNER TO ${DB_USER}; ALTER TABLE plans OWNER TO ${DB_USER}; ALTER TABLE notes OWNER TO ${DB_USER};"
 sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$ROOT/db/accounts.sql"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -f "$ROOT/db/receipts.sql"
 
 echo "==> API"
 id "$API_USER" >/dev/null 2>&1 || sudo useradd --system --create-home --shell /usr/sbin/nologin "$API_USER"

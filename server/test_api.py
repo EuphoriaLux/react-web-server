@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""API tests. Need a throwaway Postgres with db/schema.sql and db/accounts.sql applied:
+"""API tests. Need a throwaway Postgres with db/schema.sql, db/accounts.sql and db/receipts.sql applied:
 
     DATABASE_URL=postgresql://user@127.0.0.1:5432/cptest python3 -m unittest server/test_api.py
 
@@ -44,6 +44,22 @@ class Client:
             self.cookie = pair if pair.split("=", 1)[1] else None
             self.last_set_cookie = set_cookie
         return status, json.loads(raw or b"{}")
+
+    def raw(self, method, path, data=None, headers=None):
+        """For photos: bytes in, bytes and headers out."""
+        request = urllib.request.Request(self.base + path, data=data, method=method)
+        if self.cookie:
+            request.add_header("Cookie", self.cookie)
+        for key, value in (headers or {}).items():
+            request.add_header(key, value)
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status, response.read(), response.headers
+        except urllib.error.HTTPError as error:
+            return error.code, error.read(), error.headers
+
+
+JPEG = b"\xff\xd8\xff\xe0" + b"photo" * 100
 
 
 @unittest.skipUnless(os.environ.get("DATABASE_URL"), "DATABASE_URL is not set")
@@ -285,6 +301,85 @@ class ApiTest(unittest.TestCase):
         status, _ = anna.call("POST", "/api/account/delete", {"confirm": "anna@example.com"}, {"Origin": "https://evil.example"})
         self.assertEqual(status, 403)
         self.assertEqual(self.count("users"), 1)
+
+
+    def upload(self, client, data=JPEG, headers=None):
+        status, body, _ = client.raw("POST", "/api/receipts", data, {"Content-Type": "image/jpeg", **(headers or {})})
+        return status, json.loads(body or b"{}")
+
+    def test_both_parents_see_a_receipt_photo_and_nobody_else(self):
+        anna, ben, _ = self.plan_for_two()
+        status, body = self.upload(anna)
+        self.assertEqual(status, 201)
+        path = f"/api/receipts/{body['id']}"
+        status, data, headers = ben.raw("GET", path)
+        self.assertEqual((status, data, headers["Content-Type"]), (200, JPEG, "image/jpeg"))
+        self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(Client(self.base).raw("GET", path)[0], 401)
+        cara, _, _ = self.sign_in("cara@example.com")
+        cara.call("POST", "/api/households", {})
+        self.assertEqual(cara.raw("GET", path)[0], 404)
+        self.assertEqual(cara.raw("DELETE", path)[0], 404)
+        self.assertEqual(ben.raw("DELETE", path)[0], 200)
+        self.assertEqual(anna.raw("GET", path)[0], 404)
+        self.assertEqual(self.count("receipts"), 0)
+
+    def test_only_real_photos_of_a_sensible_size(self):
+        anna, _, _ = self.plan_for_two()
+        self.assertEqual(self.upload(anna, b"<html>not a photo</html>")[0], 400)
+        self.assertEqual(self.upload(anna, b"\xff\xd8\xff" + b"x" * api.RECEIPT_MAX_BYTES)[0], 413)
+        self.assertEqual(self.upload(anna, JPEG, {"Origin": "https://evil.example"})[0], 403)
+        self.assertEqual(self.upload(Client(self.base))[0], 401)
+        self.assertEqual(anna.raw("GET", "/api/receipts/not-an-id")[0], 404)
+        self.assertEqual(anna.raw("DELETE", f"/api/receipts/{'0' * 8}-0000-0000-0000-{'0' * 12}", headers={"Origin": "https://evil.example"})[0], 403)
+        self.assertEqual(self.count("receipts"), 0)
+
+    def test_each_plan_has_a_photo_cap(self):
+        anna, _, _ = self.plan_for_two()
+        old = api.RECEIPT_PLAN_BYTES
+        api.RECEIPT_PLAN_BYTES = len(JPEG) * 2
+        try:
+            self.assertEqual(self.upload(anna)[0], 201)
+            self.assertEqual(self.upload(anna)[0], 201)
+            self.assertEqual(self.upload(anna)[0], 413)
+        finally:
+            api.RECEIPT_PLAN_BYTES = old
+
+    def test_photos_are_in_the_export_and_go_with_the_plan(self):
+        anna, ben, _ = self.plan_for_two()
+        self.upload(anna)
+        photos = anna.call("GET", "/api/account/export")[1]["plan"]["receipt_photos"]
+        self.assertEqual(len(photos), 1)
+        self.assertTrue(photos[0]["photo"].startswith("data:image/jpeg;base64,"))
+        ben.call("POST", "/api/account/delete", {"confirm": "ben@example.com"})
+        self.assertEqual(self.count("receipts"), 1)
+        anna.call("POST", "/api/account/delete", {"confirm": "anna@example.com"})
+        self.assertEqual(self.count("receipts"), 0)
+
+
+    def test_photos_the_plan_forgot_are_deleted_after_a_week(self):
+        anna, ben, _ = self.plan_for_two()
+        kept = self.upload(anna)[1]["id"]
+        dropped = self.upload(anna)[1]["id"]
+        expenses = json.dumps([{"id": 1, "desc": "Shoes", "amount": 40, "receipts": [kept]}])
+        anna.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("select id::text, unreferenced_since is not null from receipts order by id")
+            marks = dict(cur.fetchall())
+        self.assertEqual(marks, {kept: False, dropped: True})
+        # A week later the forgotten photo goes, the attached one stays.
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("update receipts set unreferenced_since = now() - interval '8 days' where id = %s", (dropped,))
+        ben.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
+        self.assertEqual(ben.raw("GET", f"/api/receipts/{dropped}")[0], 404)
+        self.assertEqual(ben.raw("GET", f"/api/receipts/{kept}")[0], 200)
+        # Attached again in time: no longer marked. Unreadable expenses delete nothing.
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("update receipts set unreferenced_since = now() - interval '8 days'")
+        anna.call("PUT", "/api/state", {"state": {"cp-expenses": "not json"}})
+        self.assertEqual(self.count("receipts"), 1)
+        anna.call("PUT", "/api/state", {"state": {"cp-expenses": expenses}})
+        self.assertEqual(self.count("receipts where unreferenced_since is null"), 1)
 
 
 if __name__ == "__main__":
