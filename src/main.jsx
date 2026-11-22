@@ -971,25 +971,24 @@ function CalendarView() {
 
   const weekdays = weekdayLetters(tr.lang)
 
-  // Editing ends with "Done" or by leaving the screen. Either way, a change to
-  // the calendar shows in "What changed", so the other parent sees it.
-  const custodyNow = useRef(custody)
-  custodyNow.current = custody
-  const finishEdit = useCallback(() => {
-    if (before.current === null) return
+  // A change to the calendar shows in "What changed", so the other parent sees
+  // it. The entry is written with the change itself (once per month per edit),
+  // so it is there even if the page closes before "Done".
+  const logged = useRef(new Set())
+  useEffect(() => {
     const was = before.current
-    before.current = null
-    const now = custodyNow.current
-    const months = [...new Set([...Object.keys(was), ...Object.keys(now)].filter((key) => was[key] !== now[key]).map((key) => key.slice(0, 7)))].sort()
+    if (!editing || was === null) return
+    const months = [...new Set([...Object.keys(was), ...Object.keys(custody)].filter((key) => was[key] !== custody[key]).map((key) => key.slice(0, 7)))].sort()
     for (const m of months) {
+      if (logged.current.has(m)) continue
+      logged.current.add(m)
       const label = new Date(`${m}-15T12:00:00`).toLocaleString(locale, { month: 'long', year: 'numeric' })
       const text = fillIn(tr.actCal, { month: label })
       logActivity(role ? `${names()[role]} · ${text}` : text)
     }
-  }, [locale, role, tr.actCal])
-  useEffect(() => () => finishEdit(), [finishEdit])
-  const startEdit = () => { before.current = { ...custody }; setEditing(true) }
-  const stopEdit = () => { finishEdit(); setEditing(false) }
+  }, [custody, editing, locale, role, tr.actCal])
+  const startEdit = () => { before.current = { ...custody }; logged.current = new Set(); setEditing(true) }
+  const stopEdit = () => { before.current = null; setEditing(false) }
 
   // Unlocking a locked month needs both parents once the plan is shared.
   const lockState = locked[monthKey]
