@@ -22,7 +22,9 @@ export const SYNC_COPY = {
     signOut: 'Sign out',
     youAre: 'You are {name}, signed in as {email}. The other parent signs in and joins with this code.',
     copy: 'Copy code',
-    said: {},
+    said: {
+      'new plans are invite-only during the beta': 'New plans are invite-only during the beta. Join the waitlist on the home page, or join the other parent’s plan with their code.',
+    },
   },
   fr: {
     signInTitle: 'Connectez-vous pour partager ce planning',
@@ -44,6 +46,7 @@ export const SYNC_COPY = {
     youAre: 'Vous êtes {name}, connecté avec {email}. L’autre parent se connecte et rejoint avec ce code.',
     copy: 'Copier le code',
     said: {
+      'new plans are invite-only during the beta': 'Pendant la bêta, seules les personnes invitées peuvent créer un planning. Inscrivez-vous sur la liste d’attente sur la page d’accueil, ou rejoignez le planning de l’autre parent avec son code.',
       'Shared plan is open': 'Le planning partagé est ouvert',
       'Saved': 'Enregistré',
       'Updated from shared plan': 'Mis à jour depuis le planning partagé',
@@ -85,6 +88,7 @@ export const SYNC_COPY = {
     youAre: 'Sie sind {name}, angemeldet als {email}. Der andere Elternteil meldet sich an und tritt mit diesem Code bei.',
     copy: 'Code kopieren',
     said: {
+      'new plans are invite-only during the beta': 'Während der Beta können nur eingeladene Personen einen Plan erstellen. Tragt euch auf der Startseite in die Warteliste ein, oder tretet mit dem Code dem Plan des anderen Elternteils bei.',
       'Shared plan is open': 'Der gemeinsame Plan ist geöffnet',
       'Saved': 'Gespeichert',
       'Updated from shared plan': 'Aus dem gemeinsamen Plan aktualisiert',
@@ -126,6 +130,7 @@ export const SYNC_COPY = {
     youAre: 'Dir sidd {name}, ugemellt als {email}. Deen aneren Elterendeel mellt sech un a trëtt mat dësem Code bäi.',
     copy: 'Code kopéieren',
     said: {
+      'new plans are invite-only during the beta': 'Während der Beta kënnen nëmmen invitéiert Persounen e Plang erstellen. Schreift iech op der Startsäit an d’Waardelëscht an, oder trieded mam Code dem Plang vum aneren Elterendeel bäi.',
       'Shared plan is open': 'De gedeelte Plang ass op',
       'Saved': 'Gespäichert',
       'Updated from shared plan': 'Vum gedeelte Plang aktualiséiert',

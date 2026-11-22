@@ -22,7 +22,7 @@ LOCK=${COPARENTS_LOCK:-/run/lock/coparents-api-update.lock}
 MAX_BYTES=$((20 * 1024 * 1024))
 # Known order first (later files depend on earlier tables). schema.sql is the
 # first-install file and is never re-run here. Any other db/*.sql runs after these.
-ORDER=(notes accounts receipts)
+ORDER=(notes accounts receipts beta)
 
 fail() { echo "API update failed: $*" >&2; exit 1; }
 

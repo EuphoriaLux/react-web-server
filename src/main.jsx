@@ -17,6 +17,7 @@ import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 import { pickLang } from './lang.js'
 import { sharedRole, shortName, weekdayLetters } from './people.js'
 import { ExpensesView } from './money.jsx'
+import { BetaForm, useBetaCopy } from './beta.jsx'
 import { holidayOwners, schoolHolidayMap, schoolYearOf, firstPeriod } from './holidays.js'
 
 /* ─── i18n ─── */
@@ -1262,6 +1263,7 @@ function AppShell({ onExit }) {
 
 function Landing({ onEnter }) {
   const { tr } = useLang()
+  const bc = useBetaCopy()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -1308,7 +1310,8 @@ function Landing({ onEnter }) {
           </nav>
           <div className="nav-actions">
             <LangSwitch />
-            <button className="btn primary" type="button" onClick={onEnter}>{tr.enter}</button>
+            <button className="btn ghost" type="button" onClick={onEnter}>{bc.signIn}</button>
+            <a className="btn primary" href="#beta">{bc.join}</a>
           </div>
           <button className="menu-btn" type="button" aria-label={menuOpen ? 'Close' : 'Open'} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
         </div>
@@ -1319,7 +1322,8 @@ function Landing({ onEnter }) {
             <a href="#how" onClick={closeMenu}>{tr.works}</a>
             <a href="#fiscal" onClick={closeMenu}>{tr.fiscal}</a>
             <div style={{ padding: '8px 0' }}><LangSwitch /></div>
-            <button className="btn primary full" type="button" onClick={() => { closeMenu(); onEnter() }}>{tr.enter}</button>
+            <a className="btn primary full" href="#beta" onClick={closeMenu}>{bc.join}</a>
+            <button className="btn ghost full" type="button" onClick={() => { closeMenu(); onEnter() }}>{bc.signIn}</button>
           </div>
         )}
       </header>
@@ -1332,8 +1336,8 @@ function Landing({ onEnter }) {
               <h1>{tr.h1a}<span className="h1-line">{tr.h1b}</span></h1>
               <p className="lead">{tr.lead}</p>
               <div className="hero-cta">
-                <button className="btn primary large" type="button" onClick={onEnter}>{tr.enter}<ArrowRight size={18} /></button>
-                <a className="btn text" href="#solution">{tr.see}</a>
+                <a className="btn primary large" href="#beta">{bc.join}<ArrowRight size={18} /></a>
+                <button className="btn text" type="button" onClick={onEnter}>{bc.invited}</button>
               </div>
               <div className="hero-trust">
                 <span><Shield size={15} />{tr.trust1}</span>
@@ -1413,14 +1417,14 @@ function Landing({ onEnter }) {
             </ul>
           </div>
         </section>
-        <section className="section cta">
+        <section className="section cta" id="beta">
           <div className="container">
-            <div className="cta-box">
+            <div className="cta-box beta-box">
               <div className="cta-glow" aria-hidden="true" />
-              <h2>{tr.ctaH2}</h2>
-              <p>{tr.ctaP}</p>
-              <button className="btn primary large light" type="button" onClick={onEnter}>{tr.enter}<ArrowRight size={18} /></button>
-              <p className="cta-note">{tr.ctaNote}</p>
+              <div className="section-label">{bc.label}</div>
+              <h2>{bc.title}</h2>
+              <p>{bc.lead}</p>
+              <BetaForm onSignIn={onEnter} />
             </div>
           </div>
         </section>

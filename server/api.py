@@ -42,6 +42,13 @@ SMTP_HOST = os.environ.get("COPARENTS_SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("COPARENTS_SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("COPARENTS_SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("COPARENTS_SMTP_PASSWORD", "")
+# Private beta. New plans need an approved address unless the gate is off ("0").
+BETA_GATE = os.environ.get("COPARENTS_BETA_GATE", "1") != "0"
+# Where a new waitlist sign-up is announced. Empty: only the log says so.
+BETA_NOTIFY = os.environ.get("COPARENTS_BETA_NOTIFY", "").strip()
+BETA_LANGS = {"en", "fr", "de", "lb"}
+BETA_CARE = {"", "alternating", "mostly-me", "mostly-other", "other"}
+BETA_OTHER = {"", "yes", "no", "unsure"}
 COOKIE = "cp_session"
 LOGIN_TTL = timedelta(minutes=15)
 SESSION_TTL = timedelta(days=60)
@@ -99,6 +106,90 @@ def send_login_email(email: str, link: str):
         if SMTP_USER:
             smtp.login(SMTP_USER, SMTP_PASSWORD)
         smtp.send_message(message)
+
+
+def send_mail(to: str, subject: str, text: str, reply_to: str = ""):
+    if not SMTP_HOST or not MAIL_FROM:
+        print(f"[dev] email to {to}: {subject}\n{text}", flush=True)
+        return
+    message = EmailMessage()
+    message["From"] = MAIL_FROM
+    message["To"] = to
+    if reply_to:
+        message["Reply-To"] = reply_to
+    message["Subject"] = subject
+    message.set_content(text)
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
+        smtp.starttls(context=ssl.create_default_context())
+        if SMTP_USER:
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
+        smtp.send_message(message)
+
+
+def send_beta_notice(signup: dict):
+    """Tells the person running the beta that someone joined the waitlist."""
+    lines = [f"{key}: {value}" for key, value in signup.items()]
+    text = (
+        "Someone joined the CoParents beta waitlist.\n\n"
+        + "\n".join(lines)
+        + "\n\nTo let them create a plan, run in Cloud Shell:\n"
+        + f"  bash scripts/beta.sh approve {signup['email']}\n"
+    )
+    if not BETA_NOTIFY:
+        print(f"beta sign-up: {signup['email']}", flush=True)
+        return
+    send_mail(BETA_NOTIFY, "New CoParents beta sign-up", text)
+
+
+BETA_INVITE = {
+    "en": (
+        "You're in: the CoParents beta",
+        "Hello{name},\n\n"
+        "You can now use CoParents. Open {url} and sign in with this email address ({email}).\n"
+        "Then tap \"Create shared plan\" and send the code it shows to the other parent, "
+        "so they can join with their own email.\n\n"
+        "This is an early version. If something is unclear or broken, reply to this email.\n\n"
+        "Thank you for trying it.\n",
+    ),
+    "fr": (
+        "Bienvenue dans la bêta de CoParents",
+        "Bonjour{name},\n\n"
+        "Vous pouvez maintenant utiliser CoParents. Ouvrez {url} et connectez-vous avec cette adresse e-mail ({email}).\n"
+        "Touchez ensuite « Créer le planning partagé » et envoyez le code affiché à l’autre parent, "
+        "pour qu’il ou elle le rejoigne avec sa propre adresse e-mail.\n\n"
+        "C’est une première version. Si quelque chose n’est pas clair ou ne marche pas, répondez à cet e-mail.\n\n"
+        "Merci de l’essayer.\n",
+    ),
+    "de": (
+        "Willkommen in der CoParents-Beta",
+        "Hallo{name},\n\n"
+        "Ihr könnt CoParents jetzt nutzen. Öffnet {url} und meldet euch mit dieser E-Mail-Adresse an ({email}).\n"
+        "Tippt dann auf „Gemeinsamen Plan erstellen“ und schickt den angezeigten Code an den anderen Elternteil, "
+        "damit er oder sie mit der eigenen E-Mail-Adresse beitreten kann.\n\n"
+        "Das ist eine frühe Version. Wenn etwas unklar ist oder nicht funktioniert, antwortet einfach auf diese E-Mail.\n\n"
+        "Danke fürs Ausprobieren.\n",
+    ),
+    "lb": (
+        "Wëllkomm an der CoParents-Beta",
+        "Moien{name},\n\n"
+        "Dir kënnt CoParents elo benotzen. Maacht {url} op a mellt iech mat dëser E-Mail-Adress un ({email}).\n"
+        "Tippt dann op „Gemeinsame Plang erstellen“ a schéckt de Code, deen ugewise gëtt, dem aneren Elterendeel, "
+        "fir datt hien oder si mat der eegener E-Mail-Adress bäitriede kann.\n\n"
+        "Dëst ass eng fréi Versioun. Wann eppes net kloer ass oder net geet, äntwert einfach op dës E-Mail.\n\n"
+        "Merci fir d’Ausprobéieren.\n",
+    ),
+}
+
+
+def send_beta_invite(email: str, lang: str, first_name: str):
+    subject, body = BETA_INVITE.get(lang, BETA_INVITE["en"])
+    name = f" {first_name}" if first_name else ""
+    send_mail(email, subject, body.format(name=name, url=APP_URL, email=email), reply_to=BETA_NOTIFY)
+
+
+def beta_approved(cur, email: str) -> bool:
+    cur.execute("select 1 from beta_signups where email = %s and approved_at is not null", (email,))
+    return cur.fetchone() is not None
 
 
 @contextmanager
@@ -338,6 +429,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/households":
             self._create()
             return
+        if path == "/api/beta":
+            self._beta_signup()
+            return
         if path == "/api/households/join":
             self._join()
             return
@@ -482,6 +576,60 @@ class Handler(BaseHTTPRequestHandler):
             member = member_from_user(cur, user[0])
         self._send(200, self._me_payload(user[1], member))
 
+    def _beta_signup(self):
+        try:
+            body = self._read_json()
+        except ValueError:
+            self._send(400, {"error": "bad request"})
+            return
+        email = str(body.get("email", "")).strip().lower()
+        if len(email) > 254 or not EMAIL_RE.match(email):
+            self._send(400, {"error": "enter a valid email address"})
+            return
+        if body.get("consent") is not True:
+            self._send(400, {"error": "please agree to be contacted about the beta"})
+            return
+        first_name = " ".join(str(body.get("first_name", "")).split())[:60]
+        lang = str(body.get("lang", "en"))
+        lang = lang if lang in BETA_LANGS else "en"
+        care = str(body.get("care", ""))
+        other = str(body.get("other_parent", ""))
+        try:
+            children = int(body.get("children")) if body.get("children") not in (None, "") else None
+        except (TypeError, ValueError):
+            children = None
+        if children is not None and not 0 <= children <= 12:
+            children = None
+        if care not in BETA_CARE or other not in BETA_OTHER:
+            self._send(400, {"error": "bad request"})
+            return
+        if not LIMITS.allow(f"beta-ip:{self._client_ip()}", 5, 3600) or not LIMITS.allow(f"beta:{email}", 3, 86400):
+            self._send(429, {"error": "too many attempts. Try again later."})
+            return
+        with db() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                insert into beta_signups (email, first_name, lang, children, care, other_parent, consent_at)
+                values (%s, %s, %s, %s, %s, %s, now())
+                on conflict (email) do update set
+                  first_name = excluded.first_name, lang = excluded.lang, children = excluded.children,
+                  care = excluded.care, other_parent = excluded.other_parent, consent_at = now()
+                returning (xmax = 0)
+                """,
+                (email, first_name, lang, children, care, other),
+            )
+            fresh = cur.fetchone()[0]
+        if fresh:
+            try:
+                send_beta_notice({
+                    "email": email, "first_name": first_name, "language": lang,
+                    "children": "" if children is None else children, "care": care, "other_parent": other,
+                })
+            except Exception as exc:
+                print(f"beta notice failed: {exc!r}", flush=True)
+        # Same answer whether or not the address was already on the list.
+        self._send(200, {"ok": True})
+
     def _create(self):
         with db() as conn, conn.cursor() as cur:
             user = self._user(cur)
@@ -490,6 +638,11 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if member_from_user(cur, user[0]) is not None:
                 self._send(409, {"error": "you already have a shared plan"})
+                return
+            # During the beta only invited addresses start a plan. Joining with
+            # the other parent's code stays open to everyone.
+            if BETA_GATE and not beta_approved(cur, user[1]):
+                self._send(403, {"error": "new plans are invite-only during the beta"})
                 return
             code = new_code(cur)
             cur.execute(
@@ -674,7 +827,20 @@ class Handler(BaseHTTPRequestHandler):
                 "exported_at": datetime.now(timezone.utc).isoformat(),
                 "account": {"email": user[1], "created_at": created_at.astimezone(timezone.utc).isoformat()},
                 "plan": None,
+                "beta": None,
             }
+            cur.execute(
+                "select first_name, lang, children, care, other_parent, consent_at, created_at, approved_at from beta_signups where email = %s",
+                (user[1],),
+            )
+            beta = cur.fetchone()
+            if beta is not None:
+                stamp = lambda value: value.astimezone(timezone.utc).isoformat() if value else None  # noqa: E731
+                payload["beta"] = {
+                    "first_name": beta[0], "language": beta[1], "children": beta[2], "care": beta[3],
+                    "other_parent": beta[4], "consent_at": stamp(beta[5]), "signed_up_at": stamp(beta[6]),
+                    "approved_at": stamp(beta[7]),
+                }
             member = member_from_user(cur, user[0])
             if member is not None:
                 role, household_id, code = member
@@ -765,6 +931,7 @@ class Handler(BaseHTTPRequestHandler):
                     cur.execute("update households set code = %s where id = %s", (new_code(cur), household_id))
                     plan = "kept"
             cur.execute("delete from login_tokens where email = %s", (email,))
+            cur.execute("delete from beta_signups where email = %s", (email,))
             cur.execute("delete from users where id = %s", (user_id,))
             # Ids only, no email: lets a restored backup be cleaned again. Kept 30 days.
             cur.execute(
@@ -925,6 +1092,79 @@ class Handler(BaseHTTPRequestHandler):
         }
 
 
+def load_env_files(paths):
+    """Reads systemd-style KEY=VALUE files, as the service gets them."""
+    for path in paths:
+        try:
+            with open(path, encoding="utf-8") as handle:
+                for line in handle:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    os.environ.setdefault(key.strip(), value.strip())
+        except OSError:
+            # Missing or not readable: the settings come from the environment instead.
+            continue
+    global DSN, APP_URL, MAIL_FROM, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, BETA_NOTIFY
+    DSN = os.environ.get("DATABASE_URL", "")
+    APP_URL = os.environ.get("COPARENTS_APP_URL", APP_URL).rstrip("/")
+    MAIL_FROM = os.environ.get("COPARENTS_MAIL_FROM", "")
+    SMTP_HOST = os.environ.get("COPARENTS_SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("COPARENTS_SMTP_PORT", "587"))
+    SMTP_USER = os.environ.get("COPARENTS_SMTP_USER", "")
+    SMTP_PASSWORD = os.environ.get("COPARENTS_SMTP_PASSWORD", "")
+    BETA_NOTIFY = os.environ.get("COPARENTS_BETA_NOTIFY", "").strip()
+
+
+def beta_command(args):
+    """python3 api.py beta list | approve EMAIL [LANG] | remove EMAIL"""
+    if not args or args[0] not in {"list", "approve", "remove"}:
+        print("usage: api.py beta list | beta approve EMAIL [en|fr|de|lb] | beta remove EMAIL")
+        return 2
+    if args[0] == "list":
+        with db() as conn, conn.cursor() as cur:
+            cur.execute(
+                """
+                select email, first_name, lang, children, care, other_parent, created_at, approved_at
+                from beta_signups order by approved_at nulls first, created_at
+                """
+            )
+            rows = cur.fetchall()
+        if not rows:
+            print("Nobody on the beta list yet.")
+        for email, name, lang, children, care, other, created, approved in rows:
+            state = f"approved {approved:%Y-%m-%d}" if approved else "waiting"
+            print(f"{created:%Y-%m-%d}  {state:<20} {email}  {name or '-'}  {lang}  children={children if children is not None else '?'}  care={care or '?'}  other parent={other or '?'}")
+        return 0
+    if len(args) < 2 or not EMAIL_RE.match(args[1].strip().lower()):
+        print("Give an email address.")
+        return 2
+    email = args[1].strip().lower()
+    if args[0] == "remove":
+        with db() as conn, conn.cursor() as cur:
+            cur.execute("delete from beta_signups where email = %s", (email,))
+            print("Removed." if cur.rowcount else "Not on the list.")
+        return 0
+    lang = args[2] if len(args) > 2 and args[2] in BETA_LANGS else None
+    with db() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into beta_signups (email, lang, approved_at) values (%s, %s, now())
+            on conflict (email) do update set approved_at = coalesce(beta_signups.approved_at, now()),
+              lang = coalesce(%s, beta_signups.lang)
+            returning lang, first_name
+            """,
+            (email, lang or "fr", lang),
+        )
+        lang, first_name = cur.fetchone()
+    send_beta_invite(email, lang, first_name)
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("update beta_signups set invited_at = now() where email = %s", (email,))
+    print(f"Approved {email}. Invitation sent in {lang}.")
+    return 0
+
+
 def main():
     if not (DSN or os.environ.get("DATABASE_URL")):
         raise RuntimeError("DATABASE_URL is not set")
@@ -934,4 +1174,9 @@ def main():
 
 
 if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) > 1 and sys.argv[1] == "beta":
+        load_env_files(["/etc/coparents/database.env", "/etc/coparents/app.env"])
+        sys.exit(beta_command(sys.argv[2:]))
     main()
