@@ -52,7 +52,7 @@ Until the mail settings are filled in, no email is sent. The link is written to 
 sudo journalctl -u coparents-api -n 20 | grep 'sign-in link'
 ```
 
-Run `update-api.sh` before the new web app goes live, because the new app needs the new API.
+Merging to `main` now updates the API before the web app when `server/api.py` or `db/` changed (see docs/github-actions.md). Run `update-api.sh` by hand only if that job is not set up or failed.
 
 ## Moving to another domain
 
