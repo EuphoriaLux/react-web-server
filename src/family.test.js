@@ -24,11 +24,12 @@ test('normalize fills missing parts of a saved family', () => {
 
 test('children label joins names for the rest of the app', () => {
   const family = emptyFamily()
-  assert.equal(childrenLabel(family), 'Noa')
+  assert.equal(childrenLabel(family), '')
   family.children = [{ ...emptyChild(), name: 'Lina' }, { ...emptyChild(), name: 'Max' }, { ...emptyChild(), name: 'Zoé' }]
   assert.equal(childrenLabel(family), 'Lina, Max & Zoé')
   family.parents.A.name = 'Tom'
-  assert.deepEqual(profileFromFamily(family, { nameA: 'Alex', nameB: 'Sam', child: 'Noa' }), { nameA: 'Tom', nameB: 'Sam', child: 'Lina, Max & Zoé' })
+  assert.deepEqual(profileFromFamily(family, { nameA: 'Alex', nameB: 'Sam', child: 'Noa' }), { nameA: 'Tom', nameB: '', child: 'Lina, Max & Zoé' })
+  assert.deepEqual(profileFromFamily(family, { nameB: 'Mia' }).nameB, 'Mia')
 })
 
 test('finishing needs your own name and one child', () => {

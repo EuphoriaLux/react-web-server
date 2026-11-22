@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { AccountPanel, PrivacyLink, usePrivacyCopy } from './privacy.jsx'
 import { useLang } from './main.jsx'
 import { SYNC_COPY, fill } from './sync-copy.js'
+import { names } from './people.js'
 
 const KEYS = [
   'cp-custody', 'cp-locked', 'cp-lockdays', 'cp-events', 'cp-expenses', 'cp-payments', 'cp-money',
@@ -477,7 +478,7 @@ export function ShareBar({ onSync }) {
     <div className="share-bar on">
       <div>
         <strong>{fill(sc.sharedPlan, { code })}</strong>
-        <p>{fill(sc.youAre, { name: role === 'A' ? (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameA || 'Alex') : (JSON.parse(localStorage.getItem('cp-profile') || '{}').nameB || 'Sam'), email })}</p>
+        <p>{fill(sc.youAre, { name: names(lang)[role === 'B' ? 'B' : 'A'], email })}</p>
       </div>
       <button className="btn ghost sm" type="button" onClick={copy}>{sc.copy}</button>
       {accountButton}

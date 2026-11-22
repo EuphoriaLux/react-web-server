@@ -71,7 +71,7 @@ export function namedChildren(family) {
 }
 
 // What the rest of the app reads as the child's name.
-export function childrenLabel(family, fallback = 'Noa') {
+export function childrenLabel(family, fallback = '') {
   const list = namedChildren(family).map((child) => child.name.trim())
   if (list.length === 0) return fallback
   if (list.length === 1) return list[0]
@@ -79,11 +79,13 @@ export function childrenLabel(family, fallback = 'Noa') {
 }
 
 // The old profile shape that the Today, Handover and share screens still read.
-export function profileFromFamily(family, previous = DEMO_NAMES) {
+// A name nobody typed stays empty, and screens show "Parent A" or "Your child".
+export function profileFromFamily(family, previous = {}) {
+  const keep = (key) => (previous && previous[key] && previous[key] !== DEMO_NAMES[key] ? previous[key] : '')
   return {
-    nameA: family.parents.A.name.trim() || previous.nameA || DEMO_NAMES.nameA,
-    nameB: family.parents.B.name.trim() || previous.nameB || DEMO_NAMES.nameB,
-    child: childrenLabel(family, previous.child || DEMO_NAMES.child),
+    nameA: family.parents.A.name.trim() || keep('nameA'),
+    nameB: family.parents.B.name.trim() || keep('nameB'),
+    child: childrenLabel(family, keep('child')),
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, createContext, useContext } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   Activity, ArrowRight, Check, Shield, Heart, Clock, Users, Menu, X, Sparkles,
@@ -15,6 +15,7 @@ import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 import { pickLang } from './lang.js'
+import { sharedRole, shortName, weekdayLetters } from './people.js'
 import { ExpensesView } from './money.jsx'
 import { holidayOwners, schoolHolidayMap, schoolYearOf, firstPeriod } from './holidays.js'
 
@@ -26,7 +27,7 @@ const t = {
   en: {
     lang: 'EN',
     problem: 'The problem', how: 'How it helps', works: 'How it works', fiscal: 'Fiscal help (LU)',
-    demo: 'Demo', enter: 'Enter shared space', back: 'Back to site',
+    enter: 'Enter shared space', back: 'Back to site',
     eyebrow: 'Built for parents who still share a child',
     h1a: 'Co-parenting', h1b: 'without the chaos',
     lead: 'One calm, shared space for schedules, expenses, messages and documents. Less friction between you. More clarity for your child.',
@@ -43,7 +44,7 @@ const t = {
     feat1t: 'Shared calendar', feat1: 'One source of truth for handovers, school events, holidays and medical appointments. Both parents see the same plan.',
     feat2t: 'Transparent expenses', feat2: 'Log costs, attach receipts and settle fairly. Fewer arguments about who paid for what.',
     feat3t: 'Structured messages', feat3: 'Keep conversations focused on the child. Less emotional noise, clearer decisions.',
-    feat4t: 'Secure documents', feat4: 'Agreements, school reports, medical records and ID copies — always available to both of you.',
+    feat4t: 'Shared notes', feat4: 'Agreements, decisions and important notes in one place — always available to both of you.',
     howLabel: 'Onboarding', howH2: 'From invite to shared rhythm',
     howLead: 'Five clear steps. No complex setup — just the essentials both of you can trust.',
     s1t: 'Create your parent profile', s1: 'Tell us the basics: children, households and how you already share care. Takes a few minutes.',
@@ -67,10 +68,10 @@ const t = {
     v2t: 'Calm by default', v2: 'Structure reduces emotional load so conversations stay practical.',
     v3t: 'Privacy first', v3: 'Your family data stays private. Designed for real life, not surveillance.',
     ctaH2: 'Ready to lower the temperature?', ctaP: 'Create a shared space that keeps logistics clear and the focus where it belongs — on your child.',
-    ctaNote: 'No account needed. Demo runs in this browser.',
+    ctaNote: 'Sign in with your email. No password to remember.',
     footerTag: 'Less friction. More clarity. Better for the kids.',
-    footerMeta: 'CoParents · Concept preview',
-    appTitle: 'CoParents demo',
+    footerMeta: 'CoParents · Private beta',
+    appTitle: 'CoParents',
     tabCal: 'Calendar', tabExp: 'Expenses', tabMsg: 'Messages', tabDoc: 'Docs',
     calTitle: 'Shared calendar',
     both: 'Both', paintAs: 'Assign', clear: 'Clear', altWeeks: 'Alt. weeks (A)', altWeeksB: 'Alt. weeks (B)', weekendA: 'Every other weekend A', monthA: 'Whole month A', monthB: 'Whole month B', clearMonth: 'Clear month', addEvent: 'Add note / event',
@@ -133,7 +134,7 @@ const t = {
   fr: {
     lang: 'FR',
     problem: 'Le problème', how: 'Comment ça aide', works: 'Comment ça marche', fiscal: 'Aide fiscale (LU)',
-    demo: 'Démo', enter: 'Entrer dans l’espace partagé', back: 'Retour au site',
+    enter: 'Entrer dans l’espace partagé', back: 'Retour au site',
     eyebrow: 'Conçu pour les parents qui partagent encore un enfant',
     h1a: 'Co-parentalité', h1b: 'sans le chaos',
     lead: 'Un espace calme et partagé pour les plannings, les dépenses, les messages et les documents. Moins de friction entre vous. Plus de clarté pour votre enfant.',
@@ -150,7 +151,7 @@ const t = {
     feat1t: 'Calendrier partagé', feat1: 'Une source unique pour les gardes, les événements scolaires, les vacances et les rendez-vous médicaux. Les deux parents voient le même plan.',
     feat2t: 'Dépenses transparentes', feat2: 'Enregistrez les coûts, joignez les reçus et réglez équitablement. Moins de disputes sur qui a payé quoi.',
     feat3t: 'Messages structurés', feat3: 'Gardez les conversations centrées sur l’enfant. Moins de bruit émotionnel, des décisions plus claires.',
-    feat4t: 'Documents sécurisés', feat4: 'Accords, bulletins, dossiers médicaux et copies d’identité — toujours disponibles pour vous deux.',
+    feat4t: 'Notes partagées', feat4: 'Accords, décisions et notes importantes au même endroit — toujours disponibles pour vous deux.',
     howLabel: 'Prise en main', howH2: 'De l’invitation au rythme partagé',
     howLead: 'Cinq étapes claires. Pas de configuration complexe — juste l’essentiel auquel vous pouvez tous les deux faire confiance.',
     s1t: 'Créer votre profil parent', s1: 'Les bases : enfants, foyers et comment vous partagez déjà la garde. Quelques minutes suffisent.',
@@ -174,10 +175,10 @@ const t = {
     v2t: 'Calme par défaut', v2: 'La structure réduit la charge émotionnelle pour que les échanges restent pratiques.',
     v3t: 'Confidentialité d’abord', v3: 'Les données de votre famille restent privées. Conçu pour la vraie vie, pas la surveillance.',
     ctaH2: 'Prêt à baisser la température ?', ctaP: 'Créez un espace partagé qui garde la logistique claire et le focus là où il doit être — sur votre enfant.',
-    ctaNote: 'Aucun compte nécessaire. La démo tourne dans ce navigateur.',
+    ctaNote: 'Connexion par e-mail. Aucun mot de passe à retenir.',
     footerTag: 'Moins de friction. Plus de clarté. Mieux pour les enfants.',
-    footerMeta: 'CoParents · Aperçu concept',
-    appTitle: 'Démo CoParents',
+    footerMeta: 'CoParents · Bêta privée',
+    appTitle: 'CoParents',
     tabCal: 'Calendrier', tabExp: 'Dépenses', tabMsg: 'Messages', tabDoc: 'Documents',
     calTitle: 'Calendrier partagé',
     both: 'Les deux', paintAs: 'Attribuer', clear: 'Effacer', altWeeks: 'Semaines alt. (A)', altWeeksB: 'Semaines alt. (B)', weekendA: 'Un week-end sur deux A', monthA: 'Tout le mois A', monthB: 'Tout le mois B', clearMonth: 'Effacer le mois', addEvent: 'Ajouter une note / événement',
@@ -241,7 +242,7 @@ const t = {
   de: {
     lang: 'DE',
     problem: 'Das Problem', how: 'Wie es hilft', works: 'So funktioniert’s', fiscal: 'Steuerhilfe (LU)',
-    demo: 'Demo', enter: 'Gemeinsamen Bereich öffnen', back: 'Zurück zur Seite',
+    enter: 'Gemeinsamen Bereich öffnen', back: 'Zurück zur Seite',
     eyebrow: 'Für Eltern, die noch ein Kind gemeinsam betreuen',
     h1a: 'Co-Parenting', h1b: 'ohne das Chaos',
     lead: 'Ein ruhiger, gemeinsamer Raum für Termine, Ausgaben, Nachrichten und Dokumente. Weniger Reibung zwischen euch. Mehr Klarheit für euer Kind.',
@@ -258,7 +259,7 @@ const t = {
     feat1t: 'Gemeinsamer Kalender', feat1: 'Eine Quelle der Wahrheit für Übergaben, Schultermine, Ferien und Arztbesuche. Beide Eltern sehen denselben Plan.',
     feat2t: 'Transparente Ausgaben', feat2: 'Kosten erfassen, Belege anhängen und fair abrechnen. Weniger Streit darüber, wer was bezahlt hat.',
     feat3t: 'Strukturierte Nachrichten', feat3: 'Gespräche auf das Kind fokussieren. Weniger emotionales Rauschen, klarere Entscheidungen.',
-    feat4t: 'Sichere Dokumente', feat4: 'Vereinbarungen, Schulberichte, Krankenakten und Ausweiskopien — immer für beide verfügbar.',
+    feat4t: 'Gemeinsame Notizen', feat4: 'Vereinbarungen, Entscheidungen und wichtige Notizen an einem Ort — immer für beide verfügbar.',
     howLabel: 'Onboarding', howH2: 'Von der Einladung zum gemeinsamen Rhythmus',
     howLead: 'Fünf klare Schritte. Kein kompliziertes Setup — nur das Wesentliche, dem ihr beide vertrauen könnt.',
     s1t: 'Elternprofil anlegen', s1: 'Die Grundlagen: Kinder, Haushalte und wie ihr die Betreuung bereits teilt. Dauert wenige Minuten.',
@@ -282,10 +283,10 @@ const t = {
     v2t: 'Ruhig by Default', v2: 'Struktur reduziert die emotionale Last, damit Gespräche praktisch bleiben.',
     v3t: 'Privatsphäre zuerst', v3: 'Eure Familiendaten bleiben privat. Für das echte Leben gebaut, nicht für Überwachung.',
     ctaH2: 'Bereit, die Temperatur zu senken?', ctaP: 'Schafft einen gemeinsamen Raum, der die Logistik klar hält und den Fokus dorthin legt, wo er hingehört — auf euer Kind.',
-    ctaNote: 'Kein Konto nötig. Die Demo läuft in diesem Browser.',
+    ctaNote: 'Anmeldung per E-Mail. Kein Passwort nötig.',
     footerTag: 'Weniger Reibung. Mehr Klarheit. Besser für die Kinder.',
-    footerMeta: 'CoParents · Konzeptvorschau',
-    appTitle: 'CoParents Demo',
+    footerMeta: 'CoParents · Private Beta',
+    appTitle: 'CoParents',
     tabCal: 'Kalender', tabExp: 'Ausgaben', tabMsg: 'Nachrichten', tabDoc: 'Dokumente',
     calTitle: 'Gemeinsamer Kalender',
     both: 'Beide', paintAs: 'Zuweisen', clear: 'Löschen', altWeeks: 'Wechselnde Wochen (A)', altWeeksB: 'Wechselnde Wochen (B)', weekendA: 'Jedes zweite Wochenende A', monthA: 'Ganzer Monat A', monthB: 'Ganzer Monat B', clearMonth: 'Monat löschen', addEvent: 'Notiz / Ereignis',
@@ -349,7 +350,7 @@ const t = {
   lb: {
     lang: 'LB',
     problem: 'De Problem', how: 'Wéi et hëlleft', works: 'Wéi et fonctionéiert', fiscal: 'Steierhëllef (LU)',
-    demo: 'Demo', enter: 'Gemeinsame Raum opmaachen', back: 'Zréck op d’Säit',
+    enter: 'Gemeinsame Raum opmaachen', back: 'Zréck op d’Säit',
     eyebrow: 'Fir Elteren, déi nach e Kand zesumme betreien',
     h1a: 'Co-Parenting', h1b: 'ouni de Chaos',
     lead: 'Ee rouege, gemeinsame Raum fir Terminer, Ausgaben, Messagen an Dokumenter. Manner Reibung tëscht iech. Méi Kloerheet fir Äert Kand.',
@@ -366,7 +367,7 @@ const t = {
     feat1t: 'Gemeinsame Kalenner', feat1: 'Eng Quell vun der Wourecht fir Iwwergaben, Schoulterminer, Vakanzen an Doktervisiten. Béid Eltere gesinn de selwechte Plang.',
     feat2t: 'Transparent Ausgaben', feat2: 'Käschten erfaassen, Beleeger bäifügen an fair ofrechnen. Manner Sträit iwwer wie wat bezuelt huet.',
     feat3t: 'Strukturéiert Messagen', feat3: 'Gespréicher op d’Kand fokusséieren. Manner emotionalt Rauschen, méi kloer Entscheedungen.',
-    feat4t: 'Sécher Dokumenter', feat4: 'Ofkommes, Schoulberichter, Krankeakten an Ausweiskopien — ëmmer fir béid verfügbar.',
+    feat4t: 'Gemeinsam Notizen', feat4: 'Ofkommes, Decisiounen a wichteg Notizen op enger Plaz — ëmmer fir béid verfügbar.',
     howLabel: 'Onboarding', howH2: 'Vun der Aluedung zum gemeinsame Rhythmus',
     howLead: 'Fënnef kloer Schrëtt. Keen komplizéierten Setup — just dat Wichtegst, deem dir béid vertrauen kënnt.',
     s1t: 'Elterprofil uleeën', s1: 'D’Grondlagen: Kanner, Haushälter a wéi dir d’Betreiung scho deelt. Dauert e puer Minutten.',
@@ -390,10 +391,10 @@ const t = {
     v2t: 'Roueg by Default', v2: 'Struktur reduzéiert déi emotional Laascht, fir datt Gespréicher praktesch bleiwen.',
     v3t: 'Privatsphär fir d’éischt', v3: 'Är Familljendate bleiwen privat. Fir dat richtegt Liewen gebaut, net fir Iwwerwaachung.',
     ctaH2: 'Prett, d’Temperatur ze senken?', ctaP: 'Schaaft ee gemeinsame Raum, deen d’Logistik kloer hält an de Fokus dohinner leet, wou e hi gehéiert — op Äert Kand.',
-    ctaNote: 'Keen Kont néideg. D’Demo leeft an dësem Browser.',
+    ctaNote: 'Umeldung per E-Mail. Kee Passwuert néideg.',
     footerTag: 'Manner Reibung. Méi Kloerheet. Besser fir d’Kanner.',
-    footerMeta: 'CoParents · Konzeptvirschau',
-    appTitle: 'CoParents Demo',
+    footerMeta: 'CoParents · Privat Beta',
+    appTitle: 'CoParents',
     tabCal: 'Kalenner', tabExp: 'Ausgaben', tabMsg: 'Messagen', tabDoc: 'Dokumenter',
     calTitle: 'Gemeinsame Kalenner',
     both: 'Béid', paintAs: 'Zouweisen', clear: 'Läschen',
@@ -452,6 +453,41 @@ const t = {
   },
 
 }
+
+// Strings added for the beta. Kept apart so the big table above stays readable.
+const MORE = {
+  en: {
+    more: 'More', beta: 'Beta', feedback: 'Send feedback',
+    editCal: 'Edit calendar', doneEdit: 'Done', viewHint: 'Tap “Edit calendar” to change who has which day.',
+    confirmReplace: 'This changes every day of {month}. Continue?', actCal: 'Calendar changed for {month}',
+    askUnlock: 'Ask to unlock', agreeUnlock: 'Agree to unlock',
+    unlockWaiting: 'Waiting for {name} to agree.', unlockAsked: '{name} asks to unlock this month.',
+  },
+  fr: {
+    more: 'Plus', beta: 'Bêta', feedback: 'Envoyer un avis',
+    editCal: 'Modifier le calendrier', doneEdit: 'Terminé', viewHint: 'Touchez « Modifier le calendrier » pour changer qui a quel jour.',
+    confirmReplace: 'Cela change tous les jours de {month}. Continuer ?', actCal: 'Calendrier modifié pour {month}',
+    askUnlock: 'Demander à déverrouiller', agreeUnlock: 'Accepter de déverrouiller',
+    unlockWaiting: 'En attente de l’accord de {name}.', unlockAsked: '{name} demande à déverrouiller ce mois.',
+  },
+  de: {
+    more: 'Mehr', beta: 'Beta', feedback: 'Feedback senden',
+    editCal: 'Kalender bearbeiten', doneEdit: 'Fertig', viewHint: 'Tippt auf „Kalender bearbeiten“, um die Tage zu ändern.',
+    confirmReplace: 'Das ändert alle Tage im {month}. Weiter?', actCal: 'Kalender für {month} geändert',
+    askUnlock: 'Entsperren anfragen', agreeUnlock: 'Entsperren zustimmen',
+    unlockWaiting: 'Wartet auf die Zustimmung von {name}.', unlockAsked: '{name} möchte diesen Monat entsperren.',
+  },
+  lb: {
+    more: 'Méi', beta: 'Beta', feedback: 'Feedback schécken',
+    editCal: 'Kalenner änneren', doneEdit: 'Fäerdeg', viewHint: 'Tippt op „Kalenner änneren“, fir d’Deeg z’änneren.',
+    confirmReplace: 'Dat ännert all Deeg am {month}. Weider?', actCal: 'Kalenner fir {month} geännert',
+    askUnlock: 'Entspären ufroen', agreeUnlock: 'Entspären zoustëmmen',
+    unlockWaiting: 'Waart op d’Zoustëmmung vun {name}.', unlockAsked: '{name} wëll dëse Mount entspären.',
+  },
+}
+for (const code of Object.keys(MORE)) Object.assign(t[code], MORE[code])
+const fillIn = (text, values) => String(text).replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '')
+const FEEDBACK_EMAIL = 'privacy@coparent.lu'
 
 function startLang() {
   let saved = null, chosen = false
@@ -819,6 +855,12 @@ function CalendarView() {
   const [mode, setMode] = useState('paint') // paint | event
   const [paint, setPaint] = useState('A')
   const [form, setForm] = useState({ title: '', date: '', type: 'event' })
+  // The calendar opens for looking. A tap changes a day only after "Edit calendar".
+  const [editing, setEditing] = useState(false)
+  const before = useRef(null)
+  const role = sharedRole()
+  const n = names()
+  const withNames = (label) => String(label).replace(/\bA\b/g, n.A).replace(/\bB\b/g, n.B)
 
   useEffect(() => { save('cp-custody', custody) }, [custody])
   useEffect(() => { save('cp-locked', locked) }, [locked])
@@ -835,7 +877,7 @@ function CalendarView() {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   const iso = (d) => `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : 'en'
+  const locale = tr.lang === 'FR' ? 'fr' : tr.lang === 'DE' ? 'de' : tr.lang === 'LB' ? 'lb' : 'en'
   const monthLabel = cursor.toLocaleString(locale, { month: 'long', year: 'numeric' })
   const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`
   const isLocked = !!locked[monthKey]
@@ -858,7 +900,7 @@ function CalendarView() {
   }
 
   const cycleDay = (d) => {
-    if (isLocked) return
+    if (isLocked || !editing) return
     const key = iso(d)
     const cur = custody[key]
     const order = [null, 'A', 'B', 'both']
@@ -867,13 +909,15 @@ function CalendarView() {
   }
 
   const paintDay = (d) => {
-    if (mode === 'event' || isLocked) return
+    if (mode === 'event' || isLocked || !editing) return
     setDay(d, paint === 'clear' ? null : paint)
   }
 
   // Quick plans
+  // Quick plans change a whole month, so they ask first.
+  const sure = () => window.confirm(fillIn(tr.confirmReplace, { month: monthLabel }))
   const planAlternateWeeks = (startWith) => {
-    if (isLocked) return
+    if (isLocked || !sure()) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
@@ -883,7 +927,7 @@ function CalendarView() {
     setCustody(next)
   }
   const planEveryOtherWeekend = (who) => {
-    if (isLocked) return
+    if (isLocked || !sure()) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
@@ -896,13 +940,13 @@ function CalendarView() {
     setCustody(next)
   }
   const planWholeMonth = (who) => {
-    if (isLocked) return
+    if (isLocked || !sure()) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) next[iso(d)] = who
     setCustody(next)
   }
   const clearMonth = () => {
-    if (isLocked) return
+    if (isLocked || !sure()) return
     const next = { ...custody }
     for (let d = 1; d <= daysInMonth; d++) delete next[iso(d)]
     setCustody(next)
@@ -924,11 +968,34 @@ function CalendarView() {
   }
   const removeEvent = (id) => setEvents((p) => p.filter((x) => x.id !== id))
 
-  const weekdays = tr.lang === 'FR'
-    ? ['L','M','M','J','V','S','D']
-    : tr.lang === 'DE'
-    ? ['Mo','Di','Mi','Do','Fr','Sa','So']
-    : ['M','T','W','T','F','S','S']
+  const weekdays = weekdayLetters(tr.lang)
+
+  // Editing ends with "Done" or by leaving the screen. Either way, a change to
+  // the calendar shows in "What changed", so the other parent sees it.
+  const custodyNow = useRef(custody)
+  custodyNow.current = custody
+  const finishEdit = useCallback(() => {
+    if (before.current === null) return
+    const was = before.current
+    before.current = null
+    const now = custodyNow.current
+    const months = [...new Set([...Object.keys(was), ...Object.keys(now)].filter((key) => was[key] !== now[key]).map((key) => key.slice(0, 7)))].sort()
+    for (const m of months) {
+      const label = new Date(`${m}-15T12:00:00`).toLocaleString(locale, { month: 'long', year: 'numeric' })
+      const text = fillIn(tr.actCal, { month: label })
+      logActivity(role ? `${names()[role]} · ${text}` : text)
+    }
+  }, [locale, role, tr.actCal])
+  useEffect(() => () => finishEdit(), [finishEdit])
+  const startEdit = () => { before.current = { ...custody }; setEditing(true) }
+  const stopEdit = () => { finishEdit(); setEditing(false) }
+
+  // Unlocking a locked month needs both parents once the plan is shared.
+  const lockState = locked[monthKey]
+  const unlockAsk = lockState && typeof lockState === 'object' ? lockState.ask : ''
+  const unlockNow = () => setLocked((p) => { const next = { ...p }; delete next[monthKey]; return next })
+  const askUnlock = () => setLocked((p) => ({ ...p, [monthKey]: { ask: role } }))
+  const other = role === 'A' ? 'B' : 'A'
 
   return (
     <div className="app-panel kid-cal">
@@ -942,8 +1009,8 @@ function CalendarView() {
       </div>
 
       <div className="kid-summary">
-        <span className="pill a">A · {counts.A}</span>
-        <span className="pill b">B · {counts.B}</span>
+        <span className="pill a">{n.A} · {counts.A}</span>
+        <span className="pill b">{n.B} · {counts.B}</span>
         <span className="pill both">{tr.both || 'Both'} · {counts.both}</span>
         <span className="pill holiday">{tr.holidays || 'Holidays'}</span>
         {isLocked && <span className="pill locked">{tr.locked || 'Locked'}</span>}
@@ -951,20 +1018,33 @@ function CalendarView() {
       <div className="lock-bar">
         <label>{tr.lockBefore || 'Lock next month'} <input type="number" min="0" max="60" value={lockDays} onChange={(e) => setLockDays(Number(e.target.value))} /> {tr.daysBefore || 'days before'}</label>
         <button type="button" className="btn ghost sm" disabled={isLocked} onClick={() => setLocked((p) => ({ ...p, [monthKey]: true }))}>{tr.lockMonth || 'Lock this month'}</button>
-        {isLocked && <button type="button" className="btn ghost sm" onClick={() => setLocked((p) => { const n = { ...p }; delete n[monthKey]; return n })}>{tr.unlock || 'Unlock'}</button>}
+        {isLocked && !role && <button type="button" className="btn ghost sm" onClick={unlockNow}>{tr.unlock}</button>}
+        {isLocked && role && !unlockAsk && <button type="button" className="btn ghost sm" onClick={askUnlock}>{tr.askUnlock}</button>}
+        {isLocked && role && unlockAsk === role && <span className="lock-hint">{fillIn(tr.unlockWaiting, { name: n[other] })}</span>}
+        {isLocked && role && unlockAsk && unlockAsk !== role && <>
+          <span className="lock-hint">{fillIn(tr.unlockAsked, { name: n[unlockAsk] })}</span>
+          <button type="button" className="btn primary sm" onClick={unlockNow}>{tr.agreeUnlock}</button>
+        </>}
         {inLockWindow && !isLocked && <span className="lock-hint">{tr.lockHint || 'Lock window is open — confirm the month soon.'}</span>}
       </div>
       <div className="balance-bar">
-        <span>{tr.prior || 'Prior balance'} A {balance.a} · B {balance.b}</span>
+        <span>{tr.prior || 'Prior balance'} {n.A} {balance.a} · {n.B} {balance.b}</span>
       </div>
 
-      <div className="paint-bar">
+      {!isLocked && (
+        <div className="edit-bar">
+          {editing
+            ? <button type="button" className="btn primary sm" onClick={stopEdit}><Check size={16} /> {tr.doneEdit}</button>
+            : <><button type="button" className="btn primary sm" onClick={startEdit}>{tr.editCal}</button><span className="q-lead">{tr.viewHint}</span></>}
+        </div>
+      )}
+      {editing && !isLocked && <div className="paint-bar">
         <span className="paint-label">{tr.paintAs || 'Assign'}</span>
-        <button type="button" className={`paint a ${paint === 'A' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('A') }}>A</button>
-        <button type="button" className={`paint b ${paint === 'B' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('B') }}>B</button>
+        <button type="button" className={`paint a ${paint === 'A' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('A') }}>{n.A}</button>
+        <button type="button" className={`paint b ${paint === 'B' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('B') }}>{n.B}</button>
         <button type="button" className={`paint both ${paint === 'both' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('both') }}>{tr.both || 'Both'}</button>
         <button type="button" className={`paint clear ${paint === 'clear' && mode === 'paint' ? 'on' : ''}`} onClick={() => { setMode('paint'); setPaint('clear') }}>{tr.clear || 'Clear'}</button>
-      </div>
+      </div>}
 
       <div className="cal-grid kid">
         {weekdays.map((d, i) => <div key={i} className="cal-dow">{d}</div>)}
@@ -986,7 +1066,7 @@ function CalendarView() {
               title={hol || sch || undefined}
             >
               <span className="cal-day">{d}</span>
-              {who && <span className="who">{who === 'both' ? 'AB' : who}</span>}
+              {who && <span className="who">{who === 'both' ? (tr.both || 'AB') : shortName(who)}</span>}
               {hol && <span className="hol-name">{hol}</span>}
               {!hol && sch && <span className="sch-name">{sch}</span>}
               {dayEvents.length > 0 && <span className="dot" />}
@@ -995,15 +1075,15 @@ function CalendarView() {
         })}
       </div>
 
-      <div className="plan-row">
+      {editing && !isLocked && <div className="plan-row">
         <button type="button" className="btn primary sm" onClick={() => setShowQ(true)}>{tr.propose}</button>
-        <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('A')}>{tr.altWeeks || 'Alt. weeks (A start)'}</button>
-        <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('B')}>{tr.altWeeksB || 'Alt. weeks (B start)'}</button>
-        <button type="button" className="btn ghost sm" onClick={() => planEveryOtherWeekend('A')}>{tr.weekendA || 'Every other weekend A'}</button>
-        <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('A')}>{tr.monthA || 'Whole month A'}</button>
-        <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('B')}>{tr.monthB || 'Whole month B'}</button>
-        <button type="button" className="btn ghost sm" onClick={clearMonth}>{tr.clearMonth || 'Clear month'}</button>
-      </div>
+        <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('A')}>{withNames(tr.altWeeks)}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planAlternateWeeks('B')}>{withNames(tr.altWeeksB)}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planEveryOtherWeekend('A')}>{withNames(tr.weekendA)}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('A')}>{withNames(tr.monthA)}</button>
+        <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('B')}>{withNames(tr.monthB)}</button>
+        <button type="button" className="btn ghost sm" onClick={clearMonth}>{tr.clearMonth}</button>
+      </div>}
 
       {showQ && (
         <Questionnaire
@@ -1031,7 +1111,7 @@ function CalendarView() {
           }}
         />
       )}
-      <details className="holiday-list" open>
+      <details className="holiday-list">
         <summary>{tr.holidays || 'Holidays'} · {year}</summary>
         <ul>
           {Object.entries(luxHolidays(year, tr)).map(([date, name]) => (
@@ -1102,6 +1182,7 @@ function AppShell({ onExit }) {
   const fc = useFamilyCopy()
   const xc = useCopy()
   const [setup, setSetup] = useState(false)
+  const [menu, setMenu] = useState(false)
   useEffect(() => {
     const open = () => setSetup(true)
     window.addEventListener('cp-open-family', open)
@@ -1123,16 +1204,29 @@ function AppShell({ onExit }) {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="app-brand"><span className="logo-mark small"><Heart size={14} /></span> {tr.appTitle}</div>
+        <div className="app-brand"><span className="logo-mark small"><Heart size={14} /></span> {tr.appTitle} <span className="beta-badge">{tr.beta}</span></div>
         <div className="app-tools">
-          {extra.map(({ id, label, Icon }) => (
-            <button key={id} type="button" className={`btn ghost sm ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>
-              <Icon size={16} /> {label}
-            </button>
-          ))}
-          <LangSwitch />
-          <button className="btn ghost sm" type="button" onClick={onExit}><Home size={16} /> {tr.back}</button>
+          <button className={`btn ghost sm ${menu || extra.some((item) => item.id === tab) ? 'on' : ''}`} type="button" aria-expanded={menu} onClick={() => setMenu((v) => !v)}>
+            {menu ? <X size={16} /> : <Menu size={16} />} {tr.more}
+          </button>
         </div>
+        {menu && (
+          <>
+            <div className="more-backdrop" onClick={() => setMenu(false)} aria-hidden="true" />
+            <div className="more-menu" role="menu">
+              {extra.map(({ id, label, Icon }) => (
+                <button key={id} type="button" role="menuitem" className={tab === id ? 'on' : ''} onClick={() => { setTab(id); setMenu(false) }}>
+                  <Icon size={18} /> {label}
+                </button>
+              ))}
+              <a role="menuitem" href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('CoParents beta feedback')}`} onClick={() => setMenu(false)}>
+                <MessageSquare size={18} /> {tr.feedback}
+              </a>
+              <div className="more-lang"><Globe size={18} /><LangSwitch /></div>
+              <button type="button" role="menuitem" onClick={() => { setMenu(false); onExit() }}><Home size={18} /> {tr.back}</button>
+            </div>
+          </>
+        )}
       </header>
       <main className="app-main">
         <ShareBar onSync={handleSync} />
@@ -1214,7 +1308,6 @@ function Landing({ onEnter }) {
           </nav>
           <div className="nav-actions">
             <LangSwitch />
-            <button className="btn ghost" type="button" onClick={onEnter}>{tr.demo}</button>
             <button className="btn primary" type="button" onClick={onEnter}>{tr.enter}</button>
           </div>
           <button className="menu-btn" type="button" aria-label={menuOpen ? 'Close' : 'Open'} aria-expanded={menuOpen} onClick={() => setMenuOpen((v) => !v)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button>
@@ -1300,7 +1393,7 @@ function Landing({ onEnter }) {
               <h2>{tr.fiscH2}</h2>
               <p className="section-lead">{tr.fiscLead}</p>
             </div>
-            <div className="fiscal-banner"><Info size={18} /><p><strong>Timeline:</strong> {tr.fiscBanner}</p></div>
+            <div className="fiscal-banner"><Info size={18} /><p>{tr.fiscBanner}</p></div>
             <div className="fiscal-grid">{fiscalCards.map((c) => (<article className="fiscal-card" key={c.title}><h3>{c.title}</h3><p>{c.body}</p></article>))}</div>
             <div className="fiscal-note"><HelpCircle size={16} /><p>{tr.fiscNote}</p></div>
           </div>

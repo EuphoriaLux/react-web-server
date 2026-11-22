@@ -1047,3 +1047,29 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -0.035em; }
 .receipt-view { background: white; border-radius: 16px; padding: 12px; max-width: min(720px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; margin: auto; }
 .receipt-view img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 10px; }
 .receipt-view-actions { display: flex; justify-content: space-between; gap: 8px; }
+
+/* ─── App header: one "More" menu, so it fits on a phone ─── */
+.app-header { position: sticky; flex-wrap: nowrap; }
+.beta-badge {
+  font-family: var(--body, inherit); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--teal-deep); background: var(--teal-soft);
+  padding: 3px 8px; border-radius: 999px;
+}
+.more-backdrop { position: fixed; inset: 0; z-index: 41; }
+.more-menu {
+  position: absolute; right: 14px; top: calc(100% + 6px); z-index: 42;
+  display: flex; flex-direction: column; gap: 2px; min-width: 240px; max-width: calc(100vw - 28px);
+  padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: 0 18px 40px -18px rgba(12, 31, 56, 0.35);
+}
+.more-menu > button, .more-menu > a {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
+  border-radius: 10px; background: transparent; color: var(--ink); font-weight: 600;
+  text-align: left; text-decoration: none; font-size: 0.95rem;
+}
+.more-menu > button:hover, .more-menu > a:hover { background: #f1f5f9; }
+.more-menu > button.on { color: var(--teal-deep); background: var(--teal-soft); }
+.more-lang { display: flex; align-items: center; gap: 10px; padding: 8px 12px; color: var(--ink-soft); }
+.more-menu .lang-switch { margin-left: 0; }
+.edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 0; }
+.edit-bar .q-lead { margin: 0; font-size: 0.88rem; }
