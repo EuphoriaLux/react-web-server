@@ -13,6 +13,8 @@ import re
 import sys
 import threading
 import unittest
+from datetime import datetime, timedelta, timezone
+from unittest import mock
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -678,6 +680,8 @@ class AssistantTest(unittest.TestCase):
         # Saved exactly as the web app's JSON.stringify would write it.
         self.assertEqual(state["cp-family"], json.dumps(family, ensure_ascii=False, separators=(",", ":")))
         self.assertIn("via Claude", json.loads(state["cp-activity"])[0]["text"])
+        again = self.tool(anna, "save_family_details", {"custody": {"rhythm": "mostly-other"}, "fill_calendar_weeks": 0})
+        self.assertEqual(again["details"]["custody"]["rhythm"], "mostly-B")
         invite = self.tool(anna, "get_invite", {"language": "fr"})
         self.assertIn(created["code"], invite["message"])
 
@@ -697,7 +701,7 @@ class AssistantTest(unittest.TestCase):
         self.assertIn("Setup is done", " ".join(start["next_steps"]))
         with api.db() as conn, conn.cursor() as cur:
             cur.execute("select tool from agent_log order by id")
-            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "join_plan", "confirm_family_details"])
+            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "save_family_details", "join_plan", "confirm_family_details"])
 
     def test_beta_gate_offers_the_waitlist(self):
         api.BETA_GATE = True
@@ -745,6 +749,10 @@ class AssistantTest(unittest.TestCase):
         self.assertEqual(json.loads(self.plan_state()["cp-custody"]), {"2027-01-04": "B", "2027-01-05": "A"})
 
         self.tool(anna, "send_message", {"topic": "school", "message": "Lea needs her gym bag on Monday", "urgent": True})
+        with mock.patch.object(api, "deliver_at", lambda urgent: datetime.now(timezone.utc) + timedelta(hours=8)):
+            queued = self.tool(anna, "send_message", {"topic": "health", "message": "Private until morning"})
+        self.assertIn("Quiet hours", queued["note"])
+        self.assertNotIn("Private", self.plan_state()["cp-activity"])
         messages = self.tool(ben, "list_messages", {"topic": "school"})["messages"]
         self.assertEqual([m["message"] for m in messages], ["Lea needs her gym bag on Monday"])
         self.assertIn("Unknown", self.rpc(ben, "tools/call", {"name": "drop_tables"}).get("error", {}).get("message", "Unknown").title())

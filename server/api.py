@@ -927,12 +927,12 @@ class AgentSession:
             c = args["custody"] if isinstance(args["custody"], dict) else {}
             cust = draft["custody"]
             if "rhythm" in c:
-                if c["rhythm"] and c["rhythm"] not in RHYTHMS:
-                    raise ToolError(f"rhythm must be one of {', '.join(RHYTHMS)}")
                 # mostly-A / mostly-B are stored by side, the assistant speaks of me / other.
-                rhythm = c["rhythm"]
+                rhythm = c["rhythm"] or ""
                 if rhythm in ("mostly-me", "mostly-other"):
                     rhythm = f"mostly-{role if rhythm == 'mostly-me' else other}"
+                if rhythm and rhythm not in RHYTHMS:
+                    raise ToolError("rhythm must be one of weeks, 2-2-3, weekend-mid, mostly-me, mostly-other, undecided")
                 cust["rhythm"] = rhythm
             if "handover_day" in c:
                 day = str(c["handover_day"] or "").lower()
@@ -1238,9 +1238,11 @@ class AgentSession:
             "insert into notes (household_id, author, channel, fact, ask, by_when, urgent, deliver_at) values (%s, %s, %s, %s, %s, %s, %s, %s)",
             (household_id, role, topic, fact, ask, by_when, urgent, when),
         )
-        self.log("send_message", f"wrote: {fact[:80]}")
+        queued = when > datetime.now(timezone.utc) + timedelta(minutes=1)
+        # The activity feed syncs at once, so a message held for quiet hours shows no text there.
+        self.log("send_message", f"wrote a {topic} message" if queued else f"wrote: {fact[:80]}")
         out = {"ok": True, "topic": topic}
-        if when > datetime.now(timezone.utc) + timedelta(minutes=1):
+        if queued:
             out["note"] = f"Quiet hours: the other parent sees it at {when.astimezone(LU):%H:%M} (Luxembourg time). Mark it urgent only if it cannot wait."
         return out
 
