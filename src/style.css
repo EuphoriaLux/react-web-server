@@ -1207,3 +1207,22 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: var(--display-track); 
 .ask-panel .expense-row > div:first-child { flex: 1 1 100%; }
 .ask-panel .decline-why { order: 3; flex-basis: 100%; }
 .ask-summary { margin: 14px 0 8px; color: var(--ink-soft); font-size: 0.92rem; }
+
+/* Add CoParents to an AI assistant (src/assistant.jsx) */
+.assistant-card {
+  display: grid; gap: 10px; margin-top: 16px; padding: 16px; border-radius: 18px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.assistant-card.landing { max-width: 640px; margin: 0 auto; background: white; padding: 22px 20px; }
+.assistant-card h3 { margin: 0; font-size: 1.05rem; }
+.assistant-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-ink); }
+.assistant-lead { margin: 0; color: var(--ink-soft); }
+.assistant-address { display: flex; gap: 8px; min-width: 0; }
+.assistant-address input {
+  flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 10px;
+  font: inherit; font-size: 0.9rem; background: var(--surface); color: var(--ink);
+}
+.assistant-claude { justify-self: start; }
+.assistant-steps summary { cursor: pointer; font-weight: 600; color: var(--ink-soft); }
+.assistant-steps p { margin: 8px 0 0; font-size: 0.9rem; color: var(--ink-soft); }
+.assistant-privacy { color: var(--muted); }
