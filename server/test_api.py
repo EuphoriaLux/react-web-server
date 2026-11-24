@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""API tests. Need a throwaway Postgres with db/schema.sql, db/accounts.sql, db/receipts.sql and db/beta.sql applied:
+"""API tests. Need a throwaway Postgres with db/schema.sql, db/accounts.sql, db/receipts.sql, db/beta.sql and db/agents.sql applied:
 
     DATABASE_URL=postgresql://user@127.0.0.1:5432/cptest python3 -m unittest server/test_api.py
 
 Every table is emptied before each test, so never point this at real data.
 """
+import base64
+import hashlib
 import json
 import os
+import re
 import sys
 import threading
 import unittest
+from datetime import datetime, timedelta, timezone
+from unittest import mock
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import ThreadingHTTPServer
 
@@ -442,6 +448,326 @@ class ApiTest(unittest.TestCase):
         with api.db() as conn, conn.cursor() as cur:
             cur.execute("select count(*) from beta_signups")
             self.assertEqual(cur.fetchone()[0], 0)
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+class Browser(Client):
+    """A browser on the sign-in pages: form posts, redirects not followed."""
+
+    def form(self, method, path, fields=None, headers=None):
+        data = urllib.parse.urlencode(fields).encode() if fields is not None else None
+        request = urllib.request.Request(self.base + path, data=data, method=method)
+        if data is not None:
+            request.add_header("Content-Type", "application/x-www-form-urlencoded")
+        if self.cookie:
+            request.add_header("Cookie", self.cookie)
+        for key, value in (headers or {}).items():
+            request.add_header(key, value)
+        opener = urllib.request.build_opener(NoRedirect)
+        try:
+            with opener.open(request) as response:
+                status, raw, got = response.status, response.read(), response.headers
+        except urllib.error.HTTPError as error:
+            status, raw, got = error.code, error.read(), error.headers
+        set_cookie = got.get("Set-Cookie")
+        if set_cookie:
+            self.cookie = set_cookie.split(";", 1)[0]
+        return status, raw.decode(), got
+
+
+def hidden(html, name):
+    match = re.search(r'name="%s" value="([^"]*)"' % re.escape(name), html)
+    return match.group(1) if match else None
+
+
+@unittest.skipUnless(os.environ.get("DATABASE_URL"), "DATABASE_URL is not set")
+class AssistantTest(unittest.TestCase):
+    """AI assistants: OAuth sign-in with an emailed code, then MCP tools on the shared plan."""
+
+    REDIRECT = "https://claude.ai/api/mcp/auth_callback"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.codes = {}
+        api.send_login_code = lambda email, code: cls.codes.__setitem__(email, code)
+        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), api.Handler)
+        threading.Thread(target=cls.server.serve_forever, daemon=True).start()
+        cls.base = f"http://127.0.0.1:{cls.server.server_address[1]}"
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+
+    def setUp(self):
+        api.LIMITS = api.RateLimiter()
+        api.BETA_GATE = False
+        api.send_beta_notice = lambda signup: None
+        self.codes.clear()
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("truncate households, users, login_tokens, account_deletions, beta_signups, oauth_clients, agent_log cascade")
+
+    def register(self):
+        status, client = Client(self.base).call("POST", "/api/oauth/register", {
+            "client_name": "Claude", "redirect_uris": [self.REDIRECT], "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+        })
+        self.assertEqual(status, 201)
+        return client["client_id"]
+
+    def connect(self, email, client_id=None, verifier="v" * 50):
+        """Runs the whole sign-in as the parent would, returns the token answer."""
+        client_id = client_id or self.register()
+        challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
+        params = {
+            "response_type": "code", "client_id": client_id, "redirect_uri": self.REDIRECT, "state": "xyz",
+            "code_challenge": challenge, "code_challenge_method": "S256", "scope": "plan", "resource": api.mcp_url(),
+        }
+        browser = Browser(self.base)
+        status, html, _ = browser.form("GET", "/api/oauth/authorize?" + urllib.parse.urlencode(params))
+        self.assertEqual(status, 200)
+        self.assertIn('name="email"', html)
+        status, html, _ = browser.form("POST", "/api/oauth/email", {**params, "email": email})
+        self.assertEqual(status, 200)
+        pending = hidden(html, "pending")
+        status, _, got = browser.form("POST", "/api/oauth/code", {**params, "pending": pending, "email": email, "code": self.codes[email]})
+        self.assertEqual(status, 303)
+        status, html, got = browser.form("GET", got["Location"])
+        self.assertEqual(status, 200)
+        self.assertIn("Claude", html)
+        self.assertEqual(got["X-Frame-Options"], "DENY")
+        status, _, got = browser.form("POST", "/api/oauth/authorize", {**params, "csrf": hidden(html, "csrf"), "decision": "allow"})
+        self.assertEqual(status, 303)
+        location = urllib.parse.urlsplit(got["Location"])
+        self.assertEqual(f"{location.scheme}://{location.netloc}{location.path}", self.REDIRECT)
+        query = dict(urllib.parse.parse_qsl(location.query))
+        self.assertEqual(query["state"], "xyz")
+        status, tokens, _ = browser.form("POST", "/api/oauth/token", {
+            "grant_type": "authorization_code", "code": query["code"], "redirect_uri": self.REDIRECT,
+            "client_id": client_id, "code_verifier": verifier,
+        })
+        self.assertEqual(status, 200)
+        return json.loads(tokens) | {"client_id": client_id, "browser": browser, "auth_code": query["code"]}
+
+    def rpc(self, token, method, params=None, msg_id=1):
+        status, body = Client(self.base).call("POST", "/api/mcp", {"jsonrpc": "2.0", "id": msg_id, "method": method, "params": params or {}},
+                                              headers={"Authorization": f"Bearer {token}", "Accept": "application/json, text/event-stream"})
+        self.assertEqual(status, 200, body)
+        return body
+
+    def tool(self, token, name, args=None, error=False):
+        result = self.rpc(token, "tools/call", {"name": name, "arguments": args or {}})["result"]
+        self.assertEqual(result.get("isError", False), error, result["content"][0]["text"])
+        return result["content"][0]["text"] if error else result["structuredContent"]
+
+    def plan_state(self):
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("select state from plans")
+            return cur.fetchone()[0]
+
+    def test_mcp_needs_a_token_and_points_to_sign_in(self):
+        status, _ = Client(self.base).call("POST", "/api/mcp", {"jsonrpc": "2.0", "id": 1, "method": "initialize"})
+        self.assertEqual(status, 401)
+        request = urllib.request.Request(self.base + "/api/mcp", data=b"{}", method="POST", headers={"Authorization": "Bearer nope"})
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(request)
+        self.assertIn("resource_metadata=", caught.exception.headers["WWW-Authenticate"])
+        self.assertIn('error="invalid_token"', caught.exception.headers["WWW-Authenticate"])
+        status, meta = Client(self.base).call("GET", "/api/oauth/protected-resource")
+        self.assertEqual((status, meta["resource"]), (200, api.mcp_url()))
+        status, meta = Client(self.base).call("GET", "/.well-known/oauth-authorization-server")
+        self.assertEqual((status, meta["code_challenge_methods_supported"]), (200, ["S256"]))
+
+    def test_registration_refuses_unsafe_redirects(self):
+        for uri in ["http://evil.example/cb", "javascript:alert(1)", "https://x.example/cb#frag"]:
+            status, _ = Client(self.base).call("POST", "/api/oauth/register", {"redirect_uris": [uri]})
+            self.assertEqual(status, 400, uri)
+        self.assertEqual(Client(self.base).call("POST", "/api/oauth/register", {"redirect_uris": ["http://localhost:6274/cb"]})[0], 201)
+
+    def test_authorize_never_redirects_to_an_unregistered_address(self):
+        client_id = self.register()
+        status, html, got = Browser(self.base).form("GET", "/api/oauth/authorize?" + urllib.parse.urlencode({
+            "response_type": "code", "client_id": client_id, "redirect_uri": "https://evil.example/cb",
+            "code_challenge": "c" * 43, "code_challenge_method": "S256"}))
+        self.assertEqual(status, 400)
+        self.assertIsNone(got.get("Location"))
+
+    def test_wrong_code_verifier_and_reused_code_are_refused(self):
+        tokens = self.connect("anna@example.com")
+        status, _ = tokens["browser"].form("POST", "/api/oauth/token", {
+            "grant_type": "authorization_code", "code": tokens["auth_code"], "redirect_uri": self.REDIRECT,
+            "client_id": tokens["client_id"], "code_verifier": "v" * 50})[:2]
+        self.assertEqual(status, 400)
+
+    def test_wrong_email_code_is_refused(self):
+        client_id = self.register()
+        params = {"response_type": "code", "client_id": client_id, "redirect_uri": self.REDIRECT,
+                  "code_challenge": "c" * 43, "code_challenge_method": "S256"}
+        browser = Browser(self.base)
+        _, html, _ = browser.form("POST", "/api/oauth/email", {**params, "email": "anna@example.com"})
+        wrong = "000000" if self.codes["anna@example.com"] != "000000" else "111111"
+        status, html, _ = browser.form("POST", "/api/oauth/code", {**params, "pending": hidden(html, "pending"), "email": "anna@example.com", "code": wrong})
+        self.assertEqual(status, 200)
+        self.assertIn("not right", html)
+        self.assertIsNone(browser.cookie)
+
+    def test_consent_needs_the_page_token(self):
+        tokens = self.connect("anna@example.com")
+        params = {"response_type": "code", "client_id": tokens["client_id"], "redirect_uri": self.REDIRECT,
+                  "code_challenge": "c" * 43, "code_challenge_method": "S256"}
+        status, _, got = tokens["browser"].form("POST", "/api/oauth/authorize", {**params, "csrf": "forged", "decision": "allow"})
+        self.assertEqual(status, 400)
+
+    def test_refresh_token_is_replaced_on_use(self):
+        tokens = self.connect("anna@example.com")
+        browser = tokens["browser"]
+        status, raw, _ = browser.form("POST", "/api/oauth/token", {"grant_type": "refresh_token", "refresh_token": tokens["refresh_token"], "client_id": tokens["client_id"]})
+        self.assertEqual(status, 200)
+        fresh = json.loads(raw)
+        self.assertNotEqual(fresh["access_token"], tokens["access_token"])
+        status = browser.form("POST", "/api/oauth/token", {"grant_type": "refresh_token", "refresh_token": tokens["refresh_token"], "client_id": tokens["client_id"]})[0]
+        self.assertEqual(status, 400)
+        self.assertIn("result", self.rpc(fresh["access_token"], "ping"))
+
+    def test_cookie_alone_does_not_open_mcp(self):
+        tokens = self.connect("anna@example.com")
+        request = urllib.request.Request(self.base + "/api/mcp", method="POST",
+                                         data=json.dumps({"jsonrpc": "2.0", "id": 1, "method": "ping"}).encode(),
+                                         headers={"Cookie": tokens["browser"].cookie, "Content-Type": "application/json"})
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            urllib.request.urlopen(request)
+        self.assertEqual(caught.exception.code, 401)
+
+    def test_initialize_and_tool_list(self):
+        token = self.connect("anna@example.com")["access_token"]
+        init = self.rpc(token, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}})["result"]
+        self.assertEqual(init["protocolVersion"], "2025-06-18")
+        self.assertIn("tools", init["capabilities"])
+        status, _ = Client(self.base).call("POST", "/api/mcp", {"jsonrpc": "2.0", "method": "notifications/initialized"}, headers={"Authorization": f"Bearer {token}"})
+        self.assertEqual(status, 202)
+        tools = {tool["name"]: tool for tool in self.rpc(token, "tools/list")["result"]["tools"]}
+        self.assertIn("save_family_details", tools)
+        self.assertTrue(tools["get_started"]["annotations"]["readOnlyHint"])
+        self.assertFalse(tools["add_expense"]["annotations"]["readOnlyHint"])
+        self.assertTrue(all(not tool["annotations"].get("destructiveHint") for tool in tools.values()))
+
+    def test_onboarding_two_parents_through_their_assistants(self):
+        anna = self.connect("anna@example.com")["access_token"]
+        start = self.tool(anna, "get_started")
+        self.assertIsNone(start["plan"])
+        self.assertTrue(start["can_create_plan"])
+        created = self.tool(anna, "create_plan")
+        self.assertEqual(len(created["code"]), 6)
+        self.tool(anna, "save_family_details", {"my_first_name": "Anna"}, error=True)  # a child is needed to finish
+        saved = self.tool(anna, "save_family_details", {
+            "my_first_name": "Anna", "other_parent_first_name": "Ben",
+            "children": [{"name": "Lea", "birth_year": "2019", "care": "school", "place": "École Belair"}],
+            "activities": [{"name": "Swimming", "child": "Lea", "day": "wednesday", "time": "14:00", "who": "other"}],
+            "custody": {"rhythm": "weeks", "handover_day": "friday", "handover_time": "18:00", "handover_place": "School"},
+        })
+        self.assertEqual(saved["calendar_days_filled"], 84)
+        state = self.plan_state()
+        family = json.loads(state["cp-family"])
+        self.assertTrue(family["done"])
+        self.assertEqual(family["custody"]["handoverDay"], "4")
+        self.assertEqual(family["activities"][0]["who"], "B")
+        self.assertEqual(family["confirmed"], {"A": True, "B": False})
+        self.assertEqual(json.loads(state["cp-profile"]), {"nameA": "Anna", "nameB": "Ben", "child": "Lea"})
+        # Saved exactly as the web app's JSON.stringify would write it.
+        self.assertEqual(state["cp-family"], json.dumps(family, ensure_ascii=False, separators=(",", ":")))
+        self.assertIn("via Claude", json.loads(state["cp-activity"])[0]["text"])
+        again = self.tool(anna, "save_family_details", {"custody": {"rhythm": "mostly-other"}, "fill_calendar_weeks": 0})
+        self.assertEqual(again["details"]["custody"]["rhythm"], "mostly-B")
+        invite = self.tool(anna, "get_invite", {"language": "fr"})
+        self.assertIn(created["code"], invite["message"])
+
+        ben = self.connect("ben@example.com")["access_token"]
+        self.assertIn("join_plan", " ".join(self.tool(ben, "get_started")["next_steps"]))
+        self.assertIn("No plan", self.tool(ben, "join_plan", {"code": "ZZZZZZ"}, error=True))
+        joined = self.tool(ben, "join_plan", {"code": created["code"].lower()})
+        self.assertEqual(joined["your_side"], "B")
+        start = self.tool(ben, "get_started")
+        self.assertFalse(start["family"]["confirmed_by_you"])
+        details = self.tool(ben, "get_family_details")
+        self.assertEqual(details["children"][0]["name"], "Lea")
+        self.assertEqual(details["activities"][0]["who"], "Ben")
+        self.tool(ben, "confirm_family_details")
+        start = self.tool(ben, "get_started")
+        self.assertTrue(start["family"]["confirmed_by_you"])
+        self.assertIn("Setup is done", " ".join(start["next_steps"]))
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("select tool from agent_log order by id")
+            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "save_family_details", "join_plan", "confirm_family_details"])
+
+    def test_beta_gate_offers_the_waitlist(self):
+        api.BETA_GATE = True
+        anna = self.connect("anna@example.com")["access_token"]
+        start = self.tool(anna, "get_started")
+        self.assertFalse(start["can_create_plan"])
+        self.assertIn("invite-only", self.tool(anna, "create_plan", error=True))
+        self.assertIn("consent", self.tool(anna, "join_waitlist", {}, error=True))
+        self.assertEqual(self.tool(anna, "join_waitlist", {"consent": True, "first_name": "Anna", "language": "fr"})["status"], "waiting")
+        self.assertEqual(self.tool(anna, "get_started")["beta_waitlist"], "waiting")
+        api.send_beta_invite = lambda *args: None
+        api.beta_command(["approve", "anna@example.com"])
+        self.assertEqual(self.tool(anna, "create_plan")["ok"], True)
+
+    def test_expenses_calendar_and_messages(self):
+        anna = self.connect("anna@example.com")["access_token"]
+        ben = self.connect("ben@example.com")["access_token"]
+        self.assertIn("no shared plan", self.tool(anna, "add_expense", {"description": "x", "amount": 1, "category": "other"}, error=True))
+        code = self.tool(anna, "create_plan")["code"]
+        self.tool(ben, "join_plan", {"code": code})
+        added = self.tool(anna, "add_expense", {"description": "School shoes", "amount": 42, "category": "clothes", "date": "2026-11-20"})
+        self.assertIn("owes", added["balance"]["summary"])
+        self.assertEqual(added["balance"]["amount_eur"], 21)
+        stored = json.loads(self.plan_state()["cp-expenses"])[0]
+        self.assertEqual((stored["amount"], stored["paidBy"], stored["split"]), (42, "A", "50"))
+        self.tool(ben, "add_expense", {"description": "Doctor", "amount": "30,50", "category": "health", "paid_by": "me", "split": "other"})
+        listed = self.tool(ben, "list_expenses", {"only_unsettled": True})
+        self.assertEqual(listed["count"], 2)
+        # Ben owes 21 for the shoes, Anna owes 30.50 for the doctor: Anna owes 9.50.
+        self.assertEqual((listed["balance"]["owes"], listed["balance"]["amount_eur"]), ("Parent A", 9.5))
+        self.tool(ben, "mark_expenses_settled", {"expense_ids": [stored["id"]]})
+        balance = self.tool(anna, "get_balance")
+        self.assertEqual(balance["balance"]["amount_eur"], 30.5)
+        self.assertIn("health", [row["category"] for row in balance["this_month"]])
+        self.assertIn("No expense", self.tool(anna, "mark_expenses_settled", {"expense_ids": [1]}, error=True))
+
+        self.tool(anna, "set_custody_days", {"days": [{"date": "2027-01-04", "with": "other"}, {"date": "2027-01-05", "with": "me"}]})
+        self.tool(ben, "add_calendar_event", {"title": "School play", "date": "2027-01-05", "type": "school"})
+        days = self.tool(ben, "get_calendar", {"from_date": "2027-01-04", "days": 2})["days"]
+        self.assertTrue(days[0]["children_with"].endswith("(you)"))
+        self.assertEqual(days[1]["events"], [{"title": "School play", "type": "school"}])
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("""update plans set state = jsonb_set(state, '{cp-locked}', '"{\\"2027-02\\":true}"')""")
+        self.assertIn("locked", self.tool(anna, "set_custody_days", {"days": [{"date": "2027-02-01", "with": "me"}]}, error=True))
+        self.assertEqual(json.loads(self.plan_state()["cp-custody"]), {"2027-01-04": "B", "2027-01-05": "A"})
+
+        self.tool(anna, "send_message", {"topic": "school", "message": "Lea needs her gym bag on Monday", "urgent": True})
+        with mock.patch.object(api, "deliver_at", lambda urgent: datetime.now(timezone.utc) + timedelta(hours=8)):
+            queued = self.tool(anna, "send_message", {"topic": "health", "message": "Private until morning"})
+        self.assertIn("Quiet hours", queued["note"])
+        self.assertNotIn("Private", self.plan_state()["cp-activity"])
+        messages = self.tool(ben, "list_messages", {"topic": "school"})["messages"]
+        self.assertEqual([m["message"] for m in messages], ["Lea needs her gym bag on Monday"])
+        self.assertIn("Unknown", self.rpc(ben, "tools/call", {"name": "drop_tables"}).get("error", {}).get("message", "Unknown").title())
+
+    def test_deleting_the_account_disconnects_assistants(self):
+        tokens = self.connect("anna@example.com")
+        anna = tokens["browser"]
+        self.tool(tokens["access_token"], "join_waitlist", {"consent": True})
+        export = anna.call("GET", "/api/account/export")[1]
+        self.assertEqual([item["name"] for item in export["assistants"]], ["Claude"])
+        self.assertEqual([item["tool"] for item in export["assistant_changes"]], ["join_waitlist"])
+        anna.call("POST", "/api/account/delete", {"confirm": "anna@example.com"}, headers={})
+        status, _ = Client(self.base).call("POST", "/api/mcp", {"jsonrpc": "2.0", "id": 1, "method": "ping"},
+                                           headers={"Authorization": f"Bearer {tokens['access_token']}"})
+        self.assertEqual(status, 401)
 
 
 if __name__ == "__main__":
