@@ -60,6 +60,8 @@ The deployment script reads the IP and original key from `~/react-server-setup`,
 
 Parents sign in with a one-time link sent by email. The session is an HttpOnly cookie. A signed-in parent creates the shared plan and invites the other parent with the 6-character code. Setup, mail settings and local testing are in [docs/accounts.md](docs/accounts.md).
 
+AI assistants (Claude, ChatGPT, ...) can connect to a parent's plan at `https://coparent.lu/api/mcp` to help with setup and everyday entry. See [docs/assistants.md](docs/assistants.md).
+
 ## Product direction
 
 1. Homepage (done) — concept & early-access landing
