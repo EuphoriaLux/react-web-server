@@ -42,12 +42,29 @@ id claude >/dev/null 2>&1 || useradd --create-home --shell /bin/bash claude
 usermod -aG systemd-journal,adm claude
 gpasswd -d claude sudo >/dev/null 2>&1 || true
 rm -f /etc/sudoers.d/claude
-install -d -o claude -g claude -m 700 /home/claude/.ssh
+# The key lives in a root-owned file outside claude's home, so this root script never
+# writes through anything claude controls (a symlink in ~/.ssh, say), and claude cannot
+# add keys of its own. sshd reads only this file for claude.
+install -d -o root -g root -m 755 /etc/ssh/authorized_keys
+TMP=$(mktemp /etc/ssh/authorized_keys/.claude.XXXXXX)
 # A shell is allowed; tunnels and agent/X11 forwarding are not.
-printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding %s\n' "$(printf '%s' "$1" | base64 -d)" \
-  > /home/claude/.ssh/authorized_keys
-chown claude:claude /home/claude/.ssh/authorized_keys
-chmod 600 /home/claude/.ssh/authorized_keys
+printf 'no-port-forwarding,no-agent-forwarding,no-X11-forwarding %s\n' "$(printf '%s' "$1" | base64 -d)" > "$TMP"
+chown root:root "$TMP"
+chmod 644 "$TMP"
+mv -f "$TMP" /etc/ssh/authorized_keys/claude
+CONF=/etc/ssh/sshd_config.d/60-claude.conf
+printf 'Match User claude\n    AuthorizedKeysFile /etc/ssh/authorized_keys/%%u\n' > "$CONF.new"
+mv -f "$CONF.new" "$CONF"
+chmod 644 "$CONF"
+# Check before reloading: valid config, claude uses the root-owned file, ubuntu is unchanged.
+if ! sshd -t \
+  || ! sshd -T -C user=claude,host=check,addr=127.0.0.1 | grep -qx 'authorizedkeysfile /etc/ssh/authorized_keys/%u' \
+  || sshd -T -C user=ubuntu,host=check,addr=127.0.0.1 | grep -q '^authorizedkeysfile /etc/ssh/authorized_keys'; then
+  rm -f "$CONF"
+  echo "The SSH config check failed, so nothing was changed in sshd." >&2
+  exit 1
+fi
+systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
 if sudo -l -U claude 2>/dev/null | grep -q 'may run'; then
   echo "claude can still use sudo. Check /etc/sudoers and /etc/sudoers.d." >&2
   exit 1

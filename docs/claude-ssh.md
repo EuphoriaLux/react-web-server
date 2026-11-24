@@ -29,8 +29,11 @@ Add them as environment variables of the project's Claude cloud environment,
 allow outbound SSH (port 22 to the VM) in its network settings, then
 `rm ~/claude-env.txt`. Never paste the private key into chat or the repo.
 
-Running the script again replaces the key. To revoke access:
-`sudo deluser --remove-home claude` on the VM (from the admin account).
+The public key is kept in the root-owned file `/etc/ssh/authorized_keys/claude`
+(set by `/etc/ssh/sshd_config.d/60-claude.conf`), not in `claude`'s home, so
+`claude` cannot add keys of its own. Running the script again replaces the key.
+To revoke access, from the admin account on the VM:
+`sudo rm /etc/ssh/authorized_keys/claude && sudo deluser --remove-home claude`.
 
 ## In a Claude session
 
