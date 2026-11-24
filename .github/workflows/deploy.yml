@@ -65,7 +65,7 @@ jobs:
       - run: python3 -m pip install --quiet psycopg2-binary
       - name: Apply schema
         run: |
-          for file in schema accounts receipts beta; do
+          for file in schema accounts receipts beta agents; do
             psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "db/$file.sql"
           done
       - run: python3 -m unittest -v server/test_api.py

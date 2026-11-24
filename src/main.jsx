@@ -11,6 +11,7 @@ import './style.css'
 import { AskDayPanel, HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity, useCopy } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
 import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
+import { AssistantCard, useAssistantCopy } from './assistant.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 import { pickLang } from './lang.js'
 import { sharedRole, shortName, weekdayLetters } from './people.js'
@@ -1250,6 +1251,7 @@ function AppShell({ onExit }) {
 function Landing({ onEnter }) {
   const { tr } = useLang()
   const bc = useBetaCopy()
+  const ac = useAssistantCopy()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -1401,6 +1403,15 @@ function Landing({ onEnter }) {
               <li><span className="value-check"><Check size={16} /></span><div><strong>{tr.v2t}</strong><span>{tr.v2}</span></div></li>
               <li><span className="value-check"><Check size={16} /></span><div><strong>{tr.v3t}</strong><span>{tr.v3}</span></div></li>
             </ul>
+          </div>
+        </section>
+        <section className="section assistant-section" id="assistant">
+          <div className="container">
+            <div className="section-header center">
+              <div className="section-label">{ac.label}</div>
+              <h2>{ac.title}</h2>
+            </div>
+            <AssistantCard landing />
           </div>
         </section>
         <section className="section cta" id="beta">

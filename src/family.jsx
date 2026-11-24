@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react'
+import { AssistantCard } from './assistant.jsx'
 import { useLang } from './main.jsx'
 import { FAMILY_COPY, fill } from './family-copy.js'
 import { names } from './people.js'
@@ -355,6 +356,7 @@ export function FamilyView() {
         <button type="button" className="btn primary sm" onClick={openFamilySetup}>{family?.done ? c.edit : c.start}</button>
       </div>
       {family && namedChildren(family).length > 0 ? <FamilySummary family={family} /> : <p className="empty">{c.noFamily}</p>}
+      <AssistantCard />
     </div>
   )
 }
