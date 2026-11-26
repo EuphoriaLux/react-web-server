@@ -167,6 +167,7 @@ export function FamilySetup({ onClose }) {
       const was = familyRule(current?.rhythmFrom ? current : before)
       next.rhythmFrom = anchorRecord(rhythm, anchor)
       const filled = refillCustody(load('cp-custody', {}), was, familyRule(next), today, 12, load('cp-locked', {}))
+      next.rhythmFrom = { ...next.rhythmFrom, filled: filled.filled }
       if (filled.changed) {
         save('cp-custody', filled.custody)
         window.dispatchEvent(new Event('cp-custody-changed'))

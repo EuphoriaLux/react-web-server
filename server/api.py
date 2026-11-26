@@ -552,7 +552,8 @@ def fill_custody(custody, rhythm, start: date, weeks, locked, anchor: date, flip
 
 
 def family_rule(family):
-    """(rhythm, anchor, flip) the saved family follows, or None."""
+    """(rhythm, anchor, flip, filled) the saved family follows, or None.
+    filled lists the days the rhythm wrote (None for older plans)."""
     if not family:
         return None
     rhythm = family["custody"].get("rhythm")
@@ -561,31 +562,42 @@ def family_rule(family):
         return None
     if saved.get("rhythm") != rhythm or not DAY_RE.match(str(saved.get("date", ""))):
         return None
-    return rhythm, date.fromisoformat(saved["date"]), family["custody"].get("flip") == "yes"
+    filled = saved.get("filled") if isinstance(saved.get("filled"), list) else None
+    return rhythm, date.fromisoformat(saved["date"]), family["custody"].get("flip") == "yes", filled
 
 
 def refill_custody(custody, was, to, start: date, weeks, locked):
-    """Move from rule `was` to rule `to`: coming days that still follow the old
-    rule, and empty days, take the new one. Days changed by hand, "both" days
-    and locked months stay. The same as refillCustody in src/family.js."""
+    """Move from rule `was` to rule `to`: coming rhythm days, and empty days,
+    take the new one. Days changed by hand, "both" days and locked months stay.
+    Returns (custody, changed, filled). The same as refillCustody in src/family.js."""
     out = dict(custody)
     changed = 0
+    known = set(was[3]) if was and was[3] is not None else None
     if not to:
-        return out, 0
+        return out, 0, list((was or [None] * 4)[3] or [])
+    window, filled = set(), []
     for i in range(weeks * 7):
         day = start + timedelta(days=i)
         key = day.isoformat()
-        if locked.get(key[:7]):
-            continue
+        window.add(key)
         now = out.get(key)
         old = rhythm_owner(was[0], day, was[1], was[2]) if was else None
-        if now and now != old:
+        ours = not now or (now == old and (known is None or key in known))
+        if locked.get(key[:7]):
+            if now and ours:
+                filled.append(key)
+            continue
+        if not ours:
             continue
         who = rhythm_owner(to[0], day, to[1], to[2])
-        if who and who != now:
+        if not who:
+            continue
+        filled.append(key)
+        if who != now:
             out[key] = who
             changed += 1
-    return out, changed
+    filled += [k for k in (known or ()) if k >= start.isoformat() and k not in window]
+    return out, changed, sorted(filled)
 
 
 def expense_balance(expenses):
@@ -907,7 +919,7 @@ class AgentSession:
 
     def rhythm_days(self, family, days=14):
         """Who the rhythm gives each of the next days, to read back to the parent."""
-        rhythm, anchor, flip = family_rule(family)
+        rhythm, anchor, flip, _ = family_rule(family)
         names = self.names()
         today = today_lu()
         out = []
@@ -1034,8 +1046,9 @@ class AgentSession:
             anchor = date.fromisoformat(saved["date"]) if saved.get("rhythm") == rhythm and DAY_RE.match(str(saved.get("date", ""))) else today
             nxt["rhythmFrom"] = {"rhythm": rhythm, "date": anchor.isoformat()}
             # Days that still follow the earlier rhythm move with a swap or a new rhythm.
-            custody, filled = refill_custody(self.read("cp-custody", {}) or {}, family_rule(current), family_rule(nxt),
-                                             today, weeks, self.read("cp-locked", {}) or {})
+            custody, filled, rhythm_days = refill_custody(self.read("cp-custody", {}) or {}, family_rule(current), family_rule(nxt),
+                                                          today, weeks, self.read("cp-locked", {}) or {})
+            nxt["rhythmFrom"]["filled"] = rhythm_days
             if filled:
                 self.write("cp-custody", custody)
         self.write("cp-family", nxt)

@@ -753,18 +753,16 @@ function generateFairPlan(year, month, answers, holidays) {
 
 // Which way round the rhythm fits the days already in the calendar best, so
 // a new proposal carries on from what the parents have.
+// The two weeks before count too, so an empty month carries on from the last.
 function bestFlip(rhythm, custody, year, month, scope) {
   let score = 0
-  const months = scope === 'year' ? [...Array(12).keys()] : [month]
-  for (const m of months) {
-    const last = new Date(year, m + 1, 0).getDate()
-    for (let d = 1; d <= last; d++) {
-      const who = custody[keyOf(year, m, d)]
-      if (who !== 'A' && who !== 'B') continue
-      const date = new Date(year, m, d)
-      if (helperOwner(rhythm, date, false) === who) score++
-      if (helperOwner(rhythm, date, true) === who) score--
-    }
+  const first = new Date(year, scope === 'year' ? 0 : month, 1)
+  const end = scope === 'year' ? new Date(year + 1, 0, 1) : new Date(year, month + 1, 1)
+  for (let date = new Date(year, first.getMonth(), 1 - 14); date < end; date = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)) {
+    const who = custody[keyOf(date.getFullYear(), date.getMonth(), date.getDate())]
+    if (who !== 'A' && who !== 'B') continue
+    if (helperOwner(rhythm, date, false) === who) score++
+    if (helperOwner(rhythm, date, true) === who) score--
   }
   return score < 0
 }
@@ -1006,7 +1004,7 @@ function CalendarView() {
     if (!window.confirm(fillIn(fc.calFlipAsk, { rhythm: fillIn(fc.rhythms[rule.rhythm], n) }))) return
     const to = { ...rule, flip: !rule.flip }
     const res = refillCustody(custody, rule, to, new Date(), 12, locked)
-    storeFamily({ ...family, custody: { ...family.custody, flip: to.flip ? 'yes' : '' } })
+    storeFamily({ ...family, custody: { ...family.custody, flip: to.flip ? 'yes' : '' }, rhythmFrom: { ...family.rhythmFrom, filled: res.filled } })
     setCustody(res.custody)
     logActivity(fillIn(fc.actFlip, { name: role ? n[role] : n.A }))
   }

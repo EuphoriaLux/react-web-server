@@ -167,3 +167,19 @@ test('swapping round rewrites rhythm days and keeps hand-made changes', () => {
   assert.equal(fresh.custody['2026-11-24'], 'B')
   assert.equal(fresh.custody['2026-11-25'], 'A')
 })
+
+test('a day changed by hand survives swapping round twice', () => {
+  const monday = new Date(2026, 10, 23)
+  const a = { rhythm: 'weeks', anchor: monday, flip: false, filled: null }
+  const first = refillCustody({}, null, a, monday, 2)
+  const custody = { ...first.custody, '2026-11-24': 'B' } // hand change: rhythm says A
+  const b = { ...a, flip: true, filled: first.filled }
+  const once = refillCustody(custody, { ...a, filled: first.filled }, b, monday, 2)
+  assert.equal(once.custody['2026-11-24'], 'B')
+  assert.equal(once.custody['2026-11-23'], 'B')
+  assert.ok(!once.filled.includes('2026-11-24'))
+  const twice = refillCustody(once.custody, { ...b, filled: once.filled }, { ...a, filled: null }, monday, 2)
+  assert.equal(twice.custody['2026-11-24'], 'B') // still the hand change
+  assert.equal(twice.custody['2026-11-23'], 'A')
+  assert.equal(twice.filled.length, 13)
+})

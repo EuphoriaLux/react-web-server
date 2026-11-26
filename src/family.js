@@ -180,28 +180,44 @@ export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}, anc
   return { custody: next, added }
 }
 
-// A rule is { rhythm, anchor: Date, flip: bool }. Moving from one rule to
-// another rewrites the coming days that still follow the old rule (and empty
+// A rule is { rhythm, anchor: Date, flip: bool, filled: [dates] | null }.
+// `filled` lists the days the rhythm itself wrote, so a day changed by hand is
+// never mistaken for a rhythm day later, even after several swaps. Older
+// plans have no list; then any day that matches the old rule counts.
+// Moving from one rule to another rewrites the coming rhythm days (and empty
 // days); days someone changed by hand, 'both' days and locked months stay.
 // Used when a parent swaps the rhythm round or picks another one.
 export function refillCustody(custody, from, to, start, weeks = 12, locked = {}) {
   const next = { ...custody }
   let changed = 0
-  if (!to || !RHYTHMS.includes(to.rhythm) || to.rhythm === 'undecided') return { custody: next, changed }
+  const known = from && Array.isArray(from.filled) ? new Set(from.filled) : null
+  const startKey = isoDate(start)
+  const window = new Set()
+  const filled = []
+  if (!to || !RHYTHMS.includes(to.rhythm) || to.rhythm === 'undecided') return { custody: next, changed, filled: from?.filled || [] }
   for (let i = 0; i < weeks * 7; i += 1) {
     const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
     const key = isoDate(date)
-    if (locked[key.slice(0, 7)]) continue
+    window.add(key)
     const now = next[key]
     const old = from && from.rhythm ? rhythmOwner(from.rhythm, date, from.anchor, from.flip) : null
-    if (now && now !== old) continue
+    const ours = !now || (now === old && (!known || known.has(key)))
+    if (locked[key.slice(0, 7)]) {
+      if (now && ours) filled.push(key)
+      continue
+    }
+    if (!ours) continue
     const who = rhythmOwner(to.rhythm, date, to.anchor, to.flip)
-    if (who && who !== now) {
+    if (!who) continue
+    filled.push(key)
+    if (who !== now) {
       next[key] = who
       changed += 1
     }
   }
-  return { custody: next, changed }
+  // Rhythm days further ahead than this fill stay listed while untouched.
+  for (const key of known || []) if (key >= startKey && !window.has(key)) filled.push(key)
+  return { custody: next, changed, filled: filled.sort() }
 }
 
 // The rule a saved family follows, or null when it has no rhythm yet.
@@ -211,7 +227,7 @@ export function familyRule(family) {
   const saved = family.rhythmFrom
   if (!saved || saved.rhythm !== rhythm || !/^\d{4}-\d{2}-\d{2}$/.test(saved.date || '')) return null
   const [y, m, d] = saved.date.split('-').map(Number)
-  return { rhythm, anchor: new Date(y, m - 1, d), flip: family.custody.flip === 'yes' }
+  return { rhythm, anchor: new Date(y, m - 1, d), flip: family.custody.flip === 'yes', filled: Array.isArray(saved.filled) ? saved.filled : null }
 }
 
 // The date weeks are counted from for a rhythm. Kept once the calendar is

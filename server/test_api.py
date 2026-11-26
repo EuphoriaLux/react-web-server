@@ -714,6 +714,17 @@ class AssistantTest(unittest.TestCase):
         self.assertEqual(cal[today], {"A": "B", "B": "A"}[before])
         self.assertEqual(cal[(api.today_lu() + timedelta(days=1)).isoformat()], "both")
         self.assertEqual(json.loads(self.plan_state()["cp-family"])["custody"]["flip"], "yes")
+        # A day changed by hand after the swap stays through swapping back.
+        in3 = (api.today_lu() + timedelta(days=3)).isoformat()
+        cal = json.loads(self.plan_state()["cp-custody"])
+        hand = {"A": "B", "B": "A"}[cal[in3]]
+        cal[in3] = hand
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("update plans set state = jsonb_set(state, '{cp-custody}', to_jsonb(%s::text))", (json.dumps(cal),))
+        self.tool(anna, "save_family_details", {"custody": {"flip": False}})
+        cal = json.loads(self.plan_state()["cp-custody"])
+        self.assertEqual(cal[in3], hand)
+        self.assertEqual(cal[today], before)
         again = self.tool(anna, "save_family_details", {"custody": {"rhythm": "mostly-other"}, "fill_calendar_weeks": 0})
         self.assertEqual(again["details"]["custody"]["rhythm"], "mostly-B")
         invite = self.tool(anna, "get_invite", {"language": "fr"})
@@ -735,7 +746,7 @@ class AssistantTest(unittest.TestCase):
         self.assertIn("Setup is done", " ".join(start["next_steps"]))
         with api.db() as conn, conn.cursor() as cur:
             cur.execute("select tool from agent_log order by id")
-            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "save_family_details", "save_family_details", "join_plan", "confirm_family_details"])
+            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "save_family_details", "save_family_details", "save_family_details", "join_plan", "confirm_family_details"])
 
     def test_beta_gate_offers_the_waitlist(self):
         api.BETA_GATE = True
