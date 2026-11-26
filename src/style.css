@@ -1226,3 +1226,20 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: var(--display-track); 
 .assistant-steps summary { cursor: pointer; font-weight: 600; color: var(--ink-soft); }
 .assistant-steps p { margin: 8px 0 0; font-size: 0.9rem; color: var(--ink-soft); }
 .assistant-privacy { color: var(--muted); }
+
+/* Two-week preview of a custody rhythm, with a swap button */
+.rhythm-preview { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; margin: 12px 0 4px; display: grid; gap: 6px; }
+.rhythm-preview .q-lead { margin: 0; }
+.rhythm-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.rhythm-dow { text-align: center; font-size: 0.72rem; font-weight: 700; color: var(--ink-soft); }
+.rhythm-day {
+  display: grid; justify-items: center; gap: 1px; padding: 5px 2px; border-radius: 9px; border: 1px solid var(--line);
+  font-size: 0.68rem; font-weight: 700; min-width: 0; overflow: hidden;
+}
+.rhythm-day b { font-size: 0.8rem; }
+.rhythm-day span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rhythm-day.A { background: var(--a-soft); border-color: var(--a-line); color: var(--a-ink); }
+.rhythm-day.B { background: var(--b-soft); border-color: var(--b-line); color: var(--b-ink); }
+.rhythm-day.past { opacity: 0.45; }
+.rhythm-day.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.rhythm-flip { justify-self: start; }

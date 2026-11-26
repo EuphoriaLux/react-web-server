@@ -697,6 +697,23 @@ class AssistantTest(unittest.TestCase):
         # Saved exactly as the web app's JSON.stringify would write it.
         self.assertEqual(state["cp-family"], json.dumps(family, ensure_ascii=False, separators=(",", ":")))
         self.assertIn("via Claude", json.loads(state["cp-activity"])[0]["text"])
+        # The rhythm is read back day by day, and can be swapped round, which fixes the filled days too.
+        next_days = saved["details"]["rhythm_next_days"]
+        self.assertEqual(len(next_days), 14)
+        self.assertFalse(saved["details"]["custody"]["flip"])
+        today = api.today_lu().isoformat()
+        cal = json.loads(self.plan_state()["cp-custody"])
+        cal[(api.today_lu() + timedelta(days=1)).isoformat()] = "both"  # changed by hand
+        with api.db() as conn, conn.cursor() as cur:
+            cur.execute("update plans set state = jsonb_set(state, '{cp-custody}', to_jsonb(%s::text))", (json.dumps(cal),))
+        before = cal[today]
+        flipped = self.tool(anna, "save_family_details", {"custody": {"flip": True}})
+        self.assertTrue(flipped["details"]["custody"]["flip"])
+        self.assertNotEqual(flipped["details"]["rhythm_next_days"][0]["with"], next_days[0]["with"])
+        cal = json.loads(self.plan_state()["cp-custody"])
+        self.assertEqual(cal[today], {"A": "B", "B": "A"}[before])
+        self.assertEqual(cal[(api.today_lu() + timedelta(days=1)).isoformat()], "both")
+        self.assertEqual(json.loads(self.plan_state()["cp-family"])["custody"]["flip"], "yes")
         again = self.tool(anna, "save_family_details", {"custody": {"rhythm": "mostly-other"}, "fill_calendar_weeks": 0})
         self.assertEqual(again["details"]["custody"]["rhythm"], "mostly-B")
         invite = self.tool(anna, "get_invite", {"language": "fr"})
@@ -718,7 +735,7 @@ class AssistantTest(unittest.TestCase):
         self.assertIn("Setup is done", " ".join(start["next_steps"]))
         with api.db() as conn, conn.cursor() as cur:
             cur.execute("select tool from agent_log order by id")
-            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "save_family_details", "join_plan", "confirm_family_details"])
+            self.assertEqual([row[0] for row in cur.fetchall()], ["create_plan", "save_family_details", "save_family_details", "save_family_details", "join_plan", "confirm_family_details"])
 
     def test_beta_gate_offers_the_waitlist(self):
         api.BETA_GATE = True

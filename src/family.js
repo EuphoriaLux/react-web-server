@@ -27,7 +27,9 @@ export function emptyFamily() {
     parents: { A: { name: '' }, B: { name: '' } },
     children: [emptyChild()],
     activities: [],
-    custody: { rhythm: '', handoverDay: '', handoverTime: '', handoverPlace: '', ruling: '' },
+    // flip: 'yes' starts the rhythm one week later, which swaps the two
+    // parents' days (weeks, 2-2-3) or whose weekend it is (the others).
+    custody: { rhythm: '', flip: '', handoverDay: '', handoverTime: '', handoverPlace: '', ruling: '' },
     filledBy: '',
     done: false,
     confirmed: { A: false, B: false },
@@ -127,12 +129,12 @@ function isoDate(date) {
 }
 
 // Who has the children on a day, for a rhythm, counting weeks from `start`'s
-// Monday. Parent A starts.
-export function rhythmOwner(rhythm, date, start) {
+// Monday. Parent A starts, unless `flip` moves the rhythm on by one week.
+export function rhythmOwner(rhythm, date, start, flip = false) {
   const monday = new Date(start.getFullYear(), start.getMonth(), start.getDate() - weekday(start))
   const day = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-  const week = Math.floor(Math.round((day - monday) / 86400000) / 7)
-  const odd = week % 2 === 1
+  const week = Math.floor(Math.round((day - monday) / 86400000) / 7) + (flip ? 1 : 0)
+  const odd = Math.abs(week % 2) === 1
   const dow = weekday(day)
   const weekend = dow >= 5
   switch (rhythm) {
@@ -161,7 +163,7 @@ export function rhythmOwner(rhythm, date, start) {
 // Fill empty calendar days for the next `weeks` weeks from `start`, counting
 // the rhythm's weeks from `anchor`. Days already planned, and days in locked
 // months, are left alone.
-export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}, anchor = start) {
+export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}, anchor = start, flip = false) {
   const next = { ...custody }
   let added = 0
   if (!RHYTHMS.includes(rhythm) || rhythm === 'undecided') return { custody: next, added }
@@ -169,13 +171,47 @@ export function fillCustody(custody, rhythm, start, weeks = 12, locked = {}, anc
     const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
     const key = isoDate(date)
     if (next[key] || locked[key.slice(0, 7)]) continue
-    const who = rhythmOwner(rhythm, date, anchor)
+    const who = rhythmOwner(rhythm, date, anchor, flip)
     if (who) {
       next[key] = who
       added += 1
     }
   }
   return { custody: next, added }
+}
+
+// A rule is { rhythm, anchor: Date, flip: bool }. Moving from one rule to
+// another rewrites the coming days that still follow the old rule (and empty
+// days); days someone changed by hand, 'both' days and locked months stay.
+// Used when a parent swaps the rhythm round or picks another one.
+export function refillCustody(custody, from, to, start, weeks = 12, locked = {}) {
+  const next = { ...custody }
+  let changed = 0
+  if (!to || !RHYTHMS.includes(to.rhythm) || to.rhythm === 'undecided') return { custody: next, changed }
+  for (let i = 0; i < weeks * 7; i += 1) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
+    const key = isoDate(date)
+    if (locked[key.slice(0, 7)]) continue
+    const now = next[key]
+    const old = from && from.rhythm ? rhythmOwner(from.rhythm, date, from.anchor, from.flip) : null
+    if (now && now !== old) continue
+    const who = rhythmOwner(to.rhythm, date, to.anchor, to.flip)
+    if (who && who !== now) {
+      next[key] = who
+      changed += 1
+    }
+  }
+  return { custody: next, changed }
+}
+
+// The rule a saved family follows, or null when it has no rhythm yet.
+export function familyRule(family) {
+  const rhythm = family?.custody?.rhythm
+  if (!rhythm || rhythm === 'undecided' || !RHYTHMS.includes(rhythm)) return null
+  const saved = family.rhythmFrom
+  if (!saved || saved.rhythm !== rhythm || !/^\d{4}-\d{2}-\d{2}$/.test(saved.date || '')) return null
+  const [y, m, d] = saved.date.split('-').map(Number)
+  return { rhythm, anchor: new Date(y, m - 1, d), flip: family.custody.flip === 'yes' }
 }
 
 // The date weeks are counted from for a rhythm. Kept once the calendar is

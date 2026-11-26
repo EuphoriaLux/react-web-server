@@ -2,11 +2,11 @@ import React, { useMemo, useState } from 'react'
 import { AssistantCard } from './assistant.jsx'
 import { useLang } from './main.jsx'
 import { FAMILY_COPY, fill } from './family-copy.js'
-import { names } from './people.js'
+import { names, weekdayLetters } from './people.js'
 import {
   CARE_TYPES, RHYTHMS, RULINGS, emptyChild, emptyActivity, familyFromProfile, normalizeFamily,
-  profileFromFamily, canFinish, cleanFamily, fillCustody, activitiesOn, describeChanges, namedChildren,
-  rhythmAnchor, anchorRecord,
+  profileFromFamily, canFinish, cleanFamily, activitiesOn, describeChanges, namedChildren,
+  rhythmAnchor, anchorRecord, refillCustody, familyRule, rhythmOwner, weekday,
 } from './family.js'
 
 const LATER_KEY = 'cp-family-later'
@@ -52,7 +52,48 @@ function parentName(family, role) {
   return family?.parents?.[role]?.name || names()[role === 'B' ? 'B' : 'A']
 }
 
-function storeFamily(family) {
+/* ─── Two weeks of a rhythm, with a button to swap it round ─── */
+
+// Shows two weeks from a Monday (this week by default), so the parent can see
+// at a glance whether the rhythm starts on the right side. `owner(date)`
+// says who has the children that day.
+export function RhythmPreview({ owner, from, onFlip, who, title, lead }) {
+  const c = useFamilyCopy()
+  const { lang } = useLang()
+  const now = new Date()
+  const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const base = from || day0
+  const monday = new Date(base.getFullYear(), base.getMonth(), base.getDate() - weekday(base))
+  const days = Array.from({ length: 14 }, (_, i) => {
+    const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)
+    return { key: date.toDateString(), date, who: owner(date) }
+  })
+  const letters = weekdayLetters(lang)
+  const short = (side) => String(who[side] || side).slice(0, 5)
+  return (
+    <div className="rhythm-preview">
+      {title !== false && <strong>{title || c.previewTitle}</strong>}
+      <p className="q-lead">{lead || c.previewLead}</p>
+      <div className="rhythm-days" role="list">
+        {letters.map((letter, index) => <span key={`h${index}`} className="rhythm-dow" aria-hidden="true">{letter}</span>)}
+        {days.map((item) => (
+          <span
+            key={item.key}
+            role="listitem"
+            className={`rhythm-day ${item.who || ''} ${item.date < day0 ? 'past' : ''} ${item.date.getTime() === day0.getTime() ? 'today' : ''}`}
+            aria-label={`${c.days[weekday(item.date)]} ${item.date.getDate()}: ${item.who ? who[item.who] : '–'}`}
+          >
+            <b>{item.date.getDate()}</b>
+            <span>{item.who ? short(item.who) : '–'}</span>
+          </span>
+        ))}
+      </div>
+      <button type="button" className="btn ghost sm rhythm-flip" onClick={onFlip}>⇄ {c.flip}</button>
+    </div>
+  )
+}
+
+export function storeFamily(family) {
   save('cp-family', family)
   save('cp-profile', profileFromFamily(family, load('cp-profile', undefined)))
 }
@@ -121,9 +162,15 @@ export function FamilySetup({ onClose }) {
     if (fillNow) {
       const today = new Date()
       const anchor = rhythmAnchor(next, rhythm, today)
+      // The rule that filled the calendar before, so days that still follow
+      // it move with a swap or a new rhythm, and hand-made changes stay.
+      const was = familyRule(current?.rhythmFrom ? current : before)
       next.rhythmFrom = anchorRecord(rhythm, anchor)
-      const filled = fillCustody(load('cp-custody', {}), rhythm, today, 12, load('cp-locked', {}), anchor)
-      if (filled.added) save('cp-custody', filled.custody)
+      const filled = refillCustody(load('cp-custody', {}), was, familyRule(next), today, 12, load('cp-locked', {}))
+      if (filled.changed) {
+        save('cp-custody', filled.custody)
+        window.dispatchEvent(new Event('cp-custody-changed'))
+      }
     }
     storeFamily(next)
     const me = parentName(next, role)
@@ -260,6 +307,13 @@ export function FamilySetup({ onClose }) {
                 </button>
               ))}
             </div>
+            {draft.custody.rhythm && draft.custody.rhythm !== 'undecided' && (
+              <RhythmPreview
+                owner={(date) => rhythmOwner(draft.custody.rhythm, date, rhythmAnchor({ rhythmFrom: loadFamily()?.rhythmFrom || before?.rhythmFrom }, draft.custody.rhythm, new Date()), draft.custody.flip === 'yes')}
+                onFlip={() => setCustody({ flip: draft.custody.flip === 'yes' ? '' : 'yes' })}
+                who={names}
+              />
+            )}
             {draft.custody.rhythm && draft.custody.rhythm !== 'undecided' && (
               <label className="family-check">
                 <input type="checkbox" checked={prefill} onChange={(event) => setPrefill(event.target.checked)} />

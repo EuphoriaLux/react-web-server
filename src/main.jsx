@@ -10,7 +10,8 @@ import '@fontsource-variable/figtree/wght.css'
 import './style.css'
 import { AskDayPanel, HandoverView, NoteThread, Papers, ResolveBoard, Threads, TodayBoard, names, logActivity, useCopy } from './extra.jsx'
 import { ShareBar } from './sync.jsx'
-import { FamilySetup, FamilyView, useFamilyCopy } from './family.jsx'
+import { FamilySetup, FamilyView, RhythmPreview, loadFamily, storeFamily, useFamilyCopy } from './family.jsx'
+import { familyRule, refillCustody, rhythmOwner } from './family.js'
 import { AssistantCard, useAssistantCopy } from './assistant.jsx'
 import { PRIVACY_HASH, PrivacyLink, PrivacyPage } from './privacy.jsx'
 import { pickLang } from './lang.js'
@@ -661,15 +662,18 @@ function luxHolidays(year, tr) {
 // School holidays first (as the parents chose), then public holidays outside them
 // kept equal, then the usual rhythm. With "rhythm", holidays are not special.
 function proposalRhythm(answers, year, m, d) {
-  if (answers.rhythm === 'weeks') {
-    const week = Math.floor((d + ((new Date(year, m, 1).getDay() + 6) % 7) - 1) / 7)
-    return week % 2 === 0 ? 'A' : 'B'
+  return helperOwner(answers.rhythm, new Date(year, m, d), answers.flip)
+}
+// Weeks are counted from one fixed Monday, so months and years proposed one
+// after the other stay in step. `flip` moves the rhythm on by one week (one
+// day for 'half'), which is how parents say who starts.
+const HELPER_EPOCH = new Date(2024, 0, 1)
+function helperOwner(rhythm, date, flip) {
+  if (rhythm === 'half') {
+    const n = Math.round((new Date(date.getFullYear(), date.getMonth(), date.getDate()) - HELPER_EPOCH) / 86400000)
+    return (n + (flip ? 1 : 0)) % 2 === 0 ? 'A' : 'B'
   }
-  if (answers.rhythm === 'weekend-mid') {
-    const dow = (new Date(year, m, d).getDay() + 6) % 7
-    return dow === 2 || dow === 3 ? 'B' : 'A'
-  }
-  return d % 2 === 0 ? 'A' : 'B'
+  return rhythmOwner(rhythm, date, HELPER_EPOCH, flip)
 }
 const keyOf = (year, m, d) => `${year}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 
@@ -727,13 +731,14 @@ function generateFairPlan(year, month, answers, holidays) {
       if (who === 'A') aH++; else bH++
     }
   }
-  // 3. Remaining weekends: honour the preference, keep them close.
+  // 3. Remaining weekends: honour the preference, keep them close. With no
+  // preference, weekends follow the rhythm, which already shares them.
   const isWeekend = (d) => ((new Date(year, month, d).getDay() + 6) % 7) >= 5
   let aW = 0, bW = 0
   const preferA = answers.weekends === 'A'
   const preferB = answers.weekends === 'B'
   for (let d = 1; d <= days; d++) {
-    if (plan[d] || !isWeekend(d)) continue
+    if (plan[d] || !isWeekend(d) || (!preferA && !preferB)) continue
     let who
     if (preferA && aW <= bW + 1) who = 'A'
     else if (preferB && bW <= aW + 1) who = 'B'
@@ -746,8 +751,36 @@ function generateFairPlan(year, month, answers, holidays) {
   return plan
 }
 
-function Questionnaire({ year, month, holidays, school, prior, onApply, onClose, tr }) {
-  const [answers, setAnswers] = useState({ rhythm: 'weeks', weekends: 'equal', holidays: 'halves', first: 'A', scope: 'month' })
+// Which way round the rhythm fits the days already in the calendar best, so
+// a new proposal carries on from what the parents have.
+function bestFlip(rhythm, custody, year, month, scope) {
+  let score = 0
+  const months = scope === 'year' ? [...Array(12).keys()] : [month]
+  for (const m of months) {
+    const last = new Date(year, m + 1, 0).getDate()
+    for (let d = 1; d <= last; d++) {
+      const who = custody[keyOf(year, m, d)]
+      if (who !== 'A' && who !== 'B') continue
+      const date = new Date(year, m, d)
+      if (helperOwner(rhythm, date, false) === who) score++
+      if (helperOwner(rhythm, date, true) === who) score--
+    }
+  }
+  return score < 0
+}
+
+function Questionnaire({ year, month, holidays, school, prior, custody = {}, onApply, onClose, tr }) {
+  const fc = useFamilyCopy()
+  const [answers, setAnswersState] = useState(() => ({ rhythm: 'weeks', weekends: 'equal', holidays: 'halves', first: 'A', scope: 'month', flip: bestFlip('weeks', custody, year, month, 'month') }))
+  // A new rhythm or scope starts the way round that fits the calendar; the
+  // parent can still swap it in the preview.
+  const setAnswers = (next) => setAnswersState(next.rhythm !== answers.rhythm || next.scope !== answers.scope
+    ? { ...next, flip: bestFlip(next.rhythm, custody, year, month, next.scope) }
+    : next)
+  // Preview from this week when it falls in what is planned, else from the start.
+  const now = new Date()
+  const current = year === now.getFullYear() && (answers.scope === 'year' || month === now.getMonth())
+  const previewFrom = current ? now : new Date(year, answers.scope === 'month' ? month : 0, 1)
   const refYear = answers.scope === 'year' ? year - 1 : schoolYearOf(year, month)
   const firstHol = firstPeriod(refYear)
   const firstLabel = firstHol
@@ -787,8 +820,17 @@ function Questionnaire({ year, month, holidays, school, prior, onApply, onClose,
         <div className="q-options">
           <button type="button" className={answers.rhythm==='weeks'?'on':''} onClick={() => setAnswers({...answers, rhythm:'weeks'})}>{tr.q1a}</button>
           <button type="button" className={answers.rhythm==='weekend-mid'?'on':''} onClick={() => setAnswers({...answers, rhythm:'weekend-mid'})}>{tr.q1b}</button>
+          <button type="button" className={answers.rhythm==='2-2-3'?'on':''} onClick={() => setAnswers({...answers, rhythm:'2-2-3'})}>{fc.rhythms['2-2-3']}</button>
           <button type="button" className={answers.rhythm==='half'?'on':''} onClick={() => setAnswers({...answers, rhythm:'half'})}>{tr.q1c}</button>
         </div>
+        <label>{fc.qStart}</label>
+        <RhythmPreview
+          owner={(date) => helperOwner(answers.rhythm, date, answers.flip)}
+          from={previewFrom}
+          onFlip={() => setAnswersState({ ...answers, flip: !answers.flip })}
+          who={names()}
+          title={false}
+        />
         <label>{tr.q2}</label>
         <div className="q-options">
           <button type="button" className={answers.weekends==='A'?'on':''} onClick={() => setAnswers({...answers, weekends:'A'})}>{tr.q2a}</button>
@@ -954,6 +996,20 @@ function CalendarView() {
     for (let d = 1; d <= daysInMonth; d++) next[iso(d)] = who
     setCustody(next)
   }
+  // Swap the family's rhythm round from today: days that still follow the
+  // rhythm change, days changed by hand and locked months stay.
+  const fc = useFamilyCopy()
+  const family = loadFamily()
+  const rule = familyRule(family)
+  const flipRhythm = () => {
+    if (!rule) return
+    if (!window.confirm(fillIn(fc.calFlipAsk, { rhythm: fillIn(fc.rhythms[rule.rhythm], n) }))) return
+    const to = { ...rule, flip: !rule.flip }
+    const res = refillCustody(custody, rule, to, new Date(), 12, locked)
+    storeFamily({ ...family, custody: { ...family.custody, flip: to.flip ? 'yes' : '' } })
+    setCustody(res.custody)
+    logActivity(fillIn(fc.actFlip, { name: role ? n[role] : n.A }))
+  }
   const clearMonth = () => {
     if (isLocked || !sure()) return
     const next = { ...custody }
@@ -1094,6 +1150,7 @@ function CalendarView() {
         <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('A')}>{withNames(tr.monthA)}</button>
         <button type="button" className="btn ghost sm" onClick={() => planWholeMonth('B')}>{withNames(tr.monthB)}</button>
         <button type="button" className="btn ghost sm" onClick={clearMonth}>{tr.clearMonth}</button>
+        {rule && <button type="button" className="btn ghost sm" onClick={flipRhythm}>⇄ {fc.calFlip}</button>}
       </div>}
 
       {showQ && (
@@ -1105,6 +1162,7 @@ function CalendarView() {
           prior={balance}
           tr={tr}
           onClose={() => setShowQ(false)}
+          custody={custody}
           onApply={(res) => {
             const next = { ...custody }
             if (res.scope === 'year') {
