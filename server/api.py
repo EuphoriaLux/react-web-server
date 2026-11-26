@@ -2770,11 +2770,50 @@ def load_env_files(paths):
     BETA_NOTIFY = os.environ.get("COPARENTS_BETA_NOTIFY", "").strip()
 
 
+def users_report():
+    """Everyone with an account: when they joined, last signed in, and their plan. Read-only."""
+    with db() as conn, conn.cursor() as cur:
+        cur.execute("set time zone 'UTC'")
+        cur.execute(
+            """
+            select u.email, u.created_at,
+              greatest(
+                (select max(s.created_at) from sessions s where s.user_id = u.id),
+                (select max(t.used_at) from login_tokens t where t.email = u.email),
+                (select max(o.created_at) from oauth_tokens o where o.user_id = u.id)
+              ) as last_seen,
+              m.role,
+              (select count(*) from members o where o.household_id = m.household_id) as parents,
+              exists (select 1 from oauth_tokens o where o.user_id = u.id and o.expires_at > now()) as assistant
+            from users u
+            left join members m on m.user_id = u.id
+            order by u.created_at
+            """
+        )
+        rows = cur.fetchall()
+    if not rows:
+        print("Nobody has an account yet.")
+        return 0
+    print(f"{len(rows)} account(s). Times are UTC.")
+    print(f"{'joined':<17} {'last sign-in':<17} {'plan':<30} email")
+    for email, created, last_seen, role, parents, assistant in rows:
+        seen = f"{last_seen:%Y-%m-%d %H:%M}" if last_seen else "-"
+        if role:
+            plan = f"parent {role}, " + ("both joined" if parents >= 2 else "waiting for other")
+        else:
+            plan = "no plan yet"
+        extra = "  +AI assistant" if assistant else ""
+        print(f"{created:%Y-%m-%d %H:%M}  {seen:<17} {plan:<30} {email}{extra}")
+    return 0
+
+
 def beta_command(args):
-    """python3 api.py beta list | approve EMAIL [LANG] | remove EMAIL"""
-    if not args or args[0] not in {"list", "approve", "remove"}:
-        print("usage: api.py beta list | beta approve EMAIL [en|fr|de|lb] | beta remove EMAIL")
+    """python3 api.py beta list | users | approve EMAIL [LANG] | remove EMAIL"""
+    if not args or args[0] not in {"list", "users", "approve", "remove"}:
+        print("usage: api.py beta list | beta users | beta approve EMAIL [en|fr|de|lb] | beta remove EMAIL")
         return 2
+    if args[0] == "users":
+        return users_report()
     if args[0] == "list":
         with db() as conn, conn.cursor() as cur:
             cur.execute(

@@ -2,6 +2,7 @@
 # Run the private beta from Oracle Cloud Shell.
 #
 #   bash scripts/beta.sh list                     who signed up, who is approved
+#   bash scripts/beta.sh users                    everyone with an account: joined, last sign-in, plan
 #   bash scripts/beta.sh approve anna@example.com  let them create a plan, and email the invitation
 #   bash scripts/beta.sh approve anna@example.com de   same, invitation in German (en, fr, de, lb)
 #   bash scripts/beta.sh remove anna@example.com   take them off the list
@@ -22,14 +23,14 @@ ACTION="${1:-}"
 ARG="${2:-}"
 LANG_ARG="${3:-}"
 case "$ACTION" in
-  list) ;;
+  list|users) ;;
   approve|remove|notify)
     [[ "$ARG" =~ $EMAIL_RE ]] || { echo "Give an email address: bash scripts/beta.sh $ACTION someone@example.com" >&2; exit 1; }
     [[ -z "$LANG_ARG" || "$LANG_ARG" =~ ^(en|fr|de|lb)$ ]] || { echo "Language must be en, fr, de or lb." >&2; exit 1; } ;;
   gate)
     [[ "$ARG" =~ ^(on|off)$ ]] || { echo "Use: bash scripts/beta.sh gate on   (or off)" >&2; exit 1; } ;;
   *)
-    sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
     exit 1 ;;
 esac
 
