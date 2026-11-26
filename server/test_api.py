@@ -6,6 +6,8 @@
 Every table is emptied before each test, so never point this at real data.
 """
 import base64
+import contextlib
+import io
 import hashlib
 import json
 import os
@@ -422,6 +424,21 @@ class ApiTest(unittest.TestCase):
         for i in range(5):
             self.assertEqual(self.signup(client, email=f"p{i}@example.com")[0], 200)
         self.assertEqual(self.signup(client, email="p9@example.com")[0], 429)
+
+    def test_users_report_lists_accounts_without_plan_codes(self):
+        api.BETA_GATE = False
+        anna, _, _ = self.sign_in("anna@example.com")
+        self.sign_in("ben@example.com")
+        status, created = anna.call("POST", "/api/households", {})
+        self.assertEqual(status, 201)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(api.beta_command(["users"]), 0)
+        text = out.getvalue()
+        self.assertIn("2 account(s)", text)
+        self.assertRegex(text, r"parent A, waiting for other\s+anna@example.com")
+        self.assertRegex(text, r"no plan yet\s+ben@example.com")
+        self.assertNotIn(created["code"], text)
 
     def test_only_approved_addresses_create_plans_but_anyone_joins(self):
         api.BETA_GATE = True
