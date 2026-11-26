@@ -452,7 +452,9 @@ def new_family():
         "parents": {"A": {"name": ""}, "B": {"name": ""}},
         "children": [],
         "activities": [],
-        "custody": {"rhythm": "", "handoverDay": "", "handoverTime": "", "handoverPlace": "", "ruling": ""},
+        # flip "yes" starts the rhythm one week later: it swaps the parents' days
+        # (weeks, 2-2-3) or whose weekend it is (the others).
+        "custody": {"rhythm": "", "flip": "", "handoverDay": "", "handoverTime": "", "handoverPlace": "", "ruling": ""},
         "filledBy": "",
         "done": False,
         "confirmed": {"A": False, "B": False},
@@ -507,9 +509,9 @@ def family_changes(before, after):
     return changes
 
 
-def rhythm_owner(rhythm, day: date, start: date):
+def rhythm_owner(rhythm, day: date, start: date, flip=False):
     monday = start - timedelta(days=start.weekday())
-    week = (day - monday).days // 7
+    week = (day - monday).days // 7 + (1 if flip else 0)
     odd = week % 2 == 1
     dow = day.weekday()
     weekend = dow >= 5
@@ -531,7 +533,7 @@ def rhythm_owner(rhythm, day: date, start: date):
     return None
 
 
-def fill_custody(custody, rhythm, start: date, weeks, locked, anchor: date):
+def fill_custody(custody, rhythm, start: date, weeks, locked, anchor: date, flip=False):
     """Fill empty days only. Planned days and locked months are left alone."""
     out = dict(custody)
     added = 0
@@ -542,11 +544,60 @@ def fill_custody(custody, rhythm, start: date, weeks, locked, anchor: date):
         key = day.isoformat()
         if out.get(key) or locked.get(key[:7]):
             continue
-        who = rhythm_owner(rhythm, day, anchor)
+        who = rhythm_owner(rhythm, day, anchor, flip)
         if who:
             out[key] = who
             added += 1
     return out, added
+
+
+def family_rule(family):
+    """(rhythm, anchor, flip, filled) the saved family follows, or None.
+    filled lists the days the rhythm wrote (None for older plans)."""
+    if not family:
+        return None
+    rhythm = family["custody"].get("rhythm")
+    saved = family.get("rhythmFrom") or {}
+    if not rhythm or rhythm == "undecided" or rhythm not in RHYTHMS:
+        return None
+    if saved.get("rhythm") != rhythm or not DAY_RE.match(str(saved.get("date", ""))):
+        return None
+    filled = saved.get("filled") if isinstance(saved.get("filled"), list) else None
+    return rhythm, date.fromisoformat(saved["date"]), family["custody"].get("flip") == "yes", filled
+
+
+def refill_custody(custody, was, to, start: date, weeks, locked):
+    """Move from rule `was` to rule `to`: coming rhythm days, and empty days,
+    take the new one. Days changed by hand, "both" days and locked months stay.
+    Returns (custody, changed, filled). The same as refillCustody in src/family.js."""
+    out = dict(custody)
+    changed = 0
+    known = set(was[3]) if was and was[3] is not None else None
+    if not to:
+        return out, 0, list((was or [None] * 4)[3] or [])
+    window, filled = set(), []
+    for i in range(weeks * 7):
+        day = start + timedelta(days=i)
+        key = day.isoformat()
+        window.add(key)
+        now = out.get(key)
+        old = rhythm_owner(was[0], day, was[1], was[2]) if was else None
+        ours = not now or (now == old and (known is None or key in known))
+        if locked.get(key[:7]):
+            if now and ours:
+                filled.append(key)
+            continue
+        if not ours:
+            continue
+        who = rhythm_owner(to[0], day, to[1], to[2])
+        if not who:
+            continue
+        filled.append(key)
+        if who != now:
+            out[key] = who
+            changed += 1
+    filled += [k for k in (known or ()) if k >= start.isoformat() and k not in window]
+    return out, changed, sorted(filled)
 
 
 def expense_balance(expenses):
@@ -861,9 +912,22 @@ class AgentSession:
                 "handover_time": cust.get("handoverTime", ""),
                 "handover_place": cust.get("handoverPlace", ""),
                 "court_ruling": cust.get("ruling", ""),
-            }.items() if v},
+            }.items() if v} | ({"flip": cust.get("flip") == "yes"} if family_rule(family) else {}),
             "confirmed": {names["A"]: bool(family["confirmed"].get("A")), names["B"]: bool(family["confirmed"].get("B"))},
+            **({"rhythm_next_days": self.rhythm_days(family)} if family_rule(family) else {}),
         }
+
+    def rhythm_days(self, family, days=14):
+        """Who the rhythm gives each of the next days, to read back to the parent."""
+        rhythm, anchor, flip, _ = family_rule(family)
+        names = self.names()
+        today = today_lu()
+        out = []
+        for i in range(days):
+            day = today + timedelta(days=i)
+            who = rhythm_owner(rhythm, day, anchor, flip)
+            out.append({"date": day.isoformat(), "weekday": WEEKDAYS[day.weekday()], "with": names.get(who, "")})
+        return out
 
     def get_family_details(self, args):
         self.need_plan()
@@ -934,6 +998,8 @@ class AgentSession:
                 if rhythm and rhythm not in RHYTHMS:
                     raise ToolError("rhythm must be one of weeks, 2-2-3, weekend-mid, mostly-me, mostly-other, undecided")
                 cust["rhythm"] = rhythm
+            if "flip" in c:
+                cust["flip"] = "yes" if c["flip"] is True else ""
             if "handover_day" in c:
                 day = str(c["handover_day"] or "").lower()
                 if day and day not in WEEKDAYS:
@@ -979,7 +1045,10 @@ class AgentSession:
             saved = nxt.get("rhythmFrom") or {}
             anchor = date.fromisoformat(saved["date"]) if saved.get("rhythm") == rhythm and DAY_RE.match(str(saved.get("date", ""))) else today
             nxt["rhythmFrom"] = {"rhythm": rhythm, "date": anchor.isoformat()}
-            custody, filled = fill_custody(self.read("cp-custody", {}) or {}, rhythm, today, weeks, self.read("cp-locked", {}) or {}, anchor)
+            # Days that still follow the earlier rhythm move with a swap or a new rhythm.
+            custody, filled, rhythm_days = refill_custody(self.read("cp-custody", {}) or {}, family_rule(current), family_rule(nxt),
+                                                          today, weeks, self.read("cp-locked", {}) or {})
+            nxt["rhythmFrom"]["filled"] = rhythm_days
             if filled:
                 self.write("cp-custody", custody)
         self.write("cp-family", nxt)
@@ -1292,7 +1361,10 @@ AGENT_TOOLS = [
     _tool("save_family_details", "Save the family details",
           "Saves the family details, the same as the app's four setup screens. Only send the sections you have answers for; a section you send replaces "
           "that section (send the whole children list, not just one child). To finish, the parent's own first name and one child's name are needed. "
-          "When a custody rhythm is set, empty calendar days for the next weeks are filled from it (planned days and locked months are left alone). "
+          "When a custody rhythm is set, the calendar for the next weeks is filled from it: empty days and days that still follow the earlier rhythm "
+          "change; days changed by hand and locked months are left alone. The result's details.rhythm_next_days shows who has the children on each "
+          "of the next days: read the first days back to the parent and ask if that is right. If it is the wrong way round, call again with "
+          "custody.flip set to the opposite value, which also fixes the days already filled. "
           "If the other parent already finished the details and this changes them, they are asked to confirm again. "
           "Health notes are sensitive: only record one if the parent offers it.",
           {"my_first_name": {"type": "string"},
@@ -1314,6 +1386,8 @@ AGENT_TOOLS = [
                "rhythm": {"type": "string", "enum": ["weeks", "2-2-3", "weekend-mid", "mostly-me", "mostly-other", "undecided"],
                           "description": "weeks: one week each. 2-2-3: two days, two days, three days. weekend-mid: one parent has weekdays, "
                                          "the other Wednesdays and every other weekend. mostly-me / mostly-other: mainly with one parent, every other weekend with the other."},
+               "flip": {"type": "boolean", "description": "Start the rhythm one week later. That swaps the two parents' days for weeks and 2-2-3, "
+                                                         "and whose weekend it is for the others. Use it when rhythm_next_days is the wrong way round."},
                "handover_day": {"type": "string", "enum": WEEKDAYS},
                "handover_time": {"type": "string", "description": "HH:MM"},
                "handover_place": {"type": "string"},
@@ -1329,7 +1403,7 @@ AGENT_TOOLS = [
           annotations=_READ),
     _tool("set_custody_days", "Set who has the children",
           "Sets who has the children on given days. Locked months cannot change. Changing days the other parent planned can upset them: "
-          "say which days change and confirm with the parent first.",
+          "say which days change and confirm with the parent first. To swap a whole rhythm round, use save_family_details with custody.flip instead.",
           {"days": {"type": "array", "minItems": 1, "maxItems": 92, "items": {"type": "object", "additionalProperties": False, "required": ["date", "with"], "properties": {
               "date": {"type": "string", "description": "YYYY-MM-DD"},
               "with": {"type": "string", "enum": ["me", "other", "both"]}}}}},

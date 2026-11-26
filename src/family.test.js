@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   emptyFamily, familyFromProfile, normalizeFamily, childrenLabel, profileFromFamily, canFinish,
   cleanFamily, rhythmOwner, fillCustody, activitiesOn, describeChanges, emptyChild, rhythmAnchor, anchorRecord,
+  refillCustody, familyRule,
 } from './family.js'
 
 test('old profile names carry over, demo names do not', () => {
@@ -118,4 +119,67 @@ test('a later fill stays in step with the first one', () => {
   assert.equal(custody['2026-11-23'], undefined)
   // A new rhythm starts counting again from today.
   assert.equal(rhythmAnchor(family, '2-2-3', later).getTime(), later.getTime())
+})
+
+test('flip starts the rhythm with the other side', () => {
+  const monday = new Date(2026, 10, 23)
+  const day = (n) => new Date(2026, 10, 23 + n)
+  assert.equal(rhythmOwner('weeks', day(0), monday, true), 'B')
+  assert.equal(rhythmOwner('weeks', day(7), monday, true), 'A')
+  assert.deepEqual([0, 2, 5, 7].map((n) => rhythmOwner('2-2-3', day(n), monday, true)), ['B', 'A', 'B', 'A'])
+  // Same main parent, the other weekend.
+  assert.deepEqual([1, 2, 5, 12].map((n) => rhythmOwner('weekend-mid', day(n), monday, true)), ['A', 'B', 'B', 'A'])
+  // Days before the anchor still alternate properly.
+  assert.equal(rhythmOwner('weeks', new Date(2026, 10, 16), monday), 'B')
+  const { custody } = fillCustody({}, '2-2-3', monday, 1, {}, monday, true)
+  assert.equal(custody['2026-11-23'], 'B')
+})
+
+test('a saved family gives its rule; old families without flip keep A first', () => {
+  const family = normalizeFamily({ custody: { rhythm: 'weeks' }, rhythmFrom: { rhythm: 'weeks', date: '2026-11-23' } })
+  assert.equal(family.custody.flip, '')
+  const rule = familyRule(family)
+  assert.equal(rule.flip, false)
+  assert.equal(rule.anchor.getDate(), 23)
+  assert.equal(familyRule({ ...family, rhythmFrom: { rhythm: '2-2-3', date: '2026-11-23' } }), null)
+  assert.equal(familyRule(normalizeFamily({ custody: { rhythm: 'undecided' } })), null)
+  assert.equal(familyRule(normalizeFamily({ custody: { rhythm: 'weeks', flip: 'yes' }, rhythmFrom: { rhythm: 'weeks', date: '2026-11-23' } })).flip, true)
+})
+
+test('swapping round rewrites rhythm days and keeps hand-made changes', () => {
+  const monday = new Date(2026, 10, 23)
+  const was = { rhythm: '2-2-3', anchor: monday, flip: false }
+  const filled = fillCustody({}, '2-2-3', monday, 2, {}, monday).custody
+  filled['2026-11-25'] = 'A' // changed by hand (rhythm says B)
+  filled['2026-11-26'] = 'both'
+  delete filled['2026-11-27']
+  const { custody, changed } = refillCustody(filled, was, { ...was, flip: true }, monday, 2, { '2026-12': true })
+  assert.equal(custody['2026-11-23'], 'B')
+  assert.equal(custody['2026-11-25'], 'A')
+  assert.equal(custody['2026-11-26'], 'both')
+  assert.equal(custody['2026-11-27'], 'B') // empty day filled
+  assert.equal(custody['2026-11-30'], 'A')
+  assert.equal(custody['2026-12-01'], filled['2026-12-01']) // locked month
+  assert.equal(changed, 6)
+  // Without an earlier rule only empty days are filled, like before.
+  const fresh = refillCustody({ '2026-11-23': 'A' }, null, { ...was, flip: true }, monday, 1)
+  assert.equal(fresh.custody['2026-11-23'], 'A')
+  assert.equal(fresh.custody['2026-11-24'], 'B')
+  assert.equal(fresh.custody['2026-11-25'], 'A')
+})
+
+test('a day changed by hand survives swapping round twice', () => {
+  const monday = new Date(2026, 10, 23)
+  const a = { rhythm: 'weeks', anchor: monday, flip: false, filled: null }
+  const first = refillCustody({}, null, a, monday, 2)
+  const custody = { ...first.custody, '2026-11-24': 'B' } // hand change: rhythm says A
+  const b = { ...a, flip: true, filled: first.filled }
+  const once = refillCustody(custody, { ...a, filled: first.filled }, b, monday, 2)
+  assert.equal(once.custody['2026-11-24'], 'B')
+  assert.equal(once.custody['2026-11-23'], 'B')
+  assert.ok(!once.filled.includes('2026-11-24'))
+  const twice = refillCustody(once.custody, { ...b, filled: once.filled }, { ...a, filled: null }, monday, 2)
+  assert.equal(twice.custody['2026-11-24'], 'B') // still the hand change
+  assert.equal(twice.custody['2026-11-23'], 'A')
+  assert.equal(twice.filled.length, 13)
 })
